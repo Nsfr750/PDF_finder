@@ -16,6 +16,9 @@ A Python application that helps you find and remove duplicate PDF files based on
 - Selective duplicate management
 - Horizontal and vertical scrolling for long paths
 - Cross-platform compatibility
+- Organized help system with user guide
+- About dialog with version information
+- Support and sponsorship options
 
 ## Requirements
 
@@ -48,7 +51,7 @@ A Python application that helps you find and remove duplicate PDF files based on
 
 1. Run the application:
    ```
-   python PDF_Finder.py
+   python main.py
    ```
 2. Click "Browse" to select a folder to scan
 3. Click "Find Duplicates" to start scanning
