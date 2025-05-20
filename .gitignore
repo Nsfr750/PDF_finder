@@ -112,3 +112,4 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Project specific (add your own project specific ignores here)
+go.bat
