@@ -40,15 +40,24 @@ class HelpWindow:
    - Use the 'Delete Selected' button to remove unwanted duplicates
    - Toggle between 'Image Preview' and 'Text Preview' to view different aspects of the PDF
 
+Customization:
+- Change between Light and Dark themes from View > Theme menu
+- Theme preferences are saved between sessions
+- Adjust window size as needed - the interface is responsive
+
 Tips:
 - The scanning process may take some time for large collections
 - Image-based comparison is more accurate but slower
 - Text-based comparison is faster but may miss visual duplicates
 - Always verify before deleting any files
+- Use horizontal scrollbar to view long file paths
 
 Keyboard Shortcuts:
 - Ctrl+O: Open folder
 - F5: Start new search
+- F1: Show this help
+- Ctrl+Q: Quit application
+- Delete: Remove selected files
 - Delete: Remove selected file
 - Esc: Close preview
 
