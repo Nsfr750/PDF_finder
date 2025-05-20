@@ -1,20 +1,17 @@
 # PDF Duplicate Finder - To Do List
 
 ## High Priority
-- [ ] Add keyboard shortcuts for common actions
-  - `Ctrl+O` for opening folders
-  - `Delete` for removing selected files
-  - `F1` for help
 - [ ] Implement batch processing for large PDF collections
 - [ ] Add progress bar for individual file processing
-
-## Medium Priority
-- [ ] Add dark/light theme support
-- [ ] Implement drag and drop folder support
 - [ ] Add file size information in the duplicates list
 - [ ] Add modification date comparison for duplicates
+
+## Medium Priority
+- [ ] Implement drag and drop folder support
 - [ ] Implement "Undo" functionality for file deletions
 - [ ] Add support for more document formats (e.g., DOCX, PPTX)
+- [ ] Add a "Recent Folders" menu
+- [ ] Improve status messages and notifications
 
 ## Features
 - [ ] Add advanced filtering options
@@ -70,3 +67,12 @@
 - [x] Implement sponsor/support options
 - [x] Update documentation
 - [x] Create CHANGELOG.md
+- [x] Add dark/light theme support
+- [x] Add keyboard shortcuts for common actions
+  - [x] `Ctrl+O` for opening folders
+  - [x] `Delete` for removing selected files
+  - [x] `F1` for help
+  - [x] `Ctrl+Q` to quit
+- [x] Add theme preference persistence
+- [x] Improve horizontal scrolling for file lists
+- [x] Add configuration file for user preferences
