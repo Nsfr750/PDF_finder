@@ -113,3 +113,4 @@ $RECYCLE.BIN/
 
 # Project specific (add your own project specific ignores here)
 go.bat
+PDF.bat
