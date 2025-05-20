@@ -1,6 +1,8 @@
 import os
 import hashlib
 import tempfile
+import json
+from pathlib import Path
 from PyPDF2 import PdfReader
 from pdf2image import convert_from_path
 import tkinter as tk
@@ -10,6 +12,7 @@ import imagehash
 from help import HelpWindow
 from about import About
 from sponsor import Sponsor
+from theme import ThemeManager
 
 
 
@@ -24,25 +27,48 @@ class PDFDuplicateApp:
         self.current_preview_image = None
         self.status_text = tk.StringVar(value="")
         self.is_searching = False
+        self.config_file = Path("pdf_finder_config.json")
+        self.settings = self.load_settings()
 
+        # Initialize theme manager and sponsor first
+        self.theme_manager = ThemeManager(self.root)
+        self.sponsor = Sponsor(root)
+        
         # Create menu
         menu_bar = tk.Menu(root)
         root.config(menu=menu_bar)
 
-        # Create a single Help menu with all related items
-        help_menu = tk.Menu(menu_bar, tearoff=0)
+        # Create View menu for theme selection
+        view_menu = tk.Menu(menu_bar, tearoff=0)
         
-        # Add items to Help menu
-        help_menu.add_command(label="How to Use", command=self.show_help)
+        # Theme submenu
+        theme_menu = tk.Menu(view_menu, tearoff=0)
+        self.theme_var = tk.StringVar(value=self.settings.get('theme', 'light'))
+        theme_menu.add_radiobutton(
+            label="Light Theme",
+            command=lambda: self.change_theme('light'),
+            variable=self.theme_var,
+            value='light'
+        )
+        theme_menu.add_radiobutton(
+            label="Dark Theme",
+            command=lambda: self.change_theme('dark'),
+            variable=self.theme_var,
+            value='dark'
+        )
+        view_menu.add_cascade(label="Theme", menu=theme_menu)
+        menu_bar.add_cascade(label="View", menu=view_menu)
+
+        # Create Help menu
+        help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="How to Use", command=self.show_help, accelerator="F1")
         help_menu.add_separator()
         help_menu.add_command(label="About PDF Finder", command=self.show_about)
-        
-        # Initialize sponsor and add to Help menu
-        self.sponsor = Sponsor(root)
         help_menu.add_command(label="Support the Project", command=self.sponsor.show_sponsor)
-        
-        # Add the Help menu to the menu bar
         menu_bar.add_cascade(label="Help", menu=help_menu)
+        
+        # Apply saved theme
+        self.change_theme(self.settings.get('theme', 'light'))
 
         # Main container for search controls and results
         main_container = ttk.Frame(root)
@@ -273,6 +299,30 @@ class PDFDuplicateApp:
         )
         messagebox.showinfo("Help", help_text)
 
+    def load_settings(self):
+        """Load application settings from config file."""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {'theme': 'light'}
+        
+    def save_settings(self):
+        """Save current settings to config file."""
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump(self.settings, f, indent=4)
+        except IOError as e:
+            print(f"Error saving settings: {e}")
+            
+    def change_theme(self, theme_name):
+        """Change the application theme."""
+        self.theme_manager.apply_theme(theme_name)
+        self.settings['theme'] = theme_name
+        self.save_settings()
+        
     def show_about(self):
         About.show_about(self.root)
 
