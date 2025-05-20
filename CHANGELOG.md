@@ -2,7 +2,17 @@
 
 All notable changes to the PDF Duplicate Finder project will be documented in this file.
 
-## [Unreleased]
+## [2.3.0] - 2025-05-20
+
+### Added
+- Theme support with light and dark modes
+- Theme preferences persistence between sessions
+- New View menu for theme selection
+- Horizontal scrolling support for the file list
+- Keyboard shortcuts for common actions
+- Configuration file for user preferences
+
+## [2.2.0] - 2025-05-20
 
 ### Added
 - Comprehensive help system with user guide
