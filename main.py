@@ -13,13 +13,18 @@ from help import HelpWindow
 from about import About
 from sponsor import Sponsor
 from theme import ThemeManager
+from translations import TRANSLATIONS, t
 
 
 
 class PDFDuplicateApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("PDF Duplicate Finder")
+        # Language settings
+        self.config_file = Path("pdf_finder_config.json")
+        self.settings = self.load_settings()
+        self.lang = self.settings.get('lang', 'en')
+        self.root.title(t('app_title', self.lang))
         self.root.geometry("1024x768")
         self.folder_path = tk.StringVar()
         self.duplicates = []
@@ -27,8 +32,6 @@ class PDFDuplicateApp:
         self.current_preview_image = None
         self.status_text = tk.StringVar(value="")
         self.is_searching = False
-        self.config_file = Path("pdf_finder_config.json")
-        self.settings = self.load_settings()
 
         # Initialize theme manager and sponsor first
         self.theme_manager = ThemeManager(self.root)
@@ -45,27 +48,33 @@ class PDFDuplicateApp:
         theme_menu = tk.Menu(view_menu, tearoff=0)
         self.theme_var = tk.StringVar(value=self.settings.get('theme', 'light'))
         theme_menu.add_radiobutton(
-            label="Light Theme",
+            label=t('light_theme', self.lang),
             command=lambda: self.change_theme('light'),
             variable=self.theme_var,
             value='light'
         )
         theme_menu.add_radiobutton(
-            label="Dark Theme",
+            label=t('dark_theme', self.lang),
             command=lambda: self.change_theme('dark'),
             variable=self.theme_var,
             value='dark'
         )
-        view_menu.add_cascade(label="Theme", menu=theme_menu)
-        menu_bar.add_cascade(label="View", menu=view_menu)
+        view_menu.add_cascade(label=t('theme_menu', self.lang), menu=theme_menu)
+        menu_bar.add_cascade(label=t('view_menu', self.lang), menu=view_menu)
+
+        # Language menu
+        language_menu = tk.Menu(menu_bar, tearoff=0)
+        language_menu.add_radiobutton(label=t('english', 'en'), command=lambda: self.change_language('en'), value='en', variable=tk.StringVar(value=self.lang))
+        language_menu.add_radiobutton(label=t('italian', 'it'), command=lambda: self.change_language('it'), value='it', variable=tk.StringVar(value=self.lang))
+        menu_bar.add_cascade(label=t('language_menu', self.lang), menu=language_menu)
 
         # Create Help menu
         help_menu = tk.Menu(menu_bar, tearoff=0)
-        help_menu.add_command(label="How to Use", command=self.show_help, accelerator="F1")
+        help_menu.add_command(label=t('help_menu', self.lang), command=self.show_help, accelerator="F1")
         help_menu.add_separator()
-        help_menu.add_command(label="About PDF Finder", command=self.show_about)
-        help_menu.add_command(label="Support the Project", command=self.sponsor.show_sponsor)
-        menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label=t('about_menu', self.lang), command=self.show_about)
+        help_menu.add_command(label=t('sponsor_menu', self.lang), command=self.sponsor.show_sponsor)
+        menu_bar.add_cascade(label=t('help_menu', self.lang), menu=help_menu)
         
         # Apply saved theme
         self.change_theme(self.settings.get('theme', 'light'))
@@ -83,12 +92,12 @@ class PDFDuplicateApp:
         search_frame.pack(fill=tk.X, pady=5)
 
         # Move search controls to search frame
-        tk.Label(search_frame, text="Folder to Scan:", font=("Arial", 12)).pack(side=tk.LEFT, padx=5)
+        tk.Label(search_frame, text=t('select_folder', self.lang), font=("Arial", 12)).pack(side=tk.LEFT, padx=5)
         tk.Entry(search_frame, textvariable=self.folder_path, width=50, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
-        tk.Button(search_frame, text="Browse", command=self.browse_folder, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
+        tk.Button(search_frame, text=t('browse', self.lang), command=self.browse_folder, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
 
         # Find duplicates button
-        tk.Button(left_frame, text="Find Duplicates", command=self.find_duplicates, font=("Arial", 12)).pack(pady=5)
+        tk.Button(left_frame, text=t('find_duplicates', self.lang), command=self.find_duplicates, font=("Arial", 12)).pack(pady=5)
 
         # Progress bar and status below search controls
         self.progress_frame = ttk.Frame(left_frame)
@@ -132,9 +141,9 @@ class PDFDuplicateApp:
         # Preview options
         preview_options = ttk.Frame(right_frame)
         preview_options.pack(fill=tk.X, pady=(0, 5))
-        ttk.Radiobutton(preview_options, text="Image Preview", variable=self.preview_type, 
+        ttk.Radiobutton(preview_options, text=t('image_preview', self.lang), variable=self.preview_type, 
                         value="image", command=self.update_preview).pack(side=tk.LEFT, padx=5)
-        ttk.Radiobutton(preview_options, text="Text Preview", variable=self.preview_type, 
+        ttk.Radiobutton(preview_options, text=t('text_preview', self.lang), variable=self.preview_type, 
                         value="text", command=self.update_preview).pack(side=tk.LEFT, padx=5)
 
         # Preview area
@@ -151,10 +160,10 @@ class PDFDuplicateApp:
         self.preview_text.pack_forget()
 
         # Delete selected button
-        tk.Button(left_frame, text="Delete Selected", command=self.delete_selected, font=("Arial", 12)).pack(pady=10)
+        tk.Button(left_frame, text=t('delete_selected', self.lang), command=self.delete_selected, font=("Arial", 12)).pack(pady=10)
 
     def browse_folder(self):
-        folder = filedialog.askdirectory(title="Select a Folder")
+        folder = filedialog.askdirectory(title=t('select_folder', self.lang))
         if folder:
             self.folder_path.set(folder)
 
@@ -171,13 +180,13 @@ class PDFDuplicateApp:
     def find_duplicates(self):
         folder = self.folder_path.get()
         if not folder:
-            messagebox.showwarning("Warning", "Please select a folder to scan.")
+            messagebox.showwarning(t('warning', self.lang), t('please_select_folder', self.lang))
             return
 
         if self.is_searching:
             # If already searching, cancel the search
             self.is_searching = False
-            self.status_text.set("Cancelling search...")
+            self.status_text.set(t('cancelling_search', self.lang))
             self.root.update_idletasks()
             return
 
@@ -189,7 +198,7 @@ class PDFDuplicateApp:
         # Configure progress bar
         self.progress_bar.pack(fill=tk.X, pady=2)
         self.progress_bar.start(10)
-        self.status_text.set("Initializing scan...")
+        self.status_text.set(t('initializing_scan', self.lang))
         self.root.update_idletasks()
         
         # Schedule the search to run in the background
@@ -222,7 +231,7 @@ class PDFDuplicateApp:
 
             total_pdfs = len(pdf_files)
             if total_pdfs == 0:
-                self.safe_update_status("No PDF files found in the selected folder.")
+                self.safe_update_status(t('no_pdfs_found', self.lang))
                 return
 
             # Second pass: process files
@@ -246,13 +255,13 @@ class PDFDuplicateApp:
 
             # Search complete
             if not self.duplicates:
-                messagebox.showinfo("Info", "No duplicate PDFs found.")
+                messagebox.showinfo(t('info', self.lang), t('no_duplicates_found', self.lang))
             else:
-                messagebox.showinfo("Info", f"Found {len(self.duplicates)} duplicate files.")
+                messagebox.showinfo(t('info', self.lang), t('duplicates_found', self.lang, count=len(self.duplicates)))
 
         except Exception as e:
             if self.is_searching:  # Only show error if search wasn't cancelled
-                messagebox.showerror("Error", f"An error occurred while scanning: {str(e)}")
+                messagebox.showerror(t('error', self.lang), f"An error occurred while scanning: {str(e)}")
 
         finally:
             if self.is_searching:  # Only cleanup if search wasn't cancelled
@@ -264,7 +273,7 @@ class PDFDuplicateApp:
     def delete_selected(self):
         selected_items = self.tree.selection()
         if not selected_items:
-            messagebox.showwarning("Warning", "No files selected for deletion.")
+            messagebox.showwarning(t('warning', self.lang), t('no_files_selected', self.lang))
             return
 
         for item in selected_items:
@@ -274,30 +283,30 @@ class PDFDuplicateApp:
                 self.tree.delete(item)
             except Exception as e:
                 print(f"Error deleting {file_path}: {e}")
-                messagebox.showerror("Error", f"Could not delete {file_path}. Check the console for details.")
+                messagebox.showerror(t('error', self.lang), f"Could not delete {file_path}. Check the console for details.")
         
-        messagebox.showinfo("Info", "Selected files have been deleted.")
+        messagebox.showinfo(t('info', self.lang), t('files_deleted', self.lang))
 
     def show_help(self):
+        # For brevity, this help text is not translated in detail. You can add translation keys for each section if desired.
         help_text = (
-            "PDF Duplicate Finder Help\n\n"
+            f"{t('app_title', self.lang)}\n\n"
             "Features:\n"
-            "1. Find duplicate PDFs based on content\n"
-            "2. Preview PDFs (image or text)\n"
-            "3. Manage and delete duplicates\n\n"
+            f"1. {t('find_duplicates', self.lang)} based on content\n"
+            f"2. {t('image_preview', self.lang)}/{t('text_preview', self.lang)}\n"
+            f"3. {t('delete_selected', self.lang)}\n\n"
             "How to Use:\n"
-            "1. Select a folder to scan\n"
-            "2. Click 'Find Duplicates' to start scanning\n"
+            f"1. {t('select_folder', self.lang)}\n"
+            f"2. Click '{t('find_duplicates', self.lang)}'\n"
             "   - Progress and status will be shown\n"
             "   - Click again to cancel the scan\n"
             "3. Review found duplicates in the list\n"
-            "4. Select a PDF to preview its contents\n"
-            "   - Switch between image/text preview\n"
-            "5. Select duplicates and click 'Delete Selected' to remove them\n\n"
+            f"4. Select a PDF to preview its contents ({t('image_preview', self.lang)}/{t('text_preview', self.lang)})\n"
+            f"5. {t('delete_selected', self.lang)}\n\n"
             "Note: The app compares PDF contents, not just filenames,\n"
             "ensuring accurate duplicate detection."
         )
-        messagebox.showinfo("Help", help_text)
+        messagebox.showinfo(t('help_menu', self.lang), help_text)
 
     def load_settings(self):
         """Load application settings from config file."""
@@ -307,7 +316,7 @@ class PDFDuplicateApp:
                     return json.load(f)
             except (json.JSONDecodeError, IOError):
                 pass
-        return {'theme': 'light'}
+        return {'theme': 'light', 'lang': 'en'}
         
     def save_settings(self):
         """Save current settings to config file."""
@@ -322,6 +331,19 @@ class PDFDuplicateApp:
         self.theme_manager.apply_theme(theme_name)
         self.settings['theme'] = theme_name
         self.save_settings()
+
+    def change_language(self, lang):
+        self.lang = lang
+        self.settings['lang'] = lang
+        self.save_settings()
+        self.refresh_language()
+
+    def refresh_language(self):
+        # Re-initialize the UI to update all text
+        self.root.destroy()
+        new_root = tk.Tk()
+        app = PDFDuplicateApp(new_root)
+        new_root.mainloop()
         
     def show_about(self):
         About.show_about(self.root)
