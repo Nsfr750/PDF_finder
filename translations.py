@@ -68,8 +68,8 @@ TRANSLATIONS = {
 
 # Helper to get translation for a key
 
-def t(key, lang='en', **kwargs):
-    text = TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+def t(key, lang='it', **kwargs):
+    text = TRANSLATIONS.get(lang, TRANSLATIONS['it']).get(key, key)
     if kwargs:
         return text.format(**kwargs)
     return text
