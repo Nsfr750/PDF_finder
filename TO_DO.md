@@ -1,5 +1,12 @@
 # PDF Duplicate Finder - To Do List
 
+## Completed
+
+- [x] Add automatic update check functionality
+  - Automatic check on startup
+  - Manual check via Help menu
+  - User notifications for available updates
+
 ## High Priority
 - [ ] Implement batch processing for large PDF collections
 - [ ] Add progress bar for individual file processing
@@ -7,6 +14,7 @@
 - [ ] Add modification date comparison for duplicates
 
 ## Medium Priority
+
 - [ ] Implement drag and drop folder support
 - [ ] Implement "Undo" functionality for file deletions
 - [ ] Add support for more document formats (e.g., DOCX, PPTX)
@@ -24,6 +32,7 @@
 - [ ] Implement a command-line interface (CLI) version
 
 ## UI/UX Improvements
+
 - [ ] Add a "Recent Folders" menu
 - [ ] Implement a more detailed preview panel
 - [ ] Add thumbnails in the file list
@@ -38,6 +47,7 @@
 - [ ] Add a "Low Priority" mode for background scanning
 
 ## Testing & Quality
+
 - [ ] Add unit tests for core functionality
 - [ ] Set up CI/CD pipeline
 - [ ] Add integration tests for UI components
@@ -48,7 +58,8 @@
 - [ ] Add more screenshots to README
 - [ ] Create a user guide
 - [ ] Add API documentation for developers
-- [ ] Create a CONTRIBUTING.md
+- [ ] Document the update check functionality
+- [ ] Add contribution guidelines
 
 ## Future Ideas
 - [ ] Add cloud storage integration (Google Drive, Dropbox)

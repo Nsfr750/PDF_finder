@@ -33,7 +33,17 @@ A Python application that helps you find and remove duplicate PDF files based on
   - Background processing for large collections
   - Cancel long-running operations
 
-## What's New in v2.3.0
+## What's New in v2.4.0
+
+- **Automatic Update Checks**
+  - Automatic check for updates on startup
+  - Manual update check via Help menu
+  - User notifications for available updates
+  - Direct download of new versions from GitHub
+
+### Previous Updates
+
+#### v2.3.0
 
 - Added light and dark theme support
 - Theme preferences are now saved between sessions
@@ -53,10 +63,12 @@ A Python application that helps you find and remove duplicate PDF files based on
 - pdf2image >= 1.16.3 (PDF to image conversion)
 - Pillow >= 10.0.0 (Image processing and display)
 - imagehash >= 4.3.1 (Content comparison)
+- requests >= 2.31.0 (HTTP requests for update checks)
 - tkinter (GUI framework, comes with Python)
 
 ### System Dependencies
 - Poppler (required by pdf2image for PDF rendering)
+- Internet connection (for update checks)
   - Windows: Included in the pdf2image package
   - macOS: Install via `brew install poppler`
   - Linux: Install via `sudo apt-get install poppler-utils`
