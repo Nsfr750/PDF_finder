@@ -14,6 +14,8 @@ from about import About
 from sponsor import Sponsor
 from theme import ThemeManager
 from translations import TRANSLATIONS, t
+from updates import check_for_updates
+import threading
 
 
 
@@ -72,6 +74,7 @@ class PDFDuplicateApp:
         help_menu = tk.Menu(menu_bar, tearoff=0)
         help_menu.add_command(label=t('help_menu', self.lang), command=self.show_help, accelerator="F1")
         help_menu.add_separator()
+        help_menu.add_command(label=t('check_updates', self.lang), command=self.check_updates)
         help_menu.add_command(label=t('about_menu', self.lang), command=self.show_about)
         help_menu.add_command(label=t('sponsor_menu', self.lang), command=self.sponsor.show_sponsor)
         menu_bar.add_cascade(label=t('help_menu', self.lang), menu=help_menu)
@@ -445,7 +448,30 @@ class PDFDuplicateApp:
             self.preview_text.insert(1.0, f"Error loading text preview: {str(e)}")
 
 
+    def check_updates(self, force=False):
+        """Check for application updates."""
+        def run_update_check():
+            try:
+                check_for_updates(self.root, current_version="1.1.0", force_check=force)
+            except Exception as e:
+                messagebox.showerror(
+                    "Update Error",
+                    f"Failed to check for updates: {str(e)}",
+                    parent=self.root
+                )
+        
+        # Run update check in a separate thread to avoid freezing the UI
+        thread = threading.Thread(target=run_update_check, daemon=True)
+        thread.start()
+
+    def on_startup(self):
+        """Handle application startup tasks."""
+        # Check for updates on startup (only if not checked recently)
+        self.check_updates(force=False)
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = PDFDuplicateApp(root)
+    # Schedule the startup tasks to run after the main window is displayed
+    root.after(1000, app.on_startup)
     root.mainloop()
