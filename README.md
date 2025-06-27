@@ -1,5 +1,14 @@
 # PDF Duplicate Finder
 
+[![GitHub release](https://img.shields.io/badge/release-v2.5.0-green.svg?style=for-the-badge)](https://github.com/Nsfr750/pack/PDF_finder/releases/tag/v2.5.0)
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/graphs/commit-activity)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
+[![Tests](https://img.shields.io/badge/tests-passing-green?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/actions)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=for-the-badge)](https://codecov.io/gh/Nsfr750/PDF_finder)
+
+
 A Python application that helps you find and remove duplicate PDF files based on their content. Features an advanced preview system that allows you to verify duplicates before deletion, with a customizable interface that includes light and dark themes.
 
 ## Features
@@ -33,18 +42,29 @@ A Python application that helps you find and remove duplicate PDF files based on
   - Background processing for large collections
   - Cancel long-running operations
 
-## What's New in v2.4.0
+## What's New in v2.5.0
 
-- **Automatic Update Checks**
-  - Automatic check for updates on startup
-  - Manual update check via Help menu
-  - User notifications for available updates
-  - Direct download of new versions from GitHub
+- **Multi-language Support**
+  - Added support for English, Italian, Spanish, Portuguese, Russian, and Arabic
+  - Language selection from the View menu
+  - Automatic saving of language preference
+  - Right-to-Left (RTL) support for Arabic
+
+- **Improved Menu System**
+  - Refactored menu code for better maintainability
+  - Added Recent Folders menu with keyboard shortcuts
+  - Undo functionality for file deletions
+  - Better organization of menu items
 
 ### Previous Updates
 
-#### v2.3.0
+#### v2.4.0
+- Automatic update checks on startup
+- Manual update check via Help menu
+- User notifications for available updates
+- Direct download of new versions from GitHub
 
+#### v2.3.0
 - Added light and dark theme support
 - Theme preferences are now saved between sessions
 - New View menu for theme selection
@@ -130,4 +150,4 @@ Join our community:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.

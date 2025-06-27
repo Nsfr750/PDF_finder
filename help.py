@@ -43,10 +43,78 @@ class HelpWindow:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Help content (English and Italian)
+        # Help content for all supported languages
         help_texts = {
-            'en': """How to use PDF Duplicate Finder:\n\n1. Select a folder containing PDF files to scan for duplicates.\n2. Click 'Find Duplicates' to start the scanning process.\n3. The application will analyze the PDFs and display any duplicates found.\n4. For each set of duplicates:\n   - Select a file in the list to preview it\n   - Use the 'Delete Selected' button to remove unwanted duplicates\n   - Toggle between 'Image Preview' and 'Text Preview' to view different aspects of the PDF\n\nCustomization:\n- Change between Light and Dark themes from View > Theme menu\n- Theme preferences are saved between sessions\n- Adjust window size as needed - the interface is responsive\n\nTips:\n- The scanning process may take some time for large collections\n- Image-based comparison is more accurate but slower\n- Text-based comparison is faster but may miss visual duplicates\n- Always verify before deleting any files\n- Use horizontal scrollbar to view long file paths\n\nKeyboard Shortcuts:\n- Ctrl+O: Open folder\n- F5: Start new search\n- F1: Show this help\n- Ctrl+Q: Quit application\n- Delete: Remove selected files\n- Esc: Close preview\n\nFor additional support, please contact us through the 'About' section.""",
-            'it': """Come usare Trova Duplicati PDF:\n\n1. Seleziona una cartella contenente file PDF da scansionare per i duplicati.\n2. Clicca su 'Trova Duplicati' per avviare la scansione.\n3. L'applicazione analizzerà i PDF e mostrerà eventuali duplicati trovati.\n4. Per ogni gruppo di duplicati:\n   - Seleziona un file nell'elenco per visualizzarlo in anteprima\n   - Usa il pulsante 'Elimina Selezionati' per rimuovere i duplicati indesiderati\n   - Passa tra 'Anteprima Immagine' e 'Anteprima Testo' per vedere diversi aspetti del PDF\n\nPersonalizzazione:\n- Cambia tra tema chiaro e scuro dal menu Visualizza > Tema\n- Le preferenze del tema vengono salvate tra le sessioni\n- Ridimensiona la finestra secondo necessità - l'interfaccia è reattiva\n\nSuggerimenti:\n- La scansione può richiedere tempo per grandi raccolte\n- Il confronto basato sulle immagini è più accurato ma più lento\n- Il confronto basato sul testo è più veloce ma può perdere duplicati visivi\n- Verifica sempre prima di eliminare i file\n- Usa la barra di scorrimento orizzontale per visualizzare percorsi lunghi\n\nScorciatoie da tastiera:\n- Ctrl+O: Apri cartella\n- F5: Nuova ricerca\n- F1: Mostra questo aiuto\n- Ctrl+Q: Chiudi applicazione\n- Canc: Rimuovi file selezionati\n- Esc: Chiudi anteprima\n\nPer ulteriore supporto, contattaci tramite la sezione 'Informazioni'."""
+            'en': """How to use PDF Duplicate Finder:
+
+1. Select a folder containing PDF files to scan for duplicates.
+2. Click 'Find Duplicates' to start the scanning process.
+3. The application will analyze the PDFs and display any duplicates found.
+4. For each set of duplicates:
+   - Select a file in the list to preview it
+   - Use the 'Delete Selected' button to remove unwanted duplicates
+   - Toggle between 'Image Preview' and 'Text Preview' to view different aspects of the PDF
+
+Customization:
+- Change between Light and Dark themes from View > Theme menu
+- Switch between multiple languages from View > Language menu
+- Theme and language preferences are saved between sessions
+- Adjust window size as needed - the interface is responsive
+
+Tips:
+- The scanning process may take some time for large collections
+- Image-based comparison is more accurate but slower
+- Text-based comparison is faster but may miss visual duplicates
+- Always verify before deleting any files
+- Use horizontal scrollbar to view long file paths
+- Access recently used folders from the File menu
+
+Keyboard Shortcuts:
+- Ctrl+O: Open folder
+- F5: Start new search
+- F1: Show this help
+- Ctrl+Q: Quit application
+- Delete: Remove selected files
+- Esc: Close preview
+- Ctrl+Z: Undo last delete
+- Ctrl+1 to Ctrl+9: Open recent folder
+
+For additional support, please contact us through the 'About' section.""",
+            'it': """Come usare Trova Duplicati PDF:
+
+1. Seleziona una cartella contenente file PDF da scansionare per i duplicati.
+2. Clicca su 'Trova Duplicati' per avviare la scansione.
+3. L'applicazione analizzerà i PDF e mostrerà eventuali duplicati trovati.
+4. Per ogni gruppo di duplicati:
+   - Seleziona un file nell'elenco per visualizzarlo in anteprima
+   - Usa il pulsante 'Elimina Selezionati' per rimuovere i duplicati indesiderati
+   - Passa tra 'Anteprima Immagine' e 'Anteprima Testo' per vedere diversi aspetti del PDF
+
+Personalizzazione:
+- Cambia tra tema chiaro e scuro dal menu Visualizza > Tema
+- Cambia lingua dal menu Visualizza > Lingua
+- Le preferenze del tema e della lingua vengono salvate tra le sessioni
+- Ridimensiona la finestra secondo necessità - l'interfaccia è reattiva
+
+Suggerimenti:
+- La scansione può richiedere tempo per grandi raccolte
+- Il confronto basato sulle immagini è più accurato ma più lento
+- Il confronto basato sul testo è più veloce ma può perdere duplicati visivi
+- Verifica sempre prima di eliminare i file
+- Usa la barra di scorrimento orizzontale per visualizzare percorsi lunghi
+- Accedi alle cartelle recenti dal menu File
+
+Scorciatoie da tastiera:
+- Ctrl+O: Apri cartella
+- F5: Nuova ricerca
+- F1: Mostra questo aiuto
+- Ctrl+Q: Chiudi applicazione
+- Canc: Rimuovi file selezionati
+- Esc: Chiudi anteprima
+- Ctrl+Z: Annulla ultima eliminazione
+- Ctrl+1 a Ctrl+9: Apri cartella recente
+
+Per ulteriore supporto, contattaci tramite la sezione 'Informazioni'."""
         }
         text.insert(tk.END, help_texts.get(lang, help_texts['en']))
         text.config(state=tk.DISABLED)  # Make it read-only

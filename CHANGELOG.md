@@ -2,6 +2,24 @@
 
 All notable changes to the PDF Duplicate Finder project will be documented in this file.
 
+## [2.5.0] - 2025-06-27
+
+### Features
+
+- Added multi-language support with 6 languages:
+  - English
+  - Italian
+  - Spanish
+  - Portuguese
+  - Russian
+  - Arabic (with RTL support)
+- Language selection from View > Language menu
+- Automatic saving of language preference
+- Refactored menu system for better maintainability
+- Added Recent Folders menu with keyboard shortcuts (Ctrl+1 to Ctrl+9)
+- Added Undo functionality for file deletions (Ctrl+Z)
+- Improved menu organization and accessibility
+
 ## [2.4.0] - 2025-06-23
 
 ### Features

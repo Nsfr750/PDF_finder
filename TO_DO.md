@@ -7,6 +7,17 @@
   - Manual check via Help menu
   - User notifications for available updates
 
+- [x] Multi-language support
+  - Added English, Italian, Spanish, Portuguese, Russian, and Arabic
+  - Language selection from View menu
+  - RTL support for Arabic
+
+- [x] Menu system improvements
+  - Refactored menu code for better maintainability
+  - Added Recent Folders menu with keyboard shortcuts
+  - Added Undo functionality for file deletions
+  - Better menu organization
+
 ## High Priority
 - [ ] Implement batch processing for large PDF collections
 - [ ] Add progress bar for individual file processing
@@ -14,12 +25,16 @@
 - [ ] Add modification date comparison for duplicates
 
 ## Medium Priority
-
 - [ ] Implement drag and drop folder support
-- [ ] Implement "Undo" functionality for file deletions
-- [ ] Add support for more document formats (e.g., DOCX, PPTX)
-- [ ] Add a "Recent Folders" menu
 - [ ] Improve status messages and notifications
+- [ ] Add more keyboard shortcuts for common actions
+- [ ] Add support for more file types (e.g., images, documents)
+
+## Future Enhancements
+- [ ] Add more languages
+- [ ] Implement a plugin system for custom comparison methods
+- [ ] Add support for cloud storage providers
+- [ ] Implement a command-line interface (CLI) version
 
 ## Features
 - [ ] Add advanced filtering options
@@ -33,16 +48,12 @@
 
 ## UI/UX Improvements
 
-- [ ] Add a "Recent Folders" menu
 - [ ] Implement a more detailed preview panel
-- [ ] Add thumbnails in the file list
 - [ ] Improve status messages and notifications
 - [ ] Add a "Select All" option for duplicates
 - [ ] Implement a "Select by Pattern" feature
 
 ## Performance
-- [ ] Optimize memory usage for large PDFs
-- [ ] Add multi-threading for faster scanning
 - [ ] Implement caching for previously scanned folders
 - [ ] Add a "Low Priority" mode for background scanning
 
@@ -62,7 +73,6 @@
 - [ ] Add contribution guidelines
 
 ## Future Ideas
-- [ ] Add cloud storage integration (Google Drive, Dropbox)
 - [ ] Implement machine learning for better duplicate detection
 - [ ] Add support for password-protected PDFs
 - [ ] Create a system tray version for background monitoring
@@ -87,3 +97,7 @@
 - [x] Add theme preference persistence
 - [x] Improve horizontal scrolling for file lists
 - [x] Add configuration file for user preferences
+- [x] Add a "Recent Folders" menu
+- [x] Add thumbnails in the file list
+- [x] Optimize memory usage for large PDFs
+- [x] Add multi-threading for faster scanning
