@@ -1,46 +1,73 @@
 # PDF Duplicate Finder - To Do List
 
-## Completed
+## Completed ✓
 
-- [x] Add automatic update check functionality
+### Update System
+
+- [x] **Improved Update System**
+  - Fixed automatic update checking
+  - Better error handling and user feedback
+  - Version comparison improvements
   - Automatic check on startup
-  - Manual check via Help menu
-  - User notifications for available updates
+  - Manual check via Help > Check for Updates
 
-- [x] Multi-language support
+### Multi-language Support
+
+- [x] **Multi-language Support**
   - Added English, Italian, Spanish, Portuguese, Russian, and Arabic
-  - Language selection from View menu
+  - Language selection from View > Language
   - RTL support for Arabic
+  - Dynamic language switching
 
-- [x] Menu system improvements
-  - Refactored menu code for better maintainability
-  - Added Recent Folders menu with keyboard shortcuts
-  - Added Undo functionality for file deletions
-  - Better menu organization
+### Menu System
+
+- [x] **Menu System**
+  - Complete menu refactoring for better maintainability
+  - Added Recent Folders with keyboard shortcuts (Ctrl+1 to Ctrl+9)
+  - Undo functionality for file deletions (Ctrl+Z)
+  - Better menu organization and accessibility
+  - Theme support with light/dark modes
+
+### Documentation
+
+- [x] **Documentation**
+  - Updated help system with new features
+  - Improved README with better installation instructions
+  - Comprehensive CHANGELOG
+  - Better code documentation
 
 ## High Priority
+
 - [ ] Implement batch processing for large PDF collections
 - [ ] Add progress bar for individual file processing
 - [ ] Add file size information in the duplicates list
 - [ ] Add modification date comparison for duplicates
 
 ## Medium Priority
+
 - [ ] Implement drag and drop folder support
 - [ ] Improve status messages and notifications
 - [ ] Add more keyboard shortcuts for common actions
 - [ ] Add support for more file types (e.g., images, documents)
 
 ## Future Enhancements
+
 - [ ] Add more languages
 - [ ] Implement a plugin system for custom comparison methods
 - [ ] Add support for cloud storage providers
 - [ ] Implement a command-line interface (CLI) version
 
 ## Features
+
+### Filtering Options
+
 - [ ] Add advanced filtering options
   - Filter by file size range
   - Filter by modification date
   - Filter by page count
+
+### File Management
+
 - [ ] Add batch rename functionality for keeping files
 - [ ] Implement a "Quick Compare" mode for faster scanning
 - [ ] Add support for saving/loading scan results
@@ -48,16 +75,28 @@
 
 ## UI/UX Improvements
 
+### Preview and Selection
+
 - [ ] Implement a more detailed preview panel
 - [ ] Improve status messages and notifications
 - [ ] Add a "Select All" option for duplicates
 - [ ] Implement a "Select by Pattern" feature
 
 ## Performance
+
+### Optimization
+
 - [ ] Implement caching for previously scanned folders
 - [ ] Add a "Low Priority" mode for background scanning
+- [ ] Optimize memory usage for large PDFs
+- [ ] Add support for multi-threaded processing
+- [ ] Implement caching for faster repeated scans
+- [ ] Create a system tray version for background monitoring
+- [ ] Add support for custom comparison algorithms
 
 ## Testing & Quality
+
+### Test Coverage
 
 - [ ] Add unit tests for core functionality
 - [ ] Set up CI/CD pipeline
@@ -66,17 +105,16 @@
 - [ ] Add test coverage reporting
 
 ## Documentation
+
+### Content Updates
+
 - [ ] Add more screenshots to README
-- [ ] Create a user guide
+- [ ] Create a comprehensive user guide
 - [ ] Add API documentation for developers
 - [ ] Document the update check functionality
 - [ ] Add contribution guidelines
-
-## Future Ideas
-- [ ] Implement machine learning for better duplicate detection
-- [ ] Add support for password-protected PDFs
-- [ ] Create a system tray version for background monitoring
-- [ ] Add support for custom comparison algorithms
+- [ ] Create a user guide video
+- [ ] Add more examples to the documentation
 
 ## Bug Fixes
 - [ ] Fix any reported issues (none currently)

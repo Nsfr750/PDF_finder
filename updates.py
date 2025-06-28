@@ -203,16 +203,39 @@ class UpdateChecker:
         self.dialog.destroy()
 
 
-def check_for_updates(parent: Optional[tk.Tk] = None, current_version: str = "__version__", force_check: bool = False) -> None:
+def check_for_updates(parent: Optional[tk.Tk] = None, current_version: str = "__version__", force_check: bool = False) -> Tuple[bool, str, str]:
     """Check for application updates and show a dialog if an update is available.
     
     Args:
         parent: Parent window for dialogs.
         current_version: Current application version.
         force_check: If True, skip the cache and force a check.
+        
+    Returns:
+        Tuple of (update_available: bool, version: str, url: str)
     """
-    checker = UpdateChecker(current_version)
-    update_available, update_info = checker.check_for_updates(parent, force_check=force_check)
-    
-    if update_available and update_info:
-        checker.show_update_dialog(parent, update_info)
+    try:
+        # Import here to avoid circular imports
+        from version import get_version
+        
+        # If default version string is passed, get the real version
+        if current_version == "__version__":
+            current_version = get_version()
+            
+        checker = UpdateChecker(current_version=current_version)
+        update_available, update_info = checker.check_for_updates(parent=parent, force_check=force_check)
+        
+        if update_available and update_info:
+            return True, update_info.get('version', ''), update_info.get('url', '')
+            
+        return False, "", ""
+        
+    except Exception as e:
+        logger.error(f"Error in check_for_updates: {e}")
+        if parent:
+            messagebox.showerror(
+                "Update Error",
+                f"Failed to check for updates: {str(e)}",
+                parent=parent
+            )
+        return False, "", ""

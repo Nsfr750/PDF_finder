@@ -2224,28 +2224,51 @@ class PDFDuplicateApp:
             self.preview_text.config(state=tk.DISABLED)
 
     def check_updates(self, force=False):
-        """Check for application updates."""
+        """Check for application updates.
+        
+        Args:
+            force: If True, force a check even if auto-updates are disabled
+        """
+        # Skip if auto-updates are disabled and this is not a manual check
         if not force and not self.settings.get('check_updates', True):
             return
             
         def run_update_check():
             try:
-                update_available, version, url = check_for_updates()
-                if update_available:
+                # Get current version
+                from version import get_version
+                current_version = get_version()
+                
+                # Check for updates
+                update_available, version, url = check_for_updates(
+                    parent=self.root if force else None,
+                    current_version=current_version,
+                    force_check=force
+                )
+                
+                # If update is available, show dialog
+                if update_available and version and url:
                     if messagebox.askyesno(
                         "Update Available",
-                        f"A new version {version} is available. Would you like to download it?",
-                        parent=self.root
+                        f"A new version {version} is available.\n\n"
+                        f"Current version: {current_version}\n"
+                        f"New version: {version}\n\n"
+                        "Would you like to download it now?",
+                        parent=self.root if force else None
                     ):
                         import webbrowser
                         webbrowser.open(url)
+                
+                # If this was a manual check and no updates are available
                 elif force:
                     messagebox.showinfo(
                         "No Updates",
-                        "You are using the latest version.",
+                        f"You are using the latest version ({current_version}).",
                         parent=self.root
                     )
+                        
             except Exception as e:
+                logger.error(f"Error in update check: {e}")
                 if force:  # Only show error if user manually checked
                     messagebox.showerror(
                         "Update Error",

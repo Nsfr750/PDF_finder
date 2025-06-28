@@ -1,6 +1,6 @@
 # PDF Duplicate Finder
 
-[![GitHub release](https://img.shields.io/badge/release-v2.5.0-green.svg?style=for-the-badge)](https://github.com/Nsfr750/pack/PDF_finder/releases/tag/v2.5.0)
+[![GitHub release](https://img.shields.io/badge/release-v2.6.0-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/tag/v2.6.0)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/graphs/commit-activity)
@@ -13,48 +13,83 @@ A Python application that helps you find and remove duplicate PDF files based on
 
 ## Features
 
-- **Smart Duplicate Detection**
-  - Content-based comparison for accurate results
-  - Support for both text and image-based comparison
-  - Fast scanning with progress tracking
+### Smart Duplicate Detection
 
-- **Modern User Interface**
-  - Light and dark theme support
-  - Responsive layout that adapts to window size
-  - Horizontal scrolling for long file paths
-  - Keyboard shortcuts for common actions
+- Content-based comparison for accurate results
+- Support for both text and image-based comparison
+- Fast scanning with progress tracking
+- Batch processing for large collections
+- Configurable comparison sensitivity
 
-- **Advanced PDF Preview**
-  - Image preview with page navigation
-  - Text content extraction view
-  - High-quality rendering with LANCZOS resampling
-  - Automatic image scaling
+### Modern User Interface
 
-- **User Experience**
-  - Theme preferences saved between sessions
-  - Intuitive menu organization
-  - Comprehensive help system
-  - About dialog with version information
-  - Support and sponsorship options
+- Light and dark theme support with automatic switching
+- Responsive layout that adapts to window size
+- Horizontal scrolling for long file paths
+- Comprehensive keyboard shortcuts
+- Multi-language support (6+ languages)
+- Recent folders with quick access
 
-- **Performance**
-  - Efficient memory management
-  - Background processing for large collections
-  - Cancel long-running operations
+### Advanced PDF Preview
 
-## What's New in v2.5.0
+- Image preview with page navigation
+- Text content extraction view
+- High-quality rendering with LANCZOS resampling
+- Automatic image scaling
 
-- **Multi-language Support**
-  - Added support for English, Italian, Spanish, Portuguese, Russian, and Arabic
-  - Language selection from the View menu
-  - Automatic saving of language preference
-  - Right-to-Left (RTL) support for Arabic
+### User Experience
 
-- **Improved Menu System**
-  - Refactored menu code for better maintainability
-  - Added Recent Folders menu with keyboard shortcuts
-  - Undo functionality for file deletions
-  - Better organization of menu items
+- Theme preferences saved between sessions
+- Intuitive menu organization
+- Comprehensive help system
+- About dialog with version information
+- Support and sponsorship options
+
+### Performance & Reliability
+
+- Efficient memory management for large PDF collections
+- Background processing to keep UI responsive
+- Cancel long-running operations at any time
+- Automatic recovery from errors
+- Optimized for both SSD and HDD storage
+
+## What's New in v2.6.0
+
+### Improved Update System
+
+- Fixed automatic update checking
+- Better error handling and user feedback
+- Smoother update experience
+
+### Enhanced Stability
+
+- Fixed various crash issues
+- Improved error recovery
+- Better handling of corrupted PDFs
+
+### Dependency Updates
+
+- Updated to latest library versions
+- Added Windows-specific optimizations
+- Better compatibility with Python 3.10+
+
+## Previous Versions
+
+### v2.5.0
+
+#### Multi-language Support
+
+- Added support for English, Italian, Spanish, Portuguese, Russian, and Arabic
+- Language selection from the View menu
+- Automatic saving of language preference
+- Right-to-Left (RTL) support for Arabic
+
+#### Improved Menu System
+
+- Refactored menu code for better maintainability
+- Added Recent Folders menu with keyboard shortcuts
+- Undo functionality for file deletions
+- Better organization of menu items
 
 ### Previous Updates
 

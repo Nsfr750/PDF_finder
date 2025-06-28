@@ -45,9 +45,49 @@ class HelpWindow:
 
         # Help content for all supported languages
         help_texts = {
-            'en': """How to use PDF Duplicate Finder:
+            'en': """# PDF Duplicate Finder - User Guide
 
-1. Select a folder containing PDF files to scan for duplicates.
+## Getting Started
+
+1. **Select a folder** containing PDF files to scan for duplicates.
+   - Use the 'Browse' button or drag and drop a folder
+   - Recent folders are available under 'File > Recent Folders'
+
+2. **Scan for duplicates**
+   - Click 'Scan' to start the duplicate detection process
+   - Progress will be shown in the status bar
+   - Cancel the scan at any time with 'Cancel'
+
+## Working with Results
+
+- **Preview files** by selecting them in the list
+  - View both images and text content
+  - Navigate between pages with the arrow buttons
+
+- **Manage duplicates**
+  - Select files to keep or delete
+  - Use 'Delete Selected' to remove unwanted duplicates
+  - 'Undo Delete' (Ctrl+Z) to restore recently deleted files
+
+## Features
+
+- **Multi-language Support**
+  - Change language from View > Language
+  - Supports English, Italian, Spanish, Portuguese, Russian, and Arabic
+
+- **Themes**
+  - Switch between light and dark themes
+  - Theme preference is saved between sessions
+
+- **Automatic Updates**
+  - Automatically checks for updates on startup
+  - Manual check via Help > Check for Updates
+
+## Tips
+
+- Use keyboard shortcuts for faster navigation
+- Check the status bar for progress and messages
+- Report any issues on our GitHub repository
 2. Click 'Find Duplicates' to start the scanning process.
 3. The application will analyze the PDFs and display any duplicates found.
 4. For each set of duplicates:

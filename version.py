@@ -7,8 +7,8 @@ for the PDF Finder project.
 
 # Version information follows Semantic Versioning 2.0.0 (https://semver.org/)
 VERSION_MAJOR = 2
-VERSION_MINOR = 5  # Added multi-language support and menu refactoring
-VERSION_PATCH = 1  # search patch
+VERSION_MINOR = 6  # Added improved update system and documentation
+VERSION_PATCH = 0  # Minor bug fixes and improvements
 
 # Additional version qualifiers
 VERSION_QUALIFIER = ''  # Could be 'alpha', 'beta', 'rc', or ''

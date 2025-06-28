@@ -231,7 +231,7 @@ class MenuManager:
         help_menu.add_separator()
         help_menu.add_command(
             label=t('check_updates', self.app.lang),
-            command=self.app.check_updates
+            command=lambda: self.app.check_updates(force=True)
         )
         help_menu.add_command(
             label=t('about_menu', self.app.lang), 
