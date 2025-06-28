@@ -95,6 +95,10 @@ class PDFDuplicateApp:
         self.scan_start_time = 0
         self.suppress_warnings = True  # Default to suppressing PyPDF2 warnings
         
+        # Initialize sponsor attribute for the sponsor menu
+        from sponsor import Sponsor
+        self.sponsor = Sponsor(root)
+        
         # Initialize config file path
         self.config_dir = Path.home() / '.pdfduplicatefinder'
         self.config_dir.mkdir(exist_ok=True)
@@ -223,29 +227,8 @@ class PDFDuplicateApp:
         self.main_container = ttk.Frame(self.root, padding="10")
         self.main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Add a menu for file operations
-        menubar = tk.Menu(self.root)
-        self.root.config(menu=menubar)
-        
-        # Add Tools menu
-        self.tools_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Tools", menu=self.tools_menu)
-        
-        # Add menu items
-        self.tools_menu.add_command(
-            label="View Problematic Files", 
-            command=self.show_problematic_files,
-            state=tk.DISABLED
-        )
-        self.tools_menu.add_separator()
-        
-        # Add checkbox for suppressing warnings
+        # Initialize suppress_warnings_var for the menu
         self.suppress_warnings_var = tk.BooleanVar(value=self.suppress_warnings)
-        self.tools_menu.add_checkbutton(
-            label="Suppress PDF Warnings",
-            variable=self.suppress_warnings_var,
-            command=self.toggle_suppress_warnings
-        )
         
         # Apply theme if theme manager exists
         if hasattr(self, 'theme_manager') and hasattr(self, 'theme_var'):
@@ -1296,36 +1279,39 @@ class PDFDuplicateApp:
         """Populate the treeview with the current duplicates."""
         try:
             # Clear existing items in the treeview
-            self.tree.delete(*self.tree.get_children())
+            for item in self.tree.get_children():
+                self.tree.delete(item)
             
             # If no duplicates, we're done
             if not hasattr(self, 'duplicates') or not self.duplicates:
                 return
                 
             # Populate the treeview with duplicates
-            for dup in self.duplicates:
-                dup_path = dup[0]
-                orig_path = dup[1] if len(dup) > 1 else ''
+            for group_id, (file_hash, files) in enumerate(self.duplicates, 1):
+                # Create a parent item for each group of duplicates
+                parent = self.tree.insert("", "end", text=f"Duplicate Group {group_id}", 
+                                       values=("", "", "", "", "", ""))
                 
-                # Get file info or use empty values if not found
-                dup_info = self.scan_results.get('file_info', {}).get(dup_path, {})
-                orig_info = self.scan_results.get('file_info', {}).get(orig_path, {}) if orig_path else {}
-                
-                # Format values for display
-                dup_size = f"{dup_info.get('size_kb', 0):.1f}" if dup_info else ''
-                dup_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(dup_info.get('mod_time', 0))) if dup_info and 'mod_time' in dup_info else ''
-                orig_size = f"{orig_info.get('size_kb', 0):.1f}" if orig_info else ''
-                orig_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(orig_info.get('mod_time', 0))) if orig_info and 'mod_time' in orig_info else ''
-                
-                # Insert into tree with all columns
-                self.tree.insert('', 'end', values=(
-                    dup_path,
-                    dup_size,
-                    dup_date,
-                    orig_path,
-                    orig_size,
-                    orig_date
-                ))
+                # Add each file in the duplicate group
+                for file_info in files:
+                    file_path = file_info["path"]
+                    file_size = file_info.get("size", 0) / 1024  # Convert to KB
+                    file_mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(file_info.get("mtime", 0)))
+                    
+                    # Insert file with parent
+                    self.tree.insert(parent, "end", 
+                                  values=(
+                                      file_path,
+                                      f"{file_size:.1f} KB",
+                                      file_mtime,
+                                      "",  # Original path (empty for duplicates)
+                                      "",  # Original size
+                                      ""   # Original date
+                                  ))
+            
+            # Expand all groups
+            for item in self.tree.get_children():
+                self.tree.item(item, open=True)
                 
             # Enable save button since we have results
             self.save_btn.config(state=tk.NORMAL)
@@ -1333,6 +1319,8 @@ class PDFDuplicateApp:
         except Exception as e:
             error_msg = f"Error populating duplicates treeview: {str(e)}"
             print(f"[ERROR] {error_msg}")
+            import traceback
+            traceback.print_exc()
             self.show_status(error_msg, "error")
     
     def _finalize_scan_results(self, total_files, duplicate_count):
@@ -1354,9 +1342,8 @@ class PDFDuplicateApp:
             if duplicate_count > 0:
                 status_msg = f"Found {duplicate_count} duplicate(s) in {total_files} files. Time: {time_str}"
                 self.show_status(status_msg, "warning")
-                if hasattr(self, 'tools_menu') and self.problematic_files:
-                    self.tools_menu.entryconfig("View Problematic Files", state=tk.NORMAL)
-                
+                if hasattr(self, 'menu_manager') and self.problematic_files:
+                    self.menu_manager.update_tools_menu_state(tk.NORMAL)
                 # Populate the treeview with duplicates
                 self._populate_duplicates_treeview()
             else:
@@ -1388,86 +1375,77 @@ class PDFDuplicateApp:
             tuple: (processed_count, duplicate_count) or (0, 0) if cancelled/errored
         """
         try:
-            if not self.is_searching:
-                print("[INFO] Scan was cancelled before processing files")
-                return 0, 0
-                
+            batch_size = 10  # Process files in batches of 10
             total_files = len(pdf_files)
-            print(f"[DEBUG] Starting to process {total_files} files")
-            
-            if total_files == 0:
-                self.show_status("No PDF files found in the selected folder", "warning")
-                return 0, 0
-                
-            # Initialize progress tracking
             processed_count = 0
             duplicate_count = 0
-            batch_size = min(50, max(10, total_files // 20))  # Dynamic batch size
             
-            print(f"[DEBUG] Using batch size: {batch_size}")
+            # Dictionary to store file hashes and their info
+            # Format: {hash: [file_info1, file_info2, ...]}
+            hash_groups = {}
             
-            # Initialize hash map for storing file hashes
-            pdf_hash_map = {}
-            
-            # Process files in batches
             for i in range(0, total_files, batch_size):
                 if not self.is_searching:
-                    print("[DEBUG] Search cancelled by user")
                     return 0, 0
                     
-                # Get current batch
                 batch = pdf_files[i:i + batch_size]
-                print(f"[DEBUG] Processing batch {i//batch_size + 1}/{(total_files + batch_size - 1)//batch_size} "
-                      f"(files {i+1}-{min(i + batch_size, total_files)} of {total_files})")
                 
-                # Process the batch
-                try:
+                # Process each file in the batch
+                for file_path in batch:
                     if not self.is_searching:
-                        print("[INFO] Scan cancelled before processing batch")
-                        return 0, 0
+                        return processed_count, duplicate_count
                         
-                    batch_results, new_duplicates, batch_duplicates = self.process_batch(
-                        batch, pdf_hash_map, duplicate_count
-                    )
-                    
-                    # Update counts
-                    if batch_results is None:  # Search was cancelled
-                        print("[INFO] Batch processing was cancelled")
-                        return 0, 0
+                    try:
+                        # Get file info
+                        file_info = self.get_pdf_info(file_path)
+                        if not file_info:
+                            continue
                             
-                    processed_count += len(batch_results)
-                    duplicate_count = new_duplicates
-                    
-                    # Add to duplicates list
-                    self.duplicates.extend(batch_duplicates)
-                    
+                        # Calculate file hash
+                        file_hash = self.calculate_pdf_hash(file_info)
+                        
+                        # Add file info to the appropriate hash group
+                        if file_hash not in hash_groups:
+                            hash_groups[file_hash] = []
+                        
+                        hash_groups[file_hash].append(file_info)
+                        
+                        # If we have more than one file with this hash, it's a duplicate
+                        if len(hash_groups[file_hash]) > 1:
+                            duplicate_count += 1
+                            
+                    except Exception as e:
+                        print(f"[ERROR] Error processing {file_path}: {str(e)}")
+                        continue
+                        
                     # Update progress
-                    progress = 10 + int(80 * (i + len(batch)) / total_files)
+                    processed_count += 1
+                    progress = 10 + int(80 * (processed_count / total_files))  # 10-90% range
                     self.update_overall_progress(progress)
+                    self.update_file_progress(int((i % batch_size + 1) / batch_size * 100))
                     
-                    # Update status message
-                    status_msg = f"Scanned {i + len(batch)}/{total_files} files"
-                    if duplicate_count > 0:
-                        status_msg += f", found {duplicate_count} duplicates"
-                    self.show_status(status_msg, "scanning")
-                    
-                    print(f"[DEBUG] {status_msg}")
-                    
-                except Exception as e:
-                    print(f"[ERROR] Error processing batch: {str(e)}")
-                    print(traceback.format_exc())
-                    self.show_status(f"Error processing batch: {str(e)}", "error")
+                    # Update status every 10 files for better performance
+                    if processed_count % 10 == 0:
+                        status_msg = f"Scanned {processed_count}/{total_files} files"
+                        if duplicate_count > 0:
+                            status_msg += f", found {duplicate_count} duplicates"
+                        self.show_status(status_msg, "scanning")
+                        print(f"[DEBUG] {status_msg}")
                 
-                # Allow UI to update
+                # Allow UI to update between batches
                 self.root.update_idletasks()
-                
+            
+            # Store duplicate groups (only groups with more than one file)
+            self.duplicates = [(h, files) for h, files in hash_groups.items() if len(files) > 1]
+            
             print(f"[DEBUG] Processing complete. Processed {processed_count} files, found {duplicate_count} duplicates")
             return processed_count, duplicate_count
             
         except Exception as e:
             error_msg = f"Error in _process_files_in_batches: {str(e)}"
             print(f"[ERROR] {error_msg}")
-            print(traceback.format_exc())
+            import traceback
+            traceback.print_exc()
             self.show_status(error_msg, "error")
             return 0, 0
 
@@ -2127,7 +2105,7 @@ class PDFDuplicateApp:
             self.show_status("PDF warnings are now suppressed", "info")
         else:
             self.show_status("PDF warnings are now enabled", "info")
-    
+            
     def _setup_drag_drop(self):
         """Set up drag and drop functionality."""
         try:
@@ -2317,38 +2295,28 @@ class PDFDuplicateApp:
             self.show_status("PDF warnings are now enabled", "info")
             
     def show_problematic_files(self):
-        """Show a dialog with a list of files that had issues during processing."""
+        """Show a dialog with files that had issues during processing."""
         if not hasattr(self, 'problematic_files') or not self.problematic_files:
-            messagebox.showinfo("No Issues Found", "No problematic files were found during the last scan.", parent=self.root)
+            messagebox.showinfo("No Issues", "No problematic files found.")
             return
             
-        # Create a new top-level window
-        window = Toplevel(self.root)
-        window.title("Problematic Files")
-        window.geometry("600x400")
-        window.transient(self.root)
-        window.grab_set()
+        # Create a dialog to show problematic files
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Problematic Files")
+        dialog.geometry("600x400")
         
-        # Create a frame for the listbox and scrollbar
-        frame = ttk.Frame(window)
-        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Add a text widget to display the files
+        text = tk.Text(dialog, wrap=tk.WORD, padx=10, pady=10)
+        text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Add a label
-        label = ttk.Label(frame, text="The following files had issues during processing:", padding=(5, 5, 5, 10))
-        label.pack(anchor=tk.W)
-        
-        # Create a listbox with scrollbar
-        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL)
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, selectmode=tk.SINGLE)
-        scrollbar.config(command=listbox.yview)
-        
-        # Add problematic files to the listbox
+        # Insert the list of problematic files
+        text.insert(tk.END, "The following files had issues during processing:\\n\\n")
         for file_path, error in self.problematic_files:
-            display_text = f"{file_path}: {str(error)}"
-            listbox.insert(tk.END, display_text)
+            text.insert(tk.END, f"• {file_path}\\n")
+            text.insert(tk.END, f"  Error: {error}\\n\\n")
         
-        # Pack the listbox and scrollbar
-        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Disable text widget
+        text.config(state=tk.DISABLED)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # Add a close button

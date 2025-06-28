@@ -23,6 +23,7 @@ class MenuManager:
         self.recent_menu = None
         self.undo_menu_item = None
         self.theme_var = None
+        self.tools_menu = None
         
     def create_menu_bar(self):
         """Create and return the main menu bar."""
@@ -37,16 +38,20 @@ class MenuManager:
         # View menu with theme and language submenus
         view_menu = self._create_view_menu()
         
-        # Help menu
-        help_menu = self._create_help_menu()
+        # Tools menu
+        self.tools_menu = self._create_tools_menu()
         
         # Log menu
         log_menu = self._create_log_menu()
+        
+        # Help menu
+        help_menu = self._create_help_menu()
         
         # Add all menus to the menu bar
         self.menu_bar.add_cascade(label=t('file_menu', self.app.lang), menu=file_menu)
         self.menu_bar.add_cascade(label=t('edit_menu', self.app.lang), menu=edit_menu)
         self.menu_bar.add_cascade(label=t('view_menu', self.app.lang), menu=view_menu)
+        self.menu_bar.add_cascade(label='Tools', menu=self.tools_menu)
         self.menu_bar.add_cascade(label=t('log_menu', self.app.lang), menu=log_menu)
         self.menu_bar.add_cascade(label=t('help_menu', self.app.lang), menu=help_menu)
         
@@ -245,11 +250,27 @@ class MenuManager:
         if not self.menu_bar:
             return
             
-        # Update main menu labels
-        self.menu_bar.entryconfig(0, label=t('file_menu', self.app.lang))
-        self.menu_bar.entryconfig(1, label=t('edit_menu', self.app.lang))
-        self.menu_bar.entryconfig(2, label=t('view_menu', self.app.lang))
-        self.menu_bar.entryconfig(3, label=t('help_menu', self.app.lang))
+        # Get all menu cascade items
+        for i in range(self.menu_bar.index('end') + 1):
+            try:
+                # Get the menu cascade configuration
+                config = self.menu_bar.entrycget(i, 'menu')
+                if config:
+                    # Recreate the menu cascade with updated label
+                    label = ''
+                    if i == 0:
+                        label = t('file_menu', self.app.lang)
+                    elif i == 1:
+                        label = t('edit_menu', self.app.lang)
+                    elif i == 2:
+                        label = t('view_menu', self.app.lang)
+                    elif i == 3:
+                        label = t('help_menu', self.app.lang)
+                    
+                    if label:
+                        self.menu_bar.entryconfigure(i, label=label)
+            except tk.TclError:
+                continue
         
         # Update other menu items as needed
         # (The actual menu items will be recreated with the new language when the menu is reopened)
@@ -258,3 +279,30 @@ class MenuManager:
         """Update the state of the Undo menu item."""
         if self.undo_menu_item:
             self.undo_menu_item['state'] = state
+            
+    def update_tools_menu_state(self, state):
+        """Update the state of the Tools menu items."""
+        if hasattr(self, 'tools_menu'):
+            # Update the state of the "View Problematic Files" menu item
+            self.tools_menu.entryconfig(0, state=state)
+    
+    def _create_tools_menu(self):
+        """Create and return the Tools menu."""
+        tools_menu = tk.Menu(self.menu_bar, tearoff=0)
+        
+        # Add menu items
+        tools_menu.add_command(
+            label="View Problematic Files", 
+            command=self.app.show_problematic_files,
+            state=tk.DISABLED
+        )
+        tools_menu.add_separator()
+        
+        # Add checkbox for suppressing warnings
+        tools_menu.add_checkbutton(
+            label="Suppress PDF Warnings",
+            variable=self.app.suppress_warnings_var,
+            command=self.app.toggle_suppress_warnings
+        )
+        
+        return tools_menu
