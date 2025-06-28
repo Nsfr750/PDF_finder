@@ -3,14 +3,29 @@ import hashlib
 import tempfile
 import json
 import math
+import logging
+from typing import List, Dict, Optional, Set
+
+# Configure PyPDF2 logger to suppress warnings
+logging.getLogger('PyPDF2').setLevel(logging.ERROR)
+
+# Custom logger for our application
+logger = logging.getLogger('PDFDuplicateFinder')
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
+import traceback
 import concurrent.futures
 import shutil
 from pathlib import Path
-from PyPDF2 import PdfReader
+import PyPDF2
+from PyPDF2 import PdfReader, PdfWriter
+from PyPDF2.errors import PdfReadError
 from pdf2image import convert_from_path
 import tkinter as tk
 from PIL import Image, ImageTk
-from tkinter import filedialog, messagebox, ttk, Button, Tk, Label, Toplevel, Frame, IntVar, Scale, HORIZONTAL
+from tkinter import filedialog, messagebox, ttk, Button, Tk, Label,  simpledialog, font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL
 from tkinterdnd2 import TkinterDnD, DND_FILES, DND_ALL
 import imagehash
 from help import HelpWindow
@@ -25,9 +40,7 @@ import os
 from datetime import datetime
 import queue
 import webbrowser
-from tkinter import simpledialog, font as tkfont, colorchooser
 from PIL import ImageOps, ImageDraw, ImageFont
-from PyPDF2 import PdfWriter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import win32ui
@@ -76,9 +89,11 @@ class PDFDuplicateApp:
         self.is_searching = False
         self.duplicates = []
         self.all_pdf_files = []
+        self.problematic_files = []  # Track files with issues
         self.last_scan_folder = ""
         self.current_preview_image = None
         self.scan_start_time = 0
+        self.suppress_warnings = True  # Default to suppressing PyPDF2 warnings
         
         # Initialize config file path
         self.config_dir = Path.home() / '.pdfduplicatefinder'
@@ -89,18 +104,25 @@ class PDFDuplicateApp:
         self.settings = self.load_settings()
         self.lang = self.settings.get('lang', 'en')
         
+        # Initialize theme manager first since it's needed early
+        self.theme_manager = ThemeManager(self.root)
+        
         # Initialize Tkinter variables after root is set up
         self._initialize_tk_variables()
         
-        # Set up the UI
-        self._setup_ui()
+        # Apply theme before setting up UI
+        self.theme_manager.apply_theme(self.settings.get('theme', 'light'))
         
-        # Load theme
-        self.theme_manager = ThemeManager(self.root)
-        self.theme_manager.apply_theme(self.theme_var.get())
+        # Set up the UI without menu first
+        self._setup_ui()
         
         # Set up drag and drop
         self._setup_drag_drop()
+        
+        # Create menu bar after everything else is initialized
+        from menu import MenuManager
+        self.menu_manager = MenuManager(self.root, self)
+        self.menu_manager.create_menu_bar()
     
     def _initialize_tk_variables(self):
         """Initialize Tkinter variables after root window is created."""
@@ -150,17 +172,67 @@ class PDFDuplicateApp:
         self.root.geometry("1024x768")
         print("Setting window geometry...")
         
+    def show_about(self):
+        """Show the about dialog."""
+        About.show_about(self.root)
+        
+    def show_sponsor(self):
+        """Show the sponsor dialog."""
+        if not hasattr(self, 'sponsor'):
+            self.sponsor = Sponsor(self.root)
+        self.sponsor.show_sponsor()
+        
+    def show_help(self):
+        """Show the help dialog."""
+        HelpWindow(self.root, self.lang)
+        
+    def on_select(self, event):
+        """Handle treeview selection event."""
+        selection = self.tree.selection()
+        if not selection:
+            return
+            
+        # Get the selected item
+        item = self.tree.item(selection[0])
+        
+        # Update preview if preview area exists
+        if hasattr(self, 'preview_text'):
+            self.update_preview()
+
     def _setup_ui(self):
         """Set up the user interface components."""
         print("Setting up UI...")
-        # Initialize theme manager and sponsor
-        self.theme_manager = ThemeManager(self.root)
-        self.sponsor = Sponsor(self.root)
+        # Create main container
+        self.main_container = ttk.Frame(self.root, padding="10")
+        self.main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Create menu manager
-        from menu import MenuManager
-        self.menu_manager = MenuManager(self.root, self)
-        self.menu_manager.create_menu_bar()
+        # Add a menu for file operations
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # Add Tools menu
+        self.tools_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Tools", menu=self.tools_menu)
+        
+        # Add menu items
+        self.tools_menu.add_command(
+            label="View Problematic Files", 
+            command=self.show_problematic_files,
+            state=tk.DISABLED
+        )
+        self.tools_menu.add_separator()
+        
+        # Add checkbox for suppressing warnings
+        self.suppress_warnings_var = tk.BooleanVar(value=self.suppress_warnings)
+        self.tools_menu.add_checkbutton(
+            label="Suppress PDF Warnings",
+            variable=self.suppress_warnings_var,
+            command=self.toggle_suppress_warnings
+        )
+        
+        # Apply theme if theme manager exists
+        if hasattr(self, 'theme_manager') and hasattr(self, 'theme_var'):
+            self.theme_manager.apply_theme(self.theme_var.get())
         
         # Main container
         main_container = ttk.Frame(self.root)
@@ -332,6 +404,10 @@ class PDFDuplicateApp:
         # Status label
         self.status_label = ttk.Label(self.progress_frame, textvariable=self.status_text)
         self.status_label.pack(pady=2)
+        
+        # Status details label
+        self.status_details = ttk.Label(self.progress_frame, text="", wraplength=600, justify=tk.LEFT)
+        self.status_details.pack(fill=tk.X, pady=(0, 5))
         
         # Configure progress bars
         self.progress_bar.configure(maximum=100)
@@ -558,6 +634,17 @@ class PDFDuplicateApp:
         self.progress_bar['value'] = value
         self.root.update_idletasks()
         
+    def clear_status(self):
+        """Clear the status message and reset progress bars."""
+        self.status_text.set("")
+        self.status_details.config(text="")
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar['value'] = 0
+        if hasattr(self, 'file_progress_bar'):
+            self.file_progress_bar['value'] = 0
+        if hasattr(self, 'file_progress_label'):
+            self.file_progress_label.config(text=t('current_file', self.lang) + ":")
+        self.root.update_idletasks()
     def update_status_details(self, message):
         """Update the status text with detailed information."""
         if not self.is_searching:
@@ -649,27 +736,105 @@ class PDFDuplicateApp:
 
     def get_pdf_info(self, file_path):
         """Get PDF metadata including page count and modification time."""
+        file_info = {
+            'path': file_path,
+            'file': os.path.basename(file_path),
+            'size_kb': 0,
+            'mod_time': 0,
+            'page_count': 0,
+            'error': None
+        }
+        
         try:
-            file_stat = os.stat(file_path)
-            mod_time = file_stat.st_mtime
-            size_kb = file_stat.st_size / 1024  # Convert to KB
-            
-            # Only read PDF if we need page count or full content
-            page_count = 0
-            if (self.filters_active.get() and self.filter_pages_min.get() or self.filter_pages_max.get()) or \
-               self.compare_mode.get() != 'quick':
-                with open(file_path, 'rb') as file:
-                    pdf_reader = PdfReader(file)
-                    page_count = len(pdf_reader.pages)
-            
-            return {
-                'path': file_path,
-                'size_kb': size_kb,
-                'mod_time': mod_time,
-                'page_count': page_count
-            }
+            # Check if file exists and is accessible
+            if not os.path.exists(file_path):
+                error_msg = f"File not found: {file_path}"
+                file_info['error'] = error_msg
+                logger.warning(error_msg)
+                self.problematic_files.append(file_info)
+                return None
+                
+            if not os.access(file_path, os.R_OK):
+                error_msg = f"No read permission for: {file_path}"
+                file_info['error'] = error_msg
+                logger.warning(error_msg)
+                self.problematic_files.append(file_info)
+                return None
+                
+            # Get file size in KB
+            try:
+                file_size = os.path.getsize(file_path)
+                if file_size == 0:
+                    error_msg = f"Empty file: {file_path}"
+                    file_info['error'] = error_msg
+                    logger.warning(error_msg)
+                    self.problematic_files.append(file_info)
+                    return None
+                    
+                file_info['size_kb'] = file_size / 1024
+                file_info['mod_time'] = os.path.getmtime(file_path)
+                
+                # Get page count with more robust error handling
+                try:
+                    with open(file_path, 'rb') as f:
+                        try:
+                            pdf_reader = PdfReader(f)
+                            file_info['page_count'] = len(pdf_reader.pages)
+                            
+                            if file_info['page_count'] == 0:
+                                error_msg = f"No pages in PDF: {os.path.basename(file_path)}"
+                                file_info['error'] = error_msg
+                                logger.warning(error_msg)
+                                self.problematic_files.append(file_info)
+                            
+                            # Try to access some basic metadata to verify PDF is not completely broken
+                            try:
+                                _ = pdf_reader.metadata
+                            except Exception as meta_err:
+                                error_msg = f"PDF metadata access error: {str(meta_err)}"
+                                file_info['error'] = error_msg
+                                if not self.suppress_warnings:
+                                    logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                                self.problematic_files.append(file_info)
+                            
+                        except (PdfReadError, PyPDF2.errors.PdfReadError) as e:
+                            error_msg = f"Corrupted PDF: {str(e)}"
+                            file_info['error'] = error_msg
+                            if not self.suppress_warnings:
+                                logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                            self.problematic_files.append(file_info)
+                            file_info['page_count'] = 0
+                            
+                        except Exception as e:
+                            error_msg = f"Error reading PDF: {type(e).__name__} - {str(e)}"
+                            file_info['error'] = error_msg
+                            logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                            self.problematic_files.append(file_info)
+                            file_info['page_count'] = 0
+                        
+                        return file_info
+                        
+                except Exception as e:
+                    error_msg = f"Error processing PDF: {type(e).__name__} - {str(e)}"
+                    file_info['error'] = error_msg
+                    logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                    self.problematic_files.append(file_info)
+                    return file_info
+                    
+            except Exception as e:
+                error_msg = f"Error getting file info: {type(e).__name__} - {str(e)}"
+                file_info['error'] = error_msg
+                logger.error(f"{file_path} - {error_msg}")
+                self.problematic_files.append(file_info)
+                return None
+                
         except Exception as e:
-            print(f"Error getting info for {file_path}: {e}")
+            error_msg = f"Unexpected error: {type(e).__name__} - {str(e)}"
+            file_info['error'] = error_msg
+            logger.error(f"{file_path} - {error_msg}")
+            import traceback
+            traceback.print_exc()
+            self.problematic_files.append(file_info)
             return None
 
     def apply_filters(self, file_info):
@@ -790,7 +955,7 @@ class PDFDuplicateApp:
                 'scanned_folder': self.last_scan_folder,
                 'scan_timestamp': time.time(),
                 'duplicates': self.scan_results['duplicates'],
-                'file_info': {info['path']: info for info in self.scan_results['file_info']}
+                'file_info': self.scan_results['file_info']  # Already a dictionary
             }
             
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -825,10 +990,10 @@ class PDFDuplicateApp:
             self.folder_path.set(loaded_data.get('scanned_folder', ''))
             self.last_scan_folder = loaded_data.get('scanned_folder', '')
             
-            # Store loaded data
+            # Store loaded data - keep file_info as a dictionary for direct access
             self.scan_results = {
                 'duplicates': loaded_data['duplicates'],
-                'file_info': list(loaded_data['file_info'].values())
+                'file_info': loaded_data['file_info']  # Keep as dictionary
             }
             
             # Update the tree view with all columns
@@ -870,9 +1035,12 @@ class PDFDuplicateApp:
     def clear_results(self):
         """Clear current scan results and UI."""
         self.duplicates = []
-        self.scan_results = {}
-        self.tree.delete(*self.tree.get_children())
+        self.all_pdf_files = []
+        self.problematic_files = []
+        for item in self.tree.get_children():
+            self.tree.delete(item)
         self.clear_preview()
+        self.clear_status()
         self.save_btn.config(state=tk.DISABLED)
         
     def find_duplicates(self):
@@ -892,7 +1060,9 @@ class PDFDuplicateApp:
         self.clear_results()
         self.last_scan_folder = folder
         
-        # Reset progress
+        # Reset progress and set searching flag
+        self.is_searching = True
+        self.scan_start_time = time.time()
         self.update_overall_progress(0, 100)
         self.update_status_details("Preparing to scan...")
         
@@ -901,25 +1071,73 @@ class PDFDuplicateApp:
         self.show_status(f"Scanning: {folder_name}", "scanning")
         
         # Start scanning in background
-        threading.Thread(target=self._scan_folder, args=(folder,), daemon=True).start()
+        scan_thread = threading.Thread(target=self._scan_folder, args=(folder,), daemon=True)
+        scan_thread.start()
     
     def _scan_folder(self, folder):
         """Scan folder for PDF files in a background thread."""
         try:
-            # First pass: find all PDF files
+            if not self.is_searching:
+                print("[INFO] Scan was cancelled before starting")
+                return
+                
+            if not os.path.isdir(folder):
+                error_msg = f"Folder not found: {folder}"
+                print(f"[ERROR] {error_msg}")
+                self.show_status(error_msg, "error")
+                return
+                
+            print(f"[INFO] Starting scan in folder: {folder}")
             self.update_status_details("Searching for PDF files...")
             pdf_files = []
             
-            for root, _, files in os.walk(folder):
-                if not self.is_searching:
+            try:
+                for root, dirs, files in os.walk(folder):
+                    if not self.is_searching:
+                        print("[INFO] Scan cancelled by user")
+                        return
+                        
+                    for file in files:
+                        if not self.is_searching:
+                            print("[INFO] Scan cancelled during file processing")
+                            return
+                            
+                        if file.lower().endswith(".pdf"):
+                            full_path = os.path.join(root, file)
+                            try:
+                                # Verify it's actually a file and not a symlink or other type
+                                if os.path.isfile(full_path):
+                                    pdf_files.append(full_path)
+                                    
+                                    # Update status every 100 files for better performance
+                                    if len(pdf_files) % 100 == 0:
+                                        self.update_status_details(f"Found {len(pdf_files)} PDF files so far...")
+                                        
+                            except Exception as e:
+                                print(f"[WARNING] Error accessing {full_path}: {e}")
+                                continue
+                
+                print(f"[INFO] Found {len(pdf_files)} PDF files to process")
+                self.all_pdf_files = pdf_files
+                total_files = len(pdf_files)
+                
+                if total_files == 0:
+                    self.show_status("No PDF files found in the selected folder", "warning")
+                    self.is_searching = False
                     return
                     
-                for file in files:
-                    if file.lower().endswith(".pdf"):
-                        pdf_files.append(os.path.join(root, file))
-            
-            self.all_pdf_files = pdf_files
-            total_files = len(pdf_files)
+                # Process files in batches
+                self._process_files_in_batches(pdf_files)
+                
+            except Exception as e:
+                error_msg = f"Error scanning folder: {str(e)}"
+                print(f"[ERROR] {error_msg}")
+                import traceback
+                traceback.print_exc()
+                self.show_status(error_msg, "error")
+            finally:
+                # Ensure we always reset the searching flag
+                self.is_searching = False
             
             if total_files == 0:
                 self.show_status("No PDF files found in the selected folder", "warning")
@@ -940,7 +1158,7 @@ class PDFDuplicateApp:
             
         except Exception as e:
             self.show_status(f"Error processing files: {str(e)}", "error")
-            print(f"Error in _process_files_in_batches: {str(e)}")
+            print(f"Error in _scan_folder: {str(e)}")
     
     def _process_files_in_batches(self, pdf_files):
         """Process PDF files in batches to find duplicates.
@@ -950,13 +1168,18 @@ class PDFDuplicateApp:
         """
         try:
             total_files = len(pdf_files)
+            print(f"[DEBUG] Starting to process {total_files} files")
+            
             if total_files == 0:
-                return
+                self.show_status("No PDF files found in the selected folder", "warning")
+                return 0, 0
                 
             # Initialize progress tracking
             processed_count = 0
             duplicate_count = 0
             batch_size = min(50, max(10, total_files // 20))  # Dynamic batch size
+            
+            print(f"[DEBUG] Using batch size: {batch_size}")
             
             # Initialize hash map for storing file hashes
             pdf_hash_map = {}
@@ -964,10 +1187,13 @@ class PDFDuplicateApp:
             # Process files in batches
             for i in range(0, total_files, batch_size):
                 if not self.is_searching:
-                    return
+                    print("[DEBUG] Search cancelled by user")
+                    return 0, 0
                     
                 # Get current batch
                 batch = pdf_files[i:i + batch_size]
+                print(f"[DEBUG] Processing batch {i//batch_size + 1}/{(total_files + batch_size - 1)//batch_size} "
+                      f"(files {i+1}-{min(i + batch_size, total_files)} of {total_files})")
                 
                 # Update status
                 self.update_status_details(
@@ -976,43 +1202,141 @@ class PDFDuplicateApp:
                 )
                 
                 # Process the batch
-                batch_results, new_duplicates, batch_duplicates = self.process_batch(
-                    batch, pdf_hash_map, duplicate_count
-                )
-                
-                # Update counts
-                if batch_results is None:  # Search was cancelled
-                    return
+                try:
+                    batch_results, new_duplicates, batch_duplicates = self.process_batch(
+                        batch, pdf_hash_map, duplicate_count
+                    )
                     
-                processed_count += len(batch_results)
-                duplicate_count = new_duplicates
-                
-                # Add to duplicates list
-                self.duplicates.extend(batch_duplicates)
-                
-                # Update progress
-                progress = 10 + int(80 * (i + len(batch)) / total_files)
-                self.update_overall_progress(progress)
-                
-                # Update status message
-                self.show_status(
-                    f"Scanned {i + len(batch)}/{total_files} files, "
-                    f"found {duplicate_count} duplicates",
-                    "scanning"
-                )
+                    # Update counts
+                    if batch_results is None:  # Search was cancelled
+                        print("[DEBUG] Batch processing returned None, search cancelled")
+                        return 0, 0
+                        
+                    processed_count += len(batch_results)
+                    duplicate_count = new_duplicates
+                    
+                    # Add to duplicates list
+                    self.duplicates.extend(batch_duplicates)
+                    
+                    # Update progress
+                    progress = 10 + int(80 * (i + len(batch)) / total_files)
+                    self.update_overall_progress(progress)
+                    
+                    # Update status message
+                    status_msg = f"Scanned {i + len(batch)}/{total_files} files"
+                    if duplicate_count > 0:
+                        status_msg += f", found {duplicate_count} duplicates"
+                    self.show_status(status_msg, "scanning")
+                    
+                    print(f"[DEBUG] {status_msg}")
+                    
+                except Exception as e:
+                    print(f"[ERROR] Error processing batch: {str(e)}")
+                    print(traceback.format_exc())
+                    self.show_status(f"Error processing batch: {str(e)}", "error")
                 
                 # Allow UI to update
                 self.root.update_idletasks()
                 
+            print(f"[DEBUG] Processing complete. Processed {processed_count} files, found {duplicate_count} duplicates")
             return processed_count, duplicate_count
             
         except Exception as e:
-            self.show_status(f"Error processing files: {str(e)}", "error")
-            print(f"Error in _process_files_in_batches: {str(e)}")
+            error_msg = f"Error in _process_files_in_batches: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            print(traceback.format_exc())
+            self.show_status(error_msg, "error")
             return 0, 0
 
+    def show_problematic_files(self):
+        """Show a dialog with problematic files."""
+        if not self.problematic_files:
+            messagebox.showinfo("No Issues Found", "No problematic files were found during the scan.")
+            return
+            
+        # Create a new window
+        problem_win = tk.Toplevel(self.root)
+        problem_win.title("Problematic Files")
+        problem_win.geometry("800x600")
+        
+        # Add a frame for buttons
+        btn_frame = ttk.Frame(problem_win)
+        btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Add export button
+        ttk.Button(btn_frame, text="Export to File", 
+                  command=self.export_problematic_files).pack(side=tk.LEFT, padx=5)
+        
+        # Add close button
+        ttk.Button(btn_frame, text="Close", 
+                  command=problem_win.destroy).pack(side=tk.RIGHT, padx=5)
+        
+        # Add a treeview to display problematic files
+        columns = ("File", "Path", "Issue")
+        tree = ttk.Treeview(problem_win, columns=columns, show="headings")
+        
+        # Configure columns
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=200 if col != "Path" else 400)
+        
+        # Add scrollbar
+        vsb = ttk.Scrollbar(problem_win, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Add data to treeview
+        for file_info in self.problematic_files:
+            tree.insert("", "end", values=(
+                file_info.get('file', ''),
+                file_info.get('path', ''),
+                file_info.get('error', 'Unknown error')
+            ))
+    
+    def export_problematic_files(self):
+        """Export list of problematic files to a text file."""
+        if not self.problematic_files:
+            return
+            
+        # Ask for save location
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            title="Save Problematic Files List As"
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write("Problematic Files Report\n")
+                f.write("=" * 30 + "\n\n")
+                f.write(f"Total files with issues: {len(self.problematic_files)}\n\n")
+                
+                for idx, file_info in enumerate(self.problematic_files, 1):
+                    f.write(f"{idx}. {file_info.get('file', '')}\n")
+                    f.write(f"   Path: {file_info.get('path', '')}\n")
+                    f.write(f"   Issue: {file_info.get('error', 'Unknown')}\n")
+                    f.write("-" * 50 + "\n")
+                    
+            messagebox.showinfo("Export Complete", 
+                            f"Successfully exported {len(self.problematic_files)} problematic files to:\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export file: {str(e)}")
+    
+    def toggle_suppress_warnings(self):
+        """Toggle the suppress warnings setting."""
+        self.suppress_warnings = self.suppress_warnings_var.get()
+        
     def _finalize_scan_results(self, total_files, duplicate_count):
         """Finalize scan results and update UI."""
+        # Update the Tools menu to enable/disable the Problematic Files option
+        if hasattr(self, 'tools_menu'):
+            state = tk.NORMAL if self.problematic_files else tk.DISABLED
+            self.tools_menu.entryconfig("View Problematic Files", state=state)
+            
         try:
             # Update progress
             self.update_overall_progress(95)
@@ -1109,15 +1433,34 @@ class PDFDuplicateApp:
         batch_results = []
         batch_duplicates = []
         
+        print(f"[DEBUG] Processing batch of {len(file_batch)} files")
+        
         # First, get file info for all files in batch
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            file_infos = list(filter(None, executor.map(self.get_pdf_info, file_batch)))
-        
-        # Apply filters if active
-        if self.filters_active.get():
-            file_infos = [info for info in file_infos if self.apply_filters(info)]
-        
-        if not file_infos:
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                file_infos = list(filter(None, executor.map(self.get_pdf_info, file_batch)))
+            
+            print(f"[DEBUG] Got file info for {len(file_infos)} files")
+            
+            if not file_infos:
+                print("[WARNING] No file information was retrieved for this batch")
+                return [], 0, []
+                
+            # Apply filters if active
+            filters_active = getattr(self, 'filters_active', None)
+            if filters_active and filters_active.get():
+                filtered_infos = [info for info in file_infos if info and self.apply_filters(info)]
+                print(f"[DEBUG] Filtered from {len(file_infos)} to {len(filtered_infos)} files after applying filters")
+                file_infos = filtered_infos
+            
+            if not file_infos:
+                print("[DEBUG] No files to process after filtering")
+                return [], duplicate_count, []
+                
+        except Exception as e:
+            print(f"[ERROR] Error processing batch: {e}")
+            import traceback
+            traceback.print_exc()
             return [], duplicate_count, []
             
         # For quick compare, first group by file size to reduce number of full comparisons
@@ -1590,59 +1933,16 @@ class PDFDuplicateApp:
             )
     
     def clear_status(self):
-        """Clear the status message."""
+        """Clear the status message and reset progress bars."""
         self.status_text.set("")
         self.status_details.config(text="")
-        self.overall_progress['value'] = 0
-
-    def show_help(self):
-        # For brevity, this help text is not translated in detail. You can add translation keys for each section if desired.
-        help_text = (
-            f"{t('app_title', self.lang)}\n\n"
-            "Features:\n"
-            f"1. {t('find_duplicates', self.lang)} based on content\n"
-            f"2. {t('image_preview', self.lang)}/{t('text_preview', self.lang)}\n"
-            f"3. {t('delete_selected', self.lang)}\n\n"
-            "How to Use:\n"
-            f"1. {t('select_folder', self.lang)}\n"
-            f"2. Click '{t('find_duplicates', self.lang)}'\n"
-            "   - Progress and status will be shown\n"
-            "   - Click again to cancel the scan\n"
-            "3. Review found duplicates in the list\n"
-            f"4. Select a PDF to preview its contents ({t('image_preview', self.lang)}/{t('text_preview', self.lang)})\n"
-            f"5. {t('delete_selected', self.lang)}\n\n"
-            "Note: The app compares PDF contents, not just filenames,\n"
-            "ensuring accurate duplicate detection."
-        )
-        messagebox.showinfo(t('help_menu', self.lang), help_text)
-
-    def load_settings(self):
-        """Load application settings from config file."""
-        if self.config_file.exists():
-            try:
-                with open(self.config_file, 'r') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
-        return {'theme': 'light', 'lang': 'en'}
-        
-        self.status_label.master.configure(style=f'{message_type}.TFrame' if message_type != 'info' else 'TFrame')
-        
-        # Schedule clearing the message
-        if hasattr(self, '_status_timeout'):
-            self.root.after_cancel(self._status_timeout)
-        
-        if timeout > 0 and message_type not in ('scanning',):
-            self._status_timeout = self.root.after(
-                timeout, 
-                lambda: self.clear_status() if message_type != 'scanning' else None
-            )
-
-    def clear_status(self):
-        """Clear the status message."""
-        self.status_text.set("")
-        self.status_details.config(text="")
-        self.overall_progress['value'] = 0
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar['value'] = 0
+        if hasattr(self, 'file_progress_bar'):
+            self.file_progress_bar['value'] = 0
+        if hasattr(self, 'file_progress_label'):
+            self.file_progress_label.config(text=t('current_file', self.lang) + ":")
+        self.root.update_idletasks()
 
     def show_help(self):
         # For brevity, this help text is not translated in detail. You can add translation keys for each section if desired.
@@ -1771,23 +2071,6 @@ class PDFDuplicateApp:
     
     def refresh_language(self):
         """Refresh the UI with the new language."""
-        # This method is kept for backward compatibility
-        # The actual refresh is now handled in change_language
-        pass
-
-    def show_about(self):
-        """Show the about dialog."""
-        about = About(self.root, self.lang)
-        about.show()
-
-    def show_sponsor(self):
-        """Show the sponsor dialog."""
-        self.sponsor.show()
-
-    def on_select(self, event):
-        """Handle treeview selection event."""
-        self.update_preview()
-
     def update_preview(self):
         """Update the preview based on the selected item."""
         self.clear_preview()

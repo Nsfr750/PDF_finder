@@ -40,10 +40,14 @@ class MenuManager:
         # Help menu
         help_menu = self._create_help_menu()
         
+        # Log menu
+        log_menu = self._create_log_menu()
+        
         # Add all menus to the menu bar
         self.menu_bar.add_cascade(label=t('file_menu', self.app.lang), menu=file_menu)
         self.menu_bar.add_cascade(label=t('edit_menu', self.app.lang), menu=edit_menu)
         self.menu_bar.add_cascade(label=t('view_menu', self.app.lang), menu=view_menu)
+        self.menu_bar.add_cascade(label=t('log_menu', self.app.lang), menu=log_menu)
         self.menu_bar.add_cascade(label=t('help_menu', self.app.lang), menu=help_menu)
         
         # Set the menu bar
@@ -58,6 +62,17 @@ class MenuManager:
         # Recent folders submenu
         self.recent_menu = tk.Menu(file_menu, tearoff=0, postcommand=self.app.update_recent_folders_menu)
         file_menu.add_cascade(label=t('recent_folders', self.app.lang), menu=self.recent_menu)
+        file_menu.add_separator()
+        
+        # Add Save and Load Results commands
+        file_menu.add_command(
+            label=t('save_results', self.app.lang, default='Save Results...'), 
+            command=self.app.save_scan_results
+        )
+        file_menu.add_command(
+            label=t('load_results', self.app.lang, default='Load Results...'), 
+            command=self.app.load_scan_results
+        )
         file_menu.add_separator()
         file_menu.add_command(label=t('exit', self.app.lang), command=self.app.root.quit)
         
@@ -124,8 +139,84 @@ class MenuManager:
         
         return language_menu
     
+    def _create_log_menu(self):
+        """Create the Log menu."""
+        log_menu = tk.Menu(self.menu_bar, tearoff=0)
+        
+        # Add commands for each log utility
+        log_menu.add_command(
+            label=t('view_logs', self.app.lang, default='View Logs'),
+            command=self._open_log_viewer
+        )
+        log_menu.add_command(
+            label=t('view_debug_logs', self.app.lang, default='View Debug Logs'),
+            command=self._open_debug_logs
+        )
+        log_menu.add_separator()
+        log_menu.add_command(
+            label=t('test_logger', self.app.lang, default='Test Logger'),
+            command=self._test_logger
+        )
+        log_menu.add_command(
+            label=t('view_traceback', self.app.lang, default='View Traceback'),
+            command=self._view_traceback
+        )
+        
+        return log_menu
+        
+    def _open_log_viewer(self):
+        """Open the log viewer utility."""
+        try:
+            from utils.log_viewer import show_log_viewer
+            show_log_viewer(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open log viewer: {str(e)}")
+    
+    def _open_debug_logs(self):
+        """Open the debug logs in the default text editor."""
+        try:
+            from utils.logger import get_log_file_path
+            import os
+            import subprocess
+            
+            log_file = get_log_file_path()
+            
+            if not os.path.exists(log_file):
+                messagebox.showinfo("Info", "No debug log file found.")
+                return
+                
+            # Open the log file with the default text editor
+            if os.name == 'nt':  # Windows
+                os.startfile(log_file)
+            elif os.name == 'posix':  # macOS and Linux
+                subprocess.run(['xdg-open', log_file])
+            else:
+                # Fallback for other platforms
+                import webbrowser
+                webbrowser.open(log_file)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open debug logs: {str(e)}")
+    
+    def _test_logger(self):
+        """Run the logger test utility."""
+        try:
+            from utils.test_logger import run_tests
+            run_tests()
+            messagebox.showinfo("Success", "Logger tests completed successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to run logger tests: {str(e)}")
+    
+    def _view_traceback(self):
+        """Open the traceback utility."""
+        try:
+            from utils.traceback import show_traceback_window
+            show_traceback_window(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open traceback viewer: {str(e)}")
+    
     def _create_help_menu(self):
-        """Create and return the Help menu."""
+        """Create the Help menu."""
         help_menu = tk.Menu(self.menu_bar, tearoff=0)
         help_menu.add_command(
             label=t('help_menu', self.app.lang), 
@@ -134,7 +225,7 @@ class MenuManager:
         )
         help_menu.add_separator()
         help_menu.add_command(
-            label=t('check_updates', self.app.lang), 
+            label=t('check_updates', self.app.lang),
             command=self.app.check_updates
         )
         help_menu.add_command(
@@ -144,7 +235,7 @@ class MenuManager:
         if hasattr(self.app, 'sponsor'):
             help_menu.add_command(
                 label=t('sponsor_menu', self.app.lang), 
-                command=self.app.sponsor.show_sponsor
+                command=self.app.show_sponsor
             )
         
         return help_menu

@@ -22,7 +22,7 @@ class About:
         description = ttk.Label(about_dialog, text='A simple and efficient tool for searching PDF files.', justify=tk.CENTER)
         description.pack(pady=20)
 
-        copyright = ttk.Label(about_dialog, text=' 2025 Nsfr750')
+        copyright = ttk.Label(about_dialog, text='© 2025 Nsfr750')
         copyright.pack(pady=10)
 
         ttk.Button(about_dialog, text='Close', command=about_dialog.destroy).pack(pady=20)
