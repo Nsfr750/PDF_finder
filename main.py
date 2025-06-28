@@ -148,6 +148,10 @@ class PDFDuplicateApp:
         self.file_progress = tk.IntVar(self.root)
         self.overall_progress_value = tk.IntVar(self.root)
         
+        # Warning suppression
+        self.suppress_warnings = self.settings.get('suppress_warnings', False)
+        self.suppress_warnings_var = tk.BooleanVar(self.root, value=self.suppress_warnings)
+        
         # Filter variables
         self.filter_size_min = tk.StringVar(self.root)
         self.filter_size_max = tk.StringVar(self.root)
@@ -291,9 +295,22 @@ class PDFDuplicateApp:
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, pady=5)
         
+        # Buttons frame for find/stop
+        action_frame = ttk.Frame(button_frame)
+        action_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
         # Find duplicates button
-        tk.Button(button_frame, text=t('find_duplicates', self.lang), command=self.find_duplicates, 
-                 font=("Arial", 10)).pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        self.find_btn = tk.Button(action_frame, text=t('find_duplicates', self.lang), 
+                                command=self.find_duplicates, 
+                                font=("Arial", 10))
+        self.find_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        
+        # Stop scan button
+        self.stop_btn = tk.Button(action_frame, text=t('stop_scan', self.lang) if hasattr(t, 'stop_scan') else 'Stop Scan',
+                                command=self.cancel_scan,
+                                font=("Arial", 10), 
+                                state=tk.DISABLED)
+        self.stop_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
                  
         # Save results button
         self.save_btn = tk.Button(button_frame, text=t('save_results', self.lang), command=self.save_scan_results,
@@ -1033,16 +1050,97 @@ class PDFDuplicateApp:
             messagebox.showerror("Error", f"Failed to load scan results: {str(e)}")
             
     def clear_results(self):
-        """Clear current scan results and UI."""
+        """Clear all results and reset the UI."""
         self.duplicates = []
-        self.all_pdf_files = []
+        self.scan_results = {}
         self.problematic_files = []
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        self.clear_preview()
-        self.clear_status()
-        self.save_btn.config(state=tk.DISABLED)
+        self.tree.delete(*self.tree.get_children())
+        self.status_text.set("Ready")
+        self.progress_var.set(0)
+        self.overall_progress_var.set(0)
+        self.update_duplicate_count(0)
+        self.tools_menu.entryconfig("View Problematic Files", state=tk.DISABLED)
         
+    def show_problematic_files(self):
+        """Show a dialog with files that had issues during processing."""
+        if not hasattr(self, 'problematic_files') or not self.problematic_files:
+            messagebox.showinfo("No Issues Found", "No problematic files were found during the last scan.")
+            return
+            
+        # Create a new window
+        window = tk.Toplevel(self.root)
+        window.title("Problematic Files")
+        window.transient(self.root)
+        window.grab_set()
+        
+        # Set window size and position
+        window_width = 800
+        window_height = 600
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        center_x = int(screen_width/2 - window_width/2)
+        center_y = int(screen_height/2 - window_height/2)
+        window.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+        
+        # Add a label
+        label = ttk.Label(
+            window,
+            text=f"Found {len(self.problematic_files)} files with issues:",
+            padding=10
+        )
+        label.pack(fill=tk.X)
+        
+        # Add a treeview to display the files
+        columns = ("File Path", "Size", "Error")
+        tree = ttk.Treeview(window, columns=columns, show="headings", selectmode="browse")
+        
+        # Configure columns
+        tree.column("File Path", width=500, anchor=tk.W)
+        tree.column("Size", width=100, anchor=tk.E)
+        tree.column("Error", width=200, anchor=tk.W)
+        
+        # Add headings
+        for col in columns:
+            tree.heading(col, text=col)
+            
+        # Add a scrollbar
+        scrollbar = ttk.Scrollbar(window, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+        
+        # Pack the tree and scrollbar
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Add the files to the tree
+        for file_info in self.problematic_files:
+            tree.insert("", tk.END, values=(
+                file_info.get('path', 'N/A'),
+                f"{file_info.get('size_kb', 0):,.0f} KB",
+                file_info.get('error', 'Unknown error')
+            ))
+            
+        # Add a close button
+        btn_frame = ttk.Frame(window)
+        btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        close_btn = ttk.Button(
+            btn_frame,
+            text="Close",
+            command=window.destroy
+        )
+        close_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+        
+        # Update the UI
+        window.update_idletasks()
+        
+    def cancel_scan(self):
+        """Cancel the current scan operation."""
+        if hasattr(self, 'is_searching') and self.is_searching:
+            self.is_searching = False
+            self.show_status("Stopping scan... Please wait", "warning")
+            self.stop_btn.config(state=tk.DISABLED)
+            # The actual cancellation will be handled in the scan thread
+            
     def find_duplicates(self):
         folder = self.folder_path.get()
         if not folder:
@@ -1065,6 +1163,10 @@ class PDFDuplicateApp:
         self.scan_start_time = time.time()
         self.update_overall_progress(0, 100)
         self.update_status_details("Preparing to scan...")
+        
+        # Update UI
+        self.find_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
         
         # Update status with folder name
         folder_name = os.path.basename(folder)
@@ -1165,8 +1267,15 @@ class PDFDuplicateApp:
         
         Args:
             pdf_files: List of PDF file paths to process
+            
+        Returns:
+            tuple: (processed_count, duplicate_count) or (0, 0) if cancelled/errored
         """
         try:
+            if not self.is_searching:
+                print("[INFO] Scan was cancelled before processing files")
+                return 0, 0
+                
             total_files = len(pdf_files)
             print(f"[DEBUG] Starting to process {total_files} files")
             
@@ -1195,23 +1304,21 @@ class PDFDuplicateApp:
                 print(f"[DEBUG] Processing batch {i//batch_size + 1}/{(total_files + batch_size - 1)//batch_size} "
                       f"(files {i+1}-{min(i + batch_size, total_files)} of {total_files})")
                 
-                # Update status
-                self.update_status_details(
-                    f"Processing batch {i//batch_size + 1}/{(total_files + batch_size - 1)//batch_size} "
-                    f"(files {i+1}-{min(i + batch_size, total_files)} of {total_files})"
-                )
-                
                 # Process the batch
                 try:
+                    if not self.is_searching:
+                        print("[INFO] Scan cancelled before processing batch")
+                        return 0, 0
+                        
                     batch_results, new_duplicates, batch_duplicates = self.process_batch(
                         batch, pdf_hash_map, duplicate_count
                     )
                     
                     # Update counts
                     if batch_results is None:  # Search was cancelled
-                        print("[DEBUG] Batch processing returned None, search cancelled")
+                        print("[INFO] Batch processing was cancelled")
                         return 0, 0
-                        
+                            
                     processed_count += len(batch_results)
                     duplicate_count = new_duplicates
                     
@@ -1248,193 +1355,27 @@ class PDFDuplicateApp:
             self.show_status(error_msg, "error")
             return 0, 0
 
-    def show_problematic_files(self):
-        """Show a dialog with problematic files."""
-        if not self.problematic_files:
-            messagebox.showinfo("No Issues Found", "No problematic files were found during the scan.")
-            return
-            
-        # Create a new window
-        problem_win = tk.Toplevel(self.root)
-        problem_win.title("Problematic Files")
-        problem_win.geometry("800x600")
-        
-        # Add a frame for buttons
-        btn_frame = ttk.Frame(problem_win)
-        btn_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Add export button
-        ttk.Button(btn_frame, text="Export to File", 
-                  command=self.export_problematic_files).pack(side=tk.LEFT, padx=5)
-        
-        # Add close button
-        ttk.Button(btn_frame, text="Close", 
-                  command=problem_win.destroy).pack(side=tk.RIGHT, padx=5)
-        
-        # Add a treeview to display problematic files
-        columns = ("File", "Path", "Issue")
-        tree = ttk.Treeview(problem_win, columns=columns, show="headings")
-        
-        # Configure columns
-        for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=200 if col != "Path" else 400)
-        
-        # Add scrollbar
-        vsb = ttk.Scrollbar(problem_win, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=vsb.set)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Add data to treeview
-        for file_info in self.problematic_files:
-            tree.insert("", "end", values=(
-                file_info.get('file', ''),
-                file_info.get('path', ''),
-                file_info.get('error', 'Unknown error')
-            ))
-    
-    def export_problematic_files(self):
-        """Export list of problematic files to a text file."""
-        if not self.problematic_files:
-            return
-            
-        # Ask for save location
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="Save Problematic Files List As"
-        )
-        
-        if not file_path:
-            return
-            
-        try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write("Problematic Files Report\n")
-                f.write("=" * 30 + "\n\n")
-                f.write(f"Total files with issues: {len(self.problematic_files)}\n\n")
-                
-                for idx, file_info in enumerate(self.problematic_files, 1):
-                    f.write(f"{idx}. {file_info.get('file', '')}\n")
-                    f.write(f"   Path: {file_info.get('path', '')}\n")
-                    f.write(f"   Issue: {file_info.get('error', 'Unknown')}\n")
-                    f.write("-" * 50 + "\n")
-                    
-            messagebox.showinfo("Export Complete", 
-                            f"Successfully exported {len(self.problematic_files)} problematic files to:\n{file_path}")
-        except Exception as e:
-            messagebox.showerror("Export Error", f"Failed to export file: {str(e)}")
-    
-    def toggle_suppress_warnings(self):
-        """Toggle the suppress warnings setting."""
-        self.suppress_warnings = self.suppress_warnings_var.get()
-        
-    def _finalize_scan_results(self, total_files, duplicate_count):
-        """Finalize scan results and update UI."""
-        # Update the Tools menu to enable/disable the Problematic Files option
-        if hasattr(self, 'tools_menu'):
-            state = tk.NORMAL if self.problematic_files else tk.DISABLED
-            self.tools_menu.entryconfig("View Problematic Files", state=state)
-            
-        try:
-            # Update progress
-            self.update_overall_progress(95)
-            self.update_status_details("Finalizing results...")
-            
-            # Store complete scan results with file info
-            self.scan_results = {
-                'duplicates': self.duplicates,
-                'file_info': {},
-                'scan_time': time.time() - getattr(self, 'scan_start_time', time.time()),
-                'file_count': total_files,
-                'duplicate_count': duplicate_count
-            }
-            
-            # Create a mapping of file paths to their info
-            for path in self.all_pdf_files:
-                file_info = self.get_pdf_info(path)
-                if file_info:  # Only add if we successfully got file info
-                    self.scan_results['file_info'][path] = file_info
-                    
-            # Update the tree with file info
-            self.tree.delete(*self.tree.get_children())
-            for dup in self.duplicates:
-                dup_path = dup[0]
-                orig_path = dup[1] if len(dup) > 1 else ''
-                
-                # Get file info or use empty values if not found
-                dup_info = self.scan_results['file_info'].get(dup_path, {})
-                orig_info = self.scan_results['file_info'].get(orig_path, {}) if orig_path else {}
-                
-                # Format values for display
-                dup_size = f"{dup_info.get('size_kb', 0):.1f}" if dup_info else ''
-                dup_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(dup_info.get('mod_time', 0))) if dup_info and 'mod_time' in dup_info else ''
-                orig_size = f"{orig_info.get('size_kb', 0):.1f}" if orig_info else ''
-                orig_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(orig_info.get('mod_time', 0))) if orig_info and 'mod_time' in orig_info else ''
-                
-                # Insert into tree with all columns
-                self.tree.insert('', 'end', values=(
-                    dup_path,
-                    dup_size,
-                    dup_date,
-                    orig_path,
-                    orig_size,
-                    orig_date
-                ))
-            
-            # Update progress
-            self.update_overall_progress(100)
-            self.update_status_details("Done")
-            
-            # Enable save button
-            self.save_btn.config(state=tk.NORMAL)
-            
-            # Calculate scan duration and format time string
-            scan_duration = time.time() - self.scan_start_time
-            time_str = time.strftime("%H:%M:%S", time.gmtime(scan_duration))
-            
-            # Show appropriate status message
-            if duplicate_count == 0:
-                status_msg = f"No duplicates found in {total_files} files. Scan completed in {time_str}."
-                self.show_status(status_msg, "success")
-                
-                if total_files > 0:
-                    self.root.after(0, lambda: messagebox.showinfo(
-                        "Scan Complete",
-                        f"No duplicate files found.\n\n"
-                        f"Scanned {total_files} files in {time_str}.",
-                        detail=f"Folder: {os.path.basename(self.last_scan_folder)}"
-                    ))
-            else:
-                status_msg = f"Found {duplicate_count} duplicate(s) in {total_files} files. Scan completed in {time_str}."
-                self.show_status(status_msg, "warning" if duplicate_count > 0 else "success")
-                
-        except Exception as e:
-            error_msg = f"Error finalizing results: {str(e)}"
-            self.show_status(error_msg, "error")
-            print(f"Error in _finalize_scan_results: {error_msg}")
-        finally:
-            # Ensure we don't have a hanging reference to perform_search
-            if hasattr(self, '_perform_search_after_id'):
-                self.root.after_cancel(self._perform_search_after_id)
-                delattr(self, '_perform_search_after_id')
-
-    def safe_update_status(self, status):
-        try:
-            if not self.is_searching:
-                return
-            self.status_text.set(status)
-            self.root.update_idletasks()
-        except Exception:
-            pass
-
     def process_batch(self, file_batch, pdf_hash_map, duplicate_count):
+        """Process a batch of files to find duplicates.
+        
+        Args:
+            file_batch: List of file paths to process in this batch
+            pdf_hash_map: Dictionary mapping file hashes to file info
+            duplicate_count: Current count of duplicates found
+                
+        Returns:
+            tuple: (batch_results, new_duplicate_count, batch_duplicates) or 
+                  (None, None, None) if cancelled
+        """
+        if not self.is_searching:
+            print("[INFO] Batch processing cancelled before starting")
+            return None, None, None
+            
         batch_results = []
         batch_duplicates = []
-        
-        print(f"[DEBUG] Processing batch of {len(file_batch)} files")
-        
+            
+        print(f"[INFO] Processing batch of {len(file_batch)} files")
+            
         # First, get file info for all files in batch
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -1462,47 +1403,57 @@ class PDFDuplicateApp:
             import traceback
             traceback.print_exc()
             return [], duplicate_count, []
-            
+                
         # For quick compare, first group by file size to reduce number of full comparisons
+        if not self.is_searching:
+            print("[INFO] Scan cancelled before quick compare")
+            return None, None, None
+            
         if self.compare_mode.get() == 'quick':
             size_groups = {}
             
             # Group files by size
             for file_info in file_infos:
+                if not self.is_searching:
+                    print("[INFO] Scan cancelled during size grouping")
+                    return None, None, None
+                    
                 size = int(file_info['size_kb'])
                 if size not in size_groups:
                     size_groups[size] = []
                 size_groups[size].append(file_info)
-            
-            # Only process groups with more than one file of the same size
-            for size, same_size_infos in size_groups.items():
-                if len(same_size_infos) > 1:
-                    # Process this group of same-sized files
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                        future_to_file = {executor.submit(self.calculate_pdf_hash, file_info): file_info 
-                                      for file_info in same_size_infos}
-                        for future in concurrent.futures.as_completed(future_to_file):
-                            if not self.is_searching:
-                                return None, None, None
-                                
-                            file_info = future_to_file[future]
-                            file_path = file_info['path']
-                            try:
-                                file_path, pdf_hash = future.result()
-                                batch_results.append(file_path)
-                                
-                                if pdf_hash is not None:
-                                    if pdf_hash in pdf_hash_map:
-                                        original_file = pdf_hash_map[pdf_hash]['path']
-                                        batch_duplicates.append((file_path, original_file))
-                                        duplicate_count += 1
-                                    else:
-                                        pdf_hash_map[pdf_hash] = file_info
-                            except Exception as e:
-                                print(f"Error processing {file_path}: {e}")
-                else:
-                    # Single file in size group, just add to results
-                    batch_results.append(same_size_infos[0]['path'])
+                
+                # Only process groups with more than one file of the same size
+                for size, same_size_infos in size_groups.items():
+                    if len(same_size_infos) > 1:
+                        # Process this group of same-sized files
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                            future_to_file = {executor.submit(self.calculate_pdf_hash, file_info): file_info 
+                                          for file_info in same_size_infos}
+                            for future in concurrent.futures.as_completed(future_to_file):
+                                if not self.is_searching:
+                                    return None, None, None
+                                    
+                                file_info = future_to_file[future]
+                                file_path = file_info['path']
+                                try:
+                                    file_path, pdf_hash = future.result()
+                                    batch_results.append(file_path)
+                                    
+                                    if pdf_hash is not None:
+                                        if pdf_hash in pdf_hash_map:
+                                            original_file = pdf_hash_map[pdf_hash]['path']
+                                            batch_duplicates.append((file_path, original_file))
+                                            duplicate_count += 1
+                                        else:
+                                            pdf_hash_map[pdf_hash] = file_info
+                                except Exception as e:
+                                    print(f"Error processing {file_path}: {e}")
+                    else:
+                        # Single file in size group, just add to results
+                        batch_results.append(same_size_infos[0]['path'])
+                        
+            return batch_results, duplicate_count, batch_duplicates
         else:
             # Full compare mode - process all files normally
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -2032,16 +1983,35 @@ class PDFDuplicateApp:
         # Create a new application instance
         main()
 
+    def toggle_suppress_warnings(self):
+        """Toggle PDF warning suppression and save the setting."""
+        self.suppress_warnings = self.suppress_warnings_var.get()
+        self.settings['suppress_warnings'] = self.suppress_warnings
+        self.save_settings()
+        
+        if self.suppress_warnings:
+            self.show_status("PDF warnings are now suppressed", "info")
+        else:
+            self.show_status("PDF warnings are now enabled", "info")
+    
     def _setup_drag_drop(self):
         """Set up drag and drop functionality."""
-        # Make the root window a drop target
-        self.root.drop_target_register(DND_FILES)
-        self.root.dnd_bind('<<Drop>>', self._on_drop)
-        
-        # Bind drag and drop events
-        self.root.drop_target = DND_FILES
-        self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
-        self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
+        try:
+            # Try to remove any existing drop target handlers if the method exists
+            if hasattr(self.root, 'drop_target_remove'):
+                self.root.drop_target_remove()
+            
+            # Enable drag and drop
+            self.root.drop_target_register(DND_FILES)
+            self.root.dnd_bind('<<Drop>>', self._on_drop)
+            
+            # Bind drag and drop events
+            self.root.drop_target = DND_FILES
+            self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
+            self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
+        except Exception as e:
+            print(f"Warning: Could not set up drag and drop: {e}")
+            # Continue without drag and drop functionality
     
     def _on_drop_enter(self, event):
         """Handle drag enter event."""
@@ -2200,6 +2170,59 @@ class PDFDuplicateApp:
         # Close the application
         self.root.quit()
         self.root.destroy()
+        
+    def toggle_suppress_warnings(self):
+        """Toggle PDF warning suppression and save the setting."""
+        self.suppress_warnings = self.suppress_warnings_var.get()
+        self.settings['suppress_warnings'] = self.suppress_warnings
+        self.save_settings()
+        
+        if self.suppress_warnings:
+            self.show_status("PDF warnings are now suppressed", "info")
+        else:
+            self.show_status("PDF warnings are now enabled", "info")
+            
+    def show_problematic_files(self):
+        """Show a dialog with a list of files that had issues during processing."""
+        if not hasattr(self, 'problematic_files') or not self.problematic_files:
+            messagebox.showinfo("No Issues Found", "No problematic files were found during the last scan.", parent=self.root)
+            return
+            
+        # Create a new top-level window
+        window = Toplevel(self.root)
+        window.title("Problematic Files")
+        window.geometry("600x400")
+        window.transient(self.root)
+        window.grab_set()
+        
+        # Create a frame for the listbox and scrollbar
+        frame = ttk.Frame(window)
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Add a label
+        label = ttk.Label(frame, text="The following files had issues during processing:", padding=(5, 5, 5, 10))
+        label.pack(anchor=tk.W)
+        
+        # Create a listbox with scrollbar
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL)
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, selectmode=tk.SINGLE)
+        scrollbar.config(command=listbox.yview)
+        
+        # Add problematic files to the listbox
+        for file_path, error in self.problematic_files:
+            display_text = f"{file_path}: {str(error)}"
+            listbox.insert(tk.END, display_text)
+        
+        # Pack the listbox and scrollbar
+        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Add a close button
+        button_frame = ttk.Frame(window)
+        button_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        close_button = ttk.Button(button_frame, text="Close", command=window.destroy)
+        close_button.pack(side=tk.RIGHT, padx=5)
 
 def main():
     # Use TkinterDnD's Tk
