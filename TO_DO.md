@@ -6,6 +6,8 @@
 
 - [ ] **Code Refactoring**
   - [x] Resolved module naming conflicts with Python standard library
+  - [x] Fixed file saving and loading functionality
+  - [x] Improved error handling for JSON operations
   - [ ] Improve test coverage
   - [ ] Add type hints throughout the codebase
   - [ ] Implement CI/CD pipeline
@@ -16,6 +18,7 @@
   - [ ] Improve PDF processing speed
   - [ ] Add caching for better performance
   - [ ] Optimize memory usage for large PDFs
+  - [ ] Profile and optimize file operations
 
 ## Application Features
 

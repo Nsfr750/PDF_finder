@@ -2,6 +2,19 @@
 
 All notable changes to the PDF Duplicate Finder project will be documented in this file.
 
+## [2.6.2] - 2025-06-29
+
+### Bug Fixes in 2.6.2
+
+- **File Handling**
+  - Fixed file saving and loading functionality
+  - Improved error handling for JSON operations
+  - Resolved issues with file path handling on Windows
+
+- **User Interface**
+  - Fixed PDF preview updating when selecting files
+  - Improved error messages for better user feedback
+
 ## [2.6.1] - 2025-06-29
 
 ### Bug Fixes in 2.6.1
