@@ -20,14 +20,19 @@
 ## Priority Levels
 
 ### High Priority
-  - Manual check via Help > Check for Updates
+
+- [ ] Manual check via Help > Check for Updates
 
 ### Multi-language Support
 
-- [x] **Multi-language Support**
-  - Added English, Italian, Spanish, Portuguese, Russian, and Arabic
-  - Language selection from View > Language
-  - RTL support for Arabic
+- [x] Added support for multiple languages
+  - English
+  - Italian
+  - Spanish
+  - Portuguese
+  - Russian
+  - Arabic (with RTL support)
+- [x] Language selection from View > Language
   - Dynamic language switching
 
 ### Module Structure
@@ -48,9 +53,9 @@
   - Better menu organization and accessibility
   - Theme support with light/dark modes
 
-### Documentation
+### Documentation Updates
 
-- [x] **Documentation**
+- [x] **Documentation Improvements**
   - Updated help system with new features
   - Improved README with better installation instructions
   - Comprehensive CHANGELOG
@@ -93,9 +98,9 @@
 - [ ] Add a "Select All" option for duplicates
 - [ ] Implement a "Select by Pattern" feature
 
-## Performance
+## Performance Improvements
 
-### Optimization
+### Optimization Tasks
 
 - [ ] Implement caching for previously scanned folders
 - [ ] Add a "Low Priority" mode for background scanning
@@ -107,7 +112,7 @@
 
 ## Testing & Quality Assurance
 
-### Test Coverage
+### Test Coverage Goals
 
 - [ ] Add unit tests for core functionality
 - [ ] Set up CI/CD pipeline
@@ -115,9 +120,9 @@
 - [ ] Implement error tracking
 - [ ] Add test coverage reporting
 
-## Documentation
+## Documentation Updates
 
-### Content Updates
+### Planned Content Additions
 
 - [ ] Add more screenshots to README
 - [ ] Create a comprehensive user guide

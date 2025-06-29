@@ -12,12 +12,12 @@ A Python application that helps you find and remove duplicate PDF files based on
 
 ## What's New in v2.6.1
 
-### Bug Fixes
+### Bug Fixes in v2.6.1
 
 - Resolved module import conflicts with Python's standard library
 - Fixed package structure for better maintainability
 
-### Improvements
+### Improvements in v2.6.1
 
 - Improved code organization and module structure
 - Updated dependencies to their latest stable versions
