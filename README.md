@@ -8,6 +8,8 @@
 [![Tests](https://img.shields.io/badge/tests-passing-green?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/actions)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=for-the-badge)](https://codecov.io/gh/Nsfr750/PDF_finder)
 
+![PDF Finder Screenshot](images/screenshot.png)
+
 A Python application that helps you find and remove duplicate PDF files based on their content. Features an advanced preview system that allows you to verify duplicates before deletion, with a customizable interface that includes light and dark themes.
 
 ## What's New in v2.6.1

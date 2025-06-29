@@ -17,9 +17,9 @@
   - [ ] Add caching for better performance
   - [ ] Optimize memory usage for large PDFs
 
-## Priority Levels
+## Application Features
 
-### High Priority
+### Update Management
 
 - [ ] Manual check via Help > Check for Updates
 
@@ -53,7 +53,7 @@
   - Better menu organization and accessibility
   - Theme support with light/dark modes
 
-### Documentation Updates
+### Documentation Status
 
 - [x] **Documentation Improvements**
   - Updated help system with new features
@@ -61,7 +61,7 @@
   - Comprehensive CHANGELOG
   - Better code documentation
 
-## High Priority
+## High Priority Tasks
 
 - [ ] Implement batch processing for large PDF collections
 - [ ] Add progress bar for individual file processing
