@@ -51,7 +51,7 @@ class MenuManager:
         self.menu_bar.add_cascade(label=t('file_menu', self.app.lang), menu=file_menu)
         self.menu_bar.add_cascade(label=t('edit_menu', self.app.lang), menu=edit_menu)
         self.menu_bar.add_cascade(label=t('view_menu', self.app.lang), menu=view_menu)
-        self.menu_bar.add_cascade(label='Tools', menu=self.tools_menu)
+        self.menu_bar.add_cascade(label=t('tools_menu', self.app.lang), menu=self.tools_menu)
         self.menu_bar.add_cascade(label=t('log_menu', self.app.lang), menu=log_menu)
         self.menu_bar.add_cascade(label=t('help_menu', self.app.lang), menu=help_menu)
         
@@ -157,15 +157,16 @@ class MenuManager:
             label=t('view_debug_logs', self.app.lang, default='View Debug Logs'),
             command=self._open_debug_logs
         )
+        log_menu.add_command(
+            label=t('view_traceback', self.app.lang, default='View Traceback'),
+            command=self._view_traceback
+        )
         log_menu.add_separator()
         log_menu.add_command(
             label=t('test_logger', self.app.lang, default='Test Logger'),
             command=self._test_logger
         )
-        log_menu.add_command(
-            label=t('view_traceback', self.app.lang, default='View Traceback'),
-            command=self._view_traceback
-        )
+
         
         return log_menu
         

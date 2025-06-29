@@ -66,9 +66,16 @@ class PDFDuplicateApp:
     def __init__(self, root):
         self.root = root
         
+        # Initialize settings and config file
+        self.settings = {}
+        self.config_file = Path(os.path.join(os.path.expanduser('~'), '.pdf_duplicate_finder', 'settings.json'))
+        
         # Initialize cache directory
         self.cache_dir = os.path.join(os.path.expanduser('~'), '.pdf_duplicate_finder')
         os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Load saved settings if they exist
+        self.load_settings()
         
         # Add cache settings
         self.use_cache = tk.BooleanVar(value=True)
@@ -76,7 +83,7 @@ class PDFDuplicateApp:
         
         # Set window title with version
         self.root.title("PDF Duplicate Finder")
-        self.root.geometry('1600x900')
+        self.root.geometry('1024x768+576+132')
         # Initialize color theme variables
         self.primary_color = "#007bff"
         self.secondary_color = "#0056b3"
@@ -85,7 +92,7 @@ class PDFDuplicateApp:
         
         # Set window icon if available
         try:
-            self.root.iconbitmap('icon.ico')
+            self.root.iconbitmap('images/icon.ico')
         except Exception:
             pass
             
@@ -98,6 +105,24 @@ class PDFDuplicateApp:
             
         # Initialize basic attributes
         self.is_searching = False
+        
+        # Initialize treeview visibility
+        self.tree_visible = self.settings.get('tree_visible', True)
+        
+        # Initialize preview visibility
+        self.preview_visible = self.settings.get('preview_visible', True)
+        
+        # Initialize Quick Compare mode (faster but less accurate)
+        self.quick_compare = tk.BooleanVar(value=self.settings.get('quick_compare', False))
+        
+        # Initialize filter variables
+        self.filters_active = tk.BooleanVar(value=False)
+        self.filter_size_min = tk.StringVar()
+        self.filter_size_max = tk.StringVar()
+        self.filter_date_from = tk.StringVar()
+        self.filter_date_to = tk.StringVar()
+        self.filter_pages_min = tk.StringVar()
+        self.filter_pages_max = tk.StringVar()
         self.duplicates = []
         self.all_pdf_files = []
         self.problematic_files = []  # Track files with issues
@@ -121,6 +146,17 @@ class PDFDuplicateApp:
         
         # Initialize theme manager first since it's needed early
         self.theme_manager = ThemeManager(self.root)
+        
+        # Initialize processing parameters
+        self.batch_size = 10  # Default batch size for processing files
+        self.max_workers = min(4, (os.cpu_count() or 1))  # Default to 4 workers or number of CPUs, whichever is smaller
+        
+        # Initialize recent folders list
+        self.recent_folders = []  # List to store recently accessed folders
+        self.max_recent_folders = 10  # Maximum number of recent folders to remember
+        
+        # Initialize filters visibility state
+        self.filters_visible = self.settings.get('filters_visible', True)  # Default to visible
         
         # Initialize Tkinter variables after root is set up
         self._initialize_tk_variables()
@@ -191,10 +227,85 @@ class PDFDuplicateApp:
         # Load saved filter settings
         self._load_filter_settings()
         
-        # Other UI state variables
-        self.recent_folders = self.settings.get('recent_folders', [])
-        self.max_recent_folders = 10
-        self.undo_stack = []
+    def clear_cache_if_needed(self):
+        """Clear the cache if the user is disabling it."""
+        if not self.use_cache.get():
+            # Clear the cache directory
+            import shutil
+            try:
+                if os.path.exists(self.cache_dir):
+                    shutil.rmtree(self.cache_dir)
+                    os.makedirs(self.cache_dir, exist_ok=True)
+                    self.show_status("Cache cleared", "info")
+            except Exception as e:
+                self.show_status(f"Error clearing cache: {str(e)}", "error")
+    
+    def toggle_filters(self):
+        """Toggle the enabled/disabled state of filter controls."""
+        state = 'normal' if self.filters_active.get() else 'disabled'
+        
+        # Toggle all filter entry widgets
+        for widget in self.filter_frame.winfo_children():
+            if widget.winfo_class() in ('TEntry', 'TButton'):
+                widget.configure(state=state)
+        
+        # Save the filter state
+        self.save_settings()
+    
+    def _load_filter_settings(self):
+        """Load filter settings from the configuration file."""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r') as f:
+                    settings = json.load(f)
+                    filters = settings.get('filters', {})
+                    
+                    # Load filter values
+                    self.filter_size_min.set(filters.get('size_min', ''))
+                    self.filter_size_max.set(filters.get('size_max', ''))
+                    self.filter_date_from.set(filters.get('date_from', ''))
+                    self.filter_date_to.set(filters.get('date_to', ''))
+                    self.filter_pages_min.set(filters.get('pages_min', ''))
+                    self.filter_pages_max.set(filters.get('pages_max', ''))
+                    self.filters_active.set(filters.get('active', False))
+        except Exception as e:
+            print(f"Error loading filter settings: {e}")
+            
+    def _save_filter_settings(self):
+        """Save current filter settings to the configuration file."""
+        try:
+            # Create the config directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+            
+            # Load existing settings or create a new dict
+            settings = {}
+            if os.path.exists(self.config_file):
+                try:
+                    with open(self.config_file, 'r') as f:
+                        settings = json.load(f)
+                except json.JSONDecodeError:
+                    settings = {}
+            
+            # Update filter settings
+            filters = {
+                'size_min': self.filter_size_min.get(),
+                'size_max': self.filter_size_max.get(),
+                'date_from': self.filter_date_from.get(),
+                'date_to': self.filter_date_to.get(),
+                'pages_min': self.filter_pages_min.get(),
+                'pages_max': self.filter_pages_max.get(),
+                'active': self.filters_active.get()
+            }
+            
+            settings['filters'] = filters
+            
+            # Save to file
+            with open(self.config_file, 'w') as f:
+                json.dump(settings, f, indent=4)
+                
+        except Exception as e:
+            print(f"Error saving filter settings: {e}")
+    
         self.max_undo_steps = 10
         self.batch_size = 10  # Default batch size
         self.max_workers = 4  # Default number of worker threads
@@ -341,14 +452,20 @@ class PDFDuplicateApp:
             
         try:
             import winsound
+            # Define default sound constants if they don't exist
+            MB_ICONHAND = getattr(winsound, 'MB_ICONHAND', 0x00000010)  # Critical stop/hand/error
+            MB_ICONWARNING = getattr(winsound, 'MB_ICONWARNING', 0x00000030)  # Warning
+            MB_ICONASTERISK = getattr(winsound, 'MB_ICONASTERISK', 0x00000040)  # Information/asterisk
+            
             if message_type == 'error':
-                winsound.MessageBeep(winsound.MB_ICONHAND)
+                winsound.MessageBeep(MB_ICONHAND)
             elif message_type == 'warning':
-                winsound.MessageBeep(winsound.MB_ICONWARNING)
+                winsound.MessageBeep(MB_ICONWARNING)
             elif message_type == 'success':
-                winsound.MessageBeep(winsound.MB_ICONASTERISK)
-        except Exception as e:
-            print(f"Could not play sound: {e}")
+                winsound.MessageBeep(MB_ICONASTERISK)
+        except Exception:
+            # Silently fail if sound can't be played
+            pass
     
     def _create_filter_ui(self, parent):
         """Create the filter controls UI."""
@@ -431,12 +548,7 @@ class PDFDuplicateApp:
             command=on_filter_toggle
         ).pack(pady=5)
         
-        # Add clear filters button
-        ttk.Button(
-            filter_frame,
-            text=t('clear_filters', self.lang),
-            command=self.clear_filters
-        ).pack(pady=2)
+
     
     def _validate_number(self, value):
         """Validate that the input is a valid number or empty."""
@@ -497,15 +609,356 @@ class PDFDuplicateApp:
         self._save_filter_settings()
         self.show_status("All filters cleared", "info")
     
+    def _on_quick_compare_toggle(self):
+        """Handle Quick Compare mode toggle."""
+        if self.quick_compare.get():
+            self.show_status("Quick Compare enabled - Faster but less accurate scanning", "info")
+        else:
+            self.show_status("Full comparison mode enabled - More accurate but slower", "info")
+        self.save_settings()
+    
+    def _compare_files(self, file1, file2):
+        """Compare two files for equality based on current mode."""
+        if self.quick_compare.get():
+            # Quick compare: Only check file size
+            try:
+                return os.path.getsize(file1) == os.path.getsize(file2)
+            except:
+                return False
+        else:
+            # Full compare: Compare file contents
+            try:
+                with open(file1, 'rb') as f1, open(file2, 'rb') as f2:
+                    # Compare file sizes first (quick check)
+                    if os.path.getsize(file1) != os.path.getsize(file2):
+                        return False
+                    # If sizes match, compare content
+                    return f1.read() == f2.read()
+            except:
+                return False
+    
+    def find_duplicates(self):
+        """Find duplicate PDF files in the selected folder."""
+        folder_path = self.folder_path.get()
+        if not folder_path or not os.path.isdir(folder_path):
+            messagebox.showerror("Error", "Please select a valid folder first.")
+            return
+            
+        # Reset UI
+        if hasattr(self, 'tree'):
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+        
+        # Update UI for scanning
+        self.find_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
+        self.progress_var.set(0)
+        self.overall_progress_var.set(0)
+        self.status_text.set("Scanning for PDF files...")
+        self.root.update_idletasks()
+        
+        try:
+            # Find all PDF files
+            pdf_files = []
+            for root, _, files in os.walk(folder_path):
+                for file in files:
+                    if file.lower().endswith('.pdf'):
+                        pdf_files.append(os.path.join(root, file))
+            
+            total_files = len(pdf_files)
+            self.status_text.set(f"Found {total_files} PDF files. Analyzing...")
+            self.progress_var.set(0)
+            self.progress['maximum'] = total_files
+            self.root.update_idletasks()
+            
+            if self.quick_compare.get():
+                # Quick compare mode: group by file size only
+                self.show_status("Quick Compare: Grouping files by size...", "info")
+                size_map = {}
+                for i, file_path in enumerate(pdf_files, 1):
+                    try:
+                        file_size = os.path.getsize(file_path)
+                        if file_size in size_map:
+                            size_map[file_size].append(file_path)
+                        else:
+                            size_map[file_size] = [file_path]
+                    except Exception as e:
+                        print(f"Error processing {file_path}: {e}")
+                    
+                    # Update progress
+                    self.progress_var.set(i)
+                    if i % 10 == 0:  # Update UI every 10 files
+                        self.root.update_idletasks()
+                
+                # Only keep groups with more than one file
+                self.duplicates = [files for files in size_map.values() if len(files) > 1]
+                
+            else:
+                # Full compare mode: compare file contents
+                self.show_status("Full comparison: Analyzing file contents...", "info")
+                self.duplicates = []
+                processed = set()
+                
+                for i in range(total_files):
+                    if i in processed:
+                        continue
+                        
+                    current_file = pdf_files[i]
+                    current_duplicates = [current_file]
+                    
+                    for j in range(i + 1, total_files):
+                        if j in processed:
+                            continue
+                            
+                        if self._compare_files(current_file, pdf_files[j]):
+                            current_duplicates.append(pdf_files[j])
+                            processed.add(j)
+                    
+                    if len(current_duplicates) > 1:
+                        self.duplicates.append(current_duplicates)
+                    
+                    # Update progress
+                    self.progress_var.set(i + 1)
+                    if (i + 1) % 5 == 0:  # Update UI more frequently for full compare
+                        self.root.update_idletasks()
+            
+            # Update UI with results
+            self._update_results_ui()
+            
+            # Update status
+            if self.duplicates:
+                dup_count = len(self.duplicates)
+                file_count = sum(len(group) for group in self.duplicates)
+                self.show_status(
+                    f"Found {dup_count} groups with {file_count} duplicate files" +
+                    (" (Quick Compare)" if self.quick_compare.get() else ""), 
+                    "info"
+                )
+                self.save_btn.config(state=tk.NORMAL)
+            else:
+                self.show_status("No duplicate files found" + 
+                               (" (Quick Compare)" if self.quick_compare.get() else ""), 
+                               "info")
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Reset UI
+            self.find_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+    
+    def _update_results_ui(self):
+        """Update the results in the UI."""
+        if not hasattr(self, 'tree') or not hasattr(self, 'duplicates'):
+            return
+            
+        # Clear existing items
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+            
+        # Add new items
+        group_id = 1
+        for group in self.duplicates:
+            if not group:  # Skip empty groups
+                continue
+                
+            # Sort files by path for consistent ordering
+            group = sorted(group)
+            
+            # The first file is considered the "original" for comparison
+            original_path = group[0]
+            try:
+                original_size = os.path.getsize(original_path)
+                original_date = datetime.fromtimestamp(os.path.getmtime(original_path)).strftime('%Y-%m-%d %H:%M')
+                
+                # Add the original file
+                self.tree.insert("", "end", 
+                               values=(
+                                   os.path.basename(original_path),
+                                   f"{original_size/1024:,.1f} KB",
+                                   original_date,
+                                   "",  # size_diff (empty for original)
+                                   "",  # date_diff (empty for original)
+                                   "",  # orig_path (empty for original)
+                                   "",  # orig_size (empty for original)
+                                   "",  # orig_date (empty for original)
+                                   original_path  # full_path
+                               ),
+                               tags=('original',))
+                
+                # Add duplicates with comparison to original
+                for dup_path in group[1:]:
+                    try:
+                        dup_size = os.path.getsize(dup_path)
+                        dup_date = datetime.fromtimestamp(os.path.getmtime(dup_path)).strftime('%Y-%m-%d %H:%M')
+                        
+                        # Calculate differences
+                        size_diff = dup_size - original_size
+                        size_diff_str = f"{size_diff/1024:+,.1f} KB" if size_diff != 0 else "0 KB"
+                        
+                        # Calculate date difference
+                        date_diff = (datetime.strptime(dup_date, '%Y-%m-%d %H:%M') - 
+                                   datetime.strptime(original_date, '%Y-%m-%d %H:%M'))
+                        date_diff_str = str(date_diff)
+                        
+                        self.tree.insert("", "end",
+                                       values=(
+                                           os.path.basename(dup_path),
+                                           f"{dup_size/1024:,.1f} KB",
+                                           dup_date,
+                                           size_diff_str,
+                                           date_diff_str,
+                                           os.path.basename(original_path),
+                                           f"{original_size/1024:,.1f} KB",
+                                           original_date,
+                                           dup_path  # full_path
+                                       ),
+                                       tags=('duplicate',))
+                    except Exception as e:
+                        print(f"Error adding duplicate {dup_path}: {e}")
+                        
+                # Add a separator between groups
+                self.tree.insert("", "end", values=("-"*20, "", "", "", "", "", "", "", ""), tags=('separator',))
+                group_id += 1
+                
+            except Exception as e:
+                print(f"Error processing group {group_id}: {e}")
+                    
+        # Update status bar
+        if hasattr(self, 'status_text'):
+            self.status_text.set(f"Found {len(self.duplicates)} groups of duplicates")
+    
+    def on_filter_toggle(self):
+        """Handle filter activation/deactivation."""
+        if self.filters_active.get():
+            # Apply filters
+            self._apply_filters()
+        else:
+            # Reset to show all results when filters are disabled
+            if hasattr(self, 'duplicates'):
+                self._update_results_ui()
+    
+    def _apply_filters(self):
+        """Apply filters to the current results."""
+        if not hasattr(self, 'duplicates') or not self.duplicates:
+            return
+            
+        # If filters are not active, show all results
+        if not self.filters_active.get():
+            self._update_results_ui()
+            return
+            
+        # Get filter values
+        size_min = self.filter_size_min.get()
+        size_max = self.filter_size_max.get()
+        date_from = self.filter_date_from.get()
+        date_to = self.filter_date_to.get()
+        pages_min = self.filter_pages_min.get()
+        pages_max = self.filter_pages_max.get()
+        
+        # Filter duplicates based on criteria
+        filtered_duplicates = []
+        
+        for group in self.duplicates:
+            filtered_group = []
+            for file_path in group:
+                try:
+                    # Get file info
+                    file_size = os.path.getsize(file_path) / 1024  # KB
+                    mod_time = os.path.getmtime(file_path)
+                    mod_date = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d')
+                    
+                    # Page count is not implemented yet, using 0 as placeholder
+                    page_count = 0
+                    
+                    # Apply filters
+                    size_ok = (not size_min or file_size >= float(size_min)) and \
+                             (not size_max or file_size <= float(size_max))
+                    
+                    date_ok = (not date_from or mod_date >= date_from) and \
+                             (not date_to or mod_date <= date_to)
+                    
+                    pages_ok = (not pages_min or page_count >= int(pages_min)) and \
+                              (not pages_max or page_count <= int(pages_max))
+                    
+                    if size_ok and date_ok and pages_ok:
+                        filtered_group.append(file_path)
+                        
+                except Exception as e:
+                    print(f"Error processing {file_path}: {e}")
+            
+            if filtered_group:
+                filtered_duplicates.append(filtered_group)
+        
+        # Update UI with filtered results
+        self._update_results_ui(filtered_duplicates)
+
+    
+    def toggle_filters_visibility(self):
+        """Toggle the visibility of the filters section."""
+        self.filters_visible = not self.filters_visible
+        
+        if self.filters_visible:
+            self.filters_container.pack(fill=tk.X, padx=5, pady=5)
+            self.toggle_filters_btn.config(text="-")
+        else:
+            self.filters_container.pack_forget()
+            self.toggle_filters_btn.config(text="+")
+            
+        # Save the filters visibility state
+        self.settings['filters_visible'] = self.filters_visible
+        self.save_settings()
+        
+    def toggle_tree_visibility(self):
+        """Toggle the visibility of the treeview."""
+        self.tree_visible = not self.tree_visible
+        
+        if self.tree_visible:
+            self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.toggle_tree_btn.config(text="◀")
+        else:
+            self.left_frame.pack_forget()
+            self.toggle_tree_btn.config(text="▶")
+            
+        # Save the treeview visibility state
+        self.settings['tree_visible'] = self.tree_visible
+        self.save_settings()
+        
+    def toggle_preview_visibility(self):
+        """Toggle the visibility of the preview panel."""
+        self.preview_visible = not self.preview_visible
+        
+        if self.preview_visible:
+            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+            self.toggle_preview_btn.config(text="▶")
+        else:
+            self.right_frame.pack_forget()
+            self.toggle_preview_btn.config(text="◀")
+            
+        # Save the preview visibility state
+        self.settings['preview_visible'] = self.preview_visible
+        self.save_settings()
+    
+    def _set_process_priority(self):
+        """Set the process priority to below normal to improve system responsiveness."""
+        try:
+            if os.name == 'nt':  # Windows
+                import win32api, win32process, win32con
+                pid = win32api.GetCurrentProcessId()
+                handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, pid)
+                win32process.SetPriorityClass(handle, win32process.BELOW_NORMAL_PRIORITY_CLASS)
+        except Exception as e:
+            print(f"Warning: Could not set process priority: {e}")
+    
     def _setup_ui(self):
         """Set up the user interface components."""
         print("Setting up UI...")
+        
         # Create main container
         self.main_container = ttk.Frame(self.root, padding="10")
         self.main_container.pack(fill=tk.BOTH, expand=True)
-        
-        # Create filter UI
-        self._create_filter_ui(self.main_container)
         
         # Initialize suppress_warnings_var for the menu
         self.suppress_warnings_var = tk.BooleanVar(value=self.suppress_warnings)
@@ -514,37 +967,32 @@ class PDFDuplicateApp:
         if hasattr(self, 'theme_manager') and hasattr(self, 'theme_var'):
             self.theme_manager.apply_theme(self.theme_var.get())
         
-        # Main container
-        main_container = ttk.Frame(self.root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # Left frame for controls and treeview
-        left_frame = ttk.Frame(main_container)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
         # Bind F5 to refresh
         self.root.bind('<F5>', lambda e: self.find_duplicates() if self.folder_path.get() else None)
         self.root.bind('<Control-z>', lambda e: self.undo_last_delete() if hasattr(self, 'menu_manager') and hasattr(self.menu_manager, 'undo_menu_item') and self.menu_manager.undo_menu_item['state'] == tk.NORMAL else None)
         
         # Enable drag and drop with tkinterdnd2
         self.root.drop_target_register(DND_FILES)
-        self.root.dnd_bind('<<Drop>>', self.on_drop)
-        self.root.dnd_bind('<<DropEnter>>', self.on_drop_enter)
-        self.root.dnd_bind('<<DropLeave>>', self.on_drop_leave)
+        self.root.dnd_bind('<<Drop>>', self._on_drop)
+        self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
+        self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
         
-        # Store drop target highlight
-        self.drop_highlight = None
+        # Create left frame for controls and treeview
+        self.left_frame = ttk.Frame(self.main_container)
+        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # Apply saved theme
-        self.change_theme(self.settings.get('theme', 'light'))
-
-        # Main container for search controls and results
-        main_container = ttk.Frame(self.root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        # Treeview visibility toggle button
+        self.toggle_tree_btn = ttk.Button(
+            self.main_container,
+            text="◀" if self.tree_visible else "▶",
+            width=2,
+            command=self.toggle_tree_visibility
+        )
+        self.toggle_tree_btn.pack(side=tk.LEFT, fill=tk.Y, padx=2)
         
         # Add drop target highlight (initially hidden)
         self.drop_highlight = ttk.Label(
-            main_container, 
+            self.main_container, 
             text=t('drop_folder_here', self.lang), 
             background='#e6f3ff', 
             foreground='#0066cc',
@@ -553,13 +1001,12 @@ class PDFDuplicateApp:
         )
         self.drop_highlight.place(relx=0.5, rely=0.5, anchor='center', relwidth=0.8, relheight=0.8)
         self.drop_highlight.place_forget()  # Hide by default
-
-        # Left side - Search controls and tree
-        left_frame = ttk.Frame(main_container)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Apply saved theme
+        self.change_theme(self.settings.get('theme', 'light'))
 
         # Search controls at the top of left frame
-        search_frame = ttk.Frame(left_frame)
+        search_frame = ttk.Frame(self.left_frame)
         search_frame.pack(fill=tk.X, pady=5)
 
         # Move search controls to search frame
@@ -568,7 +1015,7 @@ class PDFDuplicateApp:
         tk.Button(search_frame, text=t('browse', self.lang), command=self.browse_folder, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
 
         # Search buttons frame
-        button_frame = ttk.Frame(left_frame)
+        button_frame = ttk.Frame(self.left_frame)
         button_frame.pack(fill=tk.X, pady=5)
         
         # Buttons frame for find/stop
@@ -597,16 +1044,34 @@ class PDFDuplicateApp:
         tk.Button(button_frame, text=t('load_results', self.lang), command=self.load_scan_results,
                  font=("Arial", 10)).pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
 
-        # Progress bar and status below search controls
-        self.progress_frame = ttk.Frame(left_frame)
+        # Progress bar and status
+        self.progress_frame = ttk.Frame(self.left_frame)
         self.progress_frame.pack(fill=tk.X, pady=5)
         
-        # Filters section
-        filter_frame = ttk.LabelFrame(left_frame, text=t('filters', self.lang))
-        filter_frame.pack(fill=tk.X, pady=5, padx=5)
+        # Filters section with toggle
+        self.filters_visible = True        # Track filters visibility
+        self.filter_frame = ttk.LabelFrame(self.left_frame, text=t('filters', self.lang))
+        self.filter_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        # Add toggle button in the title bar of the filter frame
+        self.toggle_filters_btn = ttk.Button(
+            self.filter_frame, 
+            text="-", 
+            width=2,
+            command=self.toggle_filters_visibility
+        )
+        self.toggle_filters_btn.pack(side=tk.RIGHT, padx=5, pady=2)
+        
+        # Container for all filter controls
+        self.filters_container = ttk.Frame(self.filter_frame)
+        if self.filters_visible:
+            self.filters_container.pack(fill=tk.X, padx=5, pady=5)
+            self.toggle_filters_btn.config(text="-")
+        else:
+            self.toggle_filters_btn.config(text="+")
         
         # Size filter
-        size_frame = ttk.LabelFrame(filter_frame, text=t('file_size_kb', self.lang))
+        size_frame = ttk.LabelFrame(self.filters_container, text=t('file_size_kb', self.lang))
         size_frame.pack(fill=tk.X, padx=5, pady=2)
         
         ttk.Label(size_frame, text=t('min', self.lang) + ":").pack(side=tk.LEFT, padx=2)
@@ -615,7 +1080,7 @@ class PDFDuplicateApp:
         ttk.Entry(size_frame, textvariable=self.filter_size_max, width=8).pack(side=tk.LEFT, padx=2)
         
         # Date filter
-        date_frame = ttk.LabelFrame(filter_frame, text=t('modified_date', self.lang))
+        date_frame = ttk.LabelFrame(self.filters_container, text=t('modified_date', self.lang))
         date_frame.pack(fill=tk.X, padx=5, pady=2)
         
         ttk.Label(date_frame, text=t('from', self.lang) + ":").pack(side=tk.LEFT, padx=2)
@@ -624,7 +1089,7 @@ class PDFDuplicateApp:
         ttk.Entry(date_frame, textvariable=self.filter_date_to, width=10).pack(side=tk.LEFT, padx=2)
         
         # Page count filter
-        page_frame = ttk.LabelFrame(filter_frame, text=t('page_count', self.lang))
+        page_frame = ttk.LabelFrame(self.filters_container, text=t('page_count', self.lang))
         page_frame.pack(fill=tk.X, padx=5, pady=2)
         
         ttk.Label(page_frame, text=t('min', self.lang) + ":").pack(side=tk.LEFT, padx=2)
@@ -633,15 +1098,25 @@ class PDFDuplicateApp:
         ttk.Entry(page_frame, textvariable=self.filter_pages_max, width=5).pack(side=tk.LEFT, padx=2)
         
         # Filter toggle button
+        filter_controls_frame = ttk.Frame(self.filters_container)
+        filter_controls_frame.pack(fill=tk.X, pady=5)
+        
         ttk.Checkbutton(
-            filter_frame, 
+            filter_controls_frame, 
             text=t('enable_filters', self.lang), 
             variable=self.filters_active,
-            command=self.toggle_filters
-        ).pack(pady=5)
+            command=self.on_filter_toggle
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Clear filters button
+        ttk.Button(
+            filter_controls_frame,
+            text=t('clear_filters', self.lang),
+            command=self.clear_filters
+        ).pack(side=tk.RIGHT, padx=5)
         
         # Compare mode selection
-        compare_frame = ttk.LabelFrame(left_frame, text=t('compare_mode', self.lang))
+        compare_frame = ttk.LabelFrame(self.left_frame, text=t('compare_mode', self.lang))
         compare_frame.pack(fill=tk.X, pady=5, padx=5)
         
         ttk.Radiobutton(
@@ -659,7 +1134,7 @@ class PDFDuplicateApp:
         ).pack(anchor=tk.W, padx=5, pady=2)
         
         # Batch processing controls
-        batch_frame = ttk.LabelFrame(left_frame, text=t('processing_options', self.lang))
+        batch_frame = ttk.LabelFrame(self.left_frame, text=t('processing_options', self.lang))
         batch_frame.pack(fill=tk.X, pady=5, padx=5)
         
         # Batch size control
@@ -677,7 +1152,7 @@ class PDFDuplicateApp:
         workers_slider.pack(side=tk.LEFT, padx=5, fill=tk.X)
         
         # Cache and low-priority mode controls
-        cache_frame = ttk.LabelFrame(left_frame, text=t('cache_and_priority', self.lang))
+        cache_frame = ttk.LabelFrame(self.left_frame, text=t('cache_and_priority', self.lang))
         cache_frame.pack(fill=tk.X, pady=5, padx=5)
         
         # Cache toggle
@@ -694,6 +1169,15 @@ class PDFDuplicateApp:
             text=t('low_priority_mode', self.lang), 
             variable=self.low_priority
         ).pack(side=tk.LEFT, padx=5)
+        
+        # Quick Compare toggle
+        self.quick_compare_cb = ttk.Checkbutton(
+            cache_frame, 
+            text="Quick Compare (faster, less accurate)", 
+            variable=self.quick_compare,
+            command=self._on_quick_compare_toggle
+        )
+        self.quick_compare_cb.pack(side=tk.LEFT, padx=5)
         
         # Progress bars frame
         progress_bars_frame = ttk.Frame(self.progress_frame)
@@ -771,12 +1255,20 @@ class PDFDuplicateApp:
         self.current_file = ""
         
         # Create tree frame for results
-        tree_frame = ttk.Frame(left_frame)
+        tree_frame = ttk.Frame(self.left_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Configure and pack tree in its frame
-        self.tree = ttk.Treeview(tree_frame, columns=("dup_path", "dup_size", "dup_date", "orig_path", "orig_size", "orig_date"), 
-                               show="headings", height=15, selectmode='extended')
+        self.tree = ttk.Treeview(tree_frame, 
+                              columns=("dup_path", "dup_size", "dup_date", "size_diff", "date_diff", "orig_path", "orig_size", "orig_date", "full_path"),
+                              show="headings", 
+                              height=15, 
+                              selectmode='extended')
+                              
+        # Configure tags for row styling
+        self.tree.tag_configure('original', background='#e6f7ff')  # Light blue for original files
+        self.tree.tag_configure('duplicate', background='white')   # White for duplicates
+        self.tree.tag_configure('separator', background='#f0f0f0') # Light gray for separators
         
         # Configure columns
         columns = [
@@ -813,11 +1305,21 @@ class PDFDuplicateApp:
         self.tree.bind('<<TreeviewSelect>>', self.on_select)
         
         # Right frame for preview
-        right_frame = ttk.Frame(main_container)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        self.right_frame = ttk.Frame(self.main_container)
+        if self.preview_visible:
+            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+            
+        # Preview visibility toggle button
+        self.toggle_preview_btn = ttk.Button(
+            self.main_container,
+            text="▶" if self.preview_visible else "◀",
+            width=2,
+            command=self.toggle_preview_visibility
+        )
+        self.toggle_preview_btn.pack(side=tk.RIGHT, fill=tk.Y, padx=2)
 
         # Preview options
-        preview_options = ttk.Frame(right_frame)
+        preview_options = ttk.Frame(self.right_frame)
         preview_options.pack(fill=tk.X, pady=(0, 5))
         ttk.Radiobutton(preview_options, text=t('image_preview', self.lang), variable=self.preview_type, 
                         value="image", command=self.update_preview).pack(side=tk.LEFT, padx=5)
@@ -825,7 +1327,7 @@ class PDFDuplicateApp:
                         value="text", command=self.update_preview).pack(side=tk.LEFT, padx=5)
 
         # Preview area
-        preview_container = ttk.Frame(right_frame, relief="solid", borderwidth=1)
+        preview_container = ttk.Frame(self.right_frame, relief="solid", borderwidth=1)
         preview_container.pack(fill=tk.BOTH, expand=True)
 
         # Canvas for image preview
@@ -838,7 +1340,7 @@ class PDFDuplicateApp:
         self.preview_text.pack_forget()
 
         # Buttons frame for delete and preview
-        button_frame = ttk.Frame(left_frame)
+        button_frame = ttk.Frame(self.left_frame)
         button_frame.pack(fill=tk.X, pady=5)
         
         # Preview button
@@ -1076,13 +1578,33 @@ class PDFDuplicateApp:
         self.tree.heading(col, text=current_text.rstrip(' ↓↑') + sort_symbol)
         self.tree_sort_reverse = not reverse
 
-    def on_drop_enter(self, event):
-        """Handle drag enter event."""
-        if self.drop_highlight:
-            self.drop_highlight.lift()
-            self.drop_highlight.place(relx=0.5, rely=0.5, anchor='center', relwidth=0.8, relheight=0.8)
-        return 'copy'
-    
+    def _on_drop_leave(self, event):
+        """Handle drag leave event."""
+        if hasattr(self, 'drop_highlight'):
+            self.drop_highlight.destroy()
+            del self.drop_highlight
+            
+    def safe_update_status(self, message, message_type="info"):
+        """Thread-safe method to update status from background threads.
+        
+        Args:
+            message (str): The status message to display
+            message_type (str): Type of message (info, success, warning, error, etc.)
+        """
+        if not hasattr(self, 'root'):
+            return
+            
+        def _update():
+            try:
+                self.show_status(message, message_type)
+            except Exception as e:
+                print(f"Error updating status: {e}")
+                
+        try:
+            self.root.after(0, _update)
+        except Exception as e:
+            print(f"Error scheduling status update: {e}")
+
     def on_drop_leave(self, event):
         """Handle drag leave event."""
         if self.drop_highlight:
@@ -1208,12 +1730,12 @@ class PDFDuplicateApp:
             except Exception as e:
                 error_msg = f"Error processing PDF: {type(e).__name__} - {str(e)}"
                 file_info['error'] = error_msg
-                logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                logger.error(f"{file_path} - {error_msg}")
                 self.problematic_files.append(file_info)
-                return file_info
+                return None
                 
         except Exception as e:
-            error_msg = f"Error getting file info: {type(e).__name__} - {str(e)}"
+            error_msg = f"Unexpected error processing file: {type(e).__name__} - {str(e)}"
             file_info['error'] = error_msg
             logger.error(f"{file_path} - {error_msg}")
             self.problematic_files.append(file_info)
@@ -1327,11 +1849,11 @@ class PDFDuplicateApp:
             return None
 
     def _process_pdf_file(self, file_path, hash_map, lock):
-        """Process a single PDF file and update the hash map."""
+        """Process a single PDF file and return (file_hash, file_path)."""
         try:
             # Skip if search was cancelled
             if hasattr(self, 'stop_search') and self.stop_search:
-                return
+                return None
                 
             # Update progress
             self.update_file_status(os.path.basename(file_path))
@@ -1339,33 +1861,26 @@ class PDFDuplicateApp:
             # Get file info
             file_info = self.get_pdf_info(file_path)
             if not file_info:
-                return
+                return None
             
             # Apply filters if active
             if hasattr(self, 'filters_active') and self.filters_active.get():
                 if not self.apply_filters(file_info):
-                    return  # Skip file if it doesn't match filters
+                    return None  # Skip file if it doesn't match filters
                 
             # Calculate hash
             file_hash = self.calculate_pdf_hash(file_info)
             if not file_hash:
-                return
+                return None
                 
-            # Add to hash map
-            with lock:
-                if file_hash in hash_map:
-                    hash_map[file_hash].append(file_path)
-                else:
-                    hash_map[file_hash] = [file_path]
-                    
+            # Return the hash and file path
+            return (file_hash, file_path)
+
         except Exception as e:
             error_msg = f"Error processing {file_path}: {e}"
             print(error_msg)
             self.show_status(error_msg, "error")
-            with lock:
-                if 'errors' not in hash_map:
-                    hash_map['errors'] = []
-                hash_map['errors'].append((file_path, str(e)))
+            return None
     
     def _find_pdf_files(self, folder, stop_event):
         """Generator that yields PDF files with cancellation support."""
@@ -1403,21 +1918,42 @@ class PDFDuplicateApp:
         cache_enabled = hasattr(self, 'use_cache') and self.use_cache.get()
         cache_file = os.path.join(self.cache_dir, f"scan_cache_{hash(folder)}.json")
         
+        # Load from cache if available
         if cache_enabled and os.path.exists(cache_file):
             try:
                 with open(cache_file, 'r') as f:
                     cache_data = json.load(f)
-                if cache_data.get('folder') == folder:
-                    cache_time = os.path.getmtime(cache_file)
-                    folder_mtime = max(os.path.getmtime(root) for root, _, _ in os.walk(folder))
+                
+                # Check if cache is for the same folder and not too old (1 day)
+                if (cache_data.get('folder') == folder and 
+                    time.time() - cache_data.get('timestamp', 0) < 86400):
                     
-                    if cache_time > folder_mtime:
-                        self.safe_update_status("Loading results from cache...")
-                        self.duplicates = cache_data.get('duplicates', [])
-                        self.all_pdf_files = cache_data.get('file_info', [])
-                        self._update_results_ui()
-                        self.safe_update_status("Results loaded from cache")
-                        return
+                    # Ensure the loaded data has the correct structure
+                    raw_duplicates = cache_data.get('duplicates', [])
+                    self.duplicates = []
+                    
+                    # Process each group in the cache
+                    for group in raw_duplicates:
+                        if isinstance(group, (list, tuple)):
+                            # Ensure all items in the group are strings
+                            valid_group = [f for f in group if isinstance(f, str) and f.strip()]
+                            if len(valid_group) > 1:  # Only keep groups with duplicates
+                                self.duplicates.append(valid_group)
+                    
+                    # Process file info
+                    raw_file_info = cache_data.get('file_info', [])
+                    self.all_pdf_files = []
+                    for file_list in raw_file_info:
+                        if isinstance(file_list, (list, tuple)):
+                            valid_files = [f for f in file_list if isinstance(f, str) and f.strip()]
+                            if valid_files:
+                                self.all_pdf_files.append(valid_files)
+                    
+                    # Update UI with cached results
+                    self.root.after(0, lambda: self._update_results_ui())
+                    self.root.after(0, lambda: self.safe_update_status(
+                        f"Loaded {len(self.duplicates)} duplicate groups from cache", "info"))
+                    return
             except Exception as e:
                 print(f"[WARNING] Failed to load cache: {e}")
         
@@ -1471,11 +2007,14 @@ class PDFDuplicateApp:
                         if stop_event.is_set():
                             break
                             
-                        duplicate = future.result()
-                        if duplicate and duplicate[0] and duplicate[1]:
+                        result = future.result()
+                        if result:  # Only process if we got a valid result
+                            file_hash, file_path = result
                             with results_lock:
-                                self.duplicates.append(duplicate)
-                                duplicate_counter += 1
+                                if file_hash in pdf_hash_map:
+                                    pdf_hash_map[file_hash].append(file_path)
+                                else:
+                                    pdf_hash_map[file_hash] = [file_path]
                         
                         # Update progress
                         processed_count += 1
@@ -1486,18 +2025,51 @@ class PDFDuplicateApp:
                         # Allow UI to update
                         if processed_count % 10 == 0:
                             self.root.update_idletasks()
+                            
+                    # After processing all files in batch, update duplicates list
+                    with results_lock:
+                        # Ensure we only keep lists of valid file paths
+                        self.duplicates = []
+                        for file_list in pdf_hash_map.values():
+                            if len(file_list) > 1:  # Only consider groups with duplicates
+                                # Ensure all items in the list are strings (file paths)
+                                valid_files = [f for f in file_list if isinstance(f, str) and f.strip()]
+                                if len(valid_files) > 1:  # Only add if we still have duplicates
+                                    self.duplicates.append(valid_files)
+                        duplicate_counter = len(self.duplicates)
             
             # Save to cache if enabled
             if cache_enabled and not stop_event.is_set():
                 try:
+                    # Prepare clean data for caching
+                    clean_duplicates = []
+                    for group in self.duplicates:
+                        if isinstance(group, (list, tuple)):
+                            clean_group = [f for f in group if isinstance(f, str) and f.strip()]
+                            if len(clean_group) > 1:
+                                clean_duplicates.append(clean_group)
+                    
+                    clean_file_info = []
+                    for file_list in pdf_hash_map.values():
+                        if isinstance(file_list, (list, tuple)):
+                            clean_files = [f for f in file_list if isinstance(f, str) and f.strip()]
+                            if clean_files:
+                                clean_file_info.append(clean_files)
+                    
                     cache_data = {
                         'folder': folder,
                         'timestamp': time.time(),
-                        'duplicates': self.duplicates,
-                        'file_info': list(pdf_hash_map.values())
+                        'duplicates': clean_duplicates,
+                        'file_info': clean_file_info
                     }
-                    with open(cache_file, 'w') as f:
-                        json.dump(cache_data, f)
+                    
+                    # Ensure cache directory exists
+                    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                    
+                    # Save to cache file
+                    with open(cache_file, 'w', encoding='utf-8') as f:
+                        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+                        
                 except Exception as e:
                     print(f"[WARNING] Failed to save cache: {e}")
             
@@ -1633,7 +2205,7 @@ class PDFDuplicateApp:
             
         # For now, just preview the first selected file
         self.update_preview()
-        
+
     def delete_selected(self):
         selected_items = self.tree.selection()
         if not selected_items:
@@ -2045,55 +2617,15 @@ class PDFDuplicateApp:
             self.notification_history = []
             window.destroy()
             self.show_status("Notification history cleared", "info")
-    
-    def _play_notification_sound(self, message_type):
-        """Play a sound for the notification if enabled."""
-        if not self.settings.get('enable_sounds', True):
-            return
             
-        try:
-            import winsound
-            if message_type == 'error':
-                winsound.MessageBeep(winsound.MB_ICONHAND)
-            elif message_type == 'warning':
-                winsound.MessageBeep(winsound.MB_ICONWARNING)
-            elif message_type == 'success':
-                winsound.MessageBeep(winsound.MB_ICONASTERISK)
-        except Exception as e:
-            print(f"Could not play sound: {e}")
-    
-    def clear_status(self):
-        """Clear the status message and reset progress bars."""
-        self.status_text.set("")
-        self.status_details.config(text="")
-        if hasattr(self, 'progress_bar'):
-            self.progress_bar['value'] = 0
-        if hasattr(self, 'file_progress_bar'):
-            self.file_progress_bar['value'] = 0
         if hasattr(self, 'file_progress_label'):
             self.file_progress_label.config(text=t('current_file', self.lang) + ":")
         self.root.update_idletasks()
 
     def show_help(self):
-        # For brevity, this help text is not translated in detail. You can add translation keys for each section if desired.
-        help_text = (
-            f"{t('app_title', self.lang)}\n\n"
-            "Features:\n"
-            f"1. {t('find_duplicates', self.lang)} based on content\n"
-            f"2. {t('image_preview', self.lang)}/{t('text_preview', self.lang)}\n"
-            f"3. {t('delete_selected', self.lang)}\n\n"
-            "How to Use:\n"
-            f"1. {t('select_folder', self.lang)}\n"
-            f"2. Click '{t('find_duplicates', self.lang)}'\n"
-            "   - Progress and status will be shown\n"
-            "   - Click again to cancel the scan\n"
-            "3. Review found duplicates in the list\n"
-            f"4. Select a PDF to preview its contents ({t('image_preview', self.lang)}/{t('text_preview', self.lang)})\n"
-            f"5. {t('delete_selected', self.lang)}\n\n"
-            "Note: The app compares PDF contents, not just filenames,\n"
-            "ensuring accurate duplicate detection."
-        )
-        messagebox.showinfo(t('help_menu', self.lang), help_text)
+        """Show the help window with user guide and instructions."""
+        from app_struct.help import HelpWindow
+        HelpWindow.show_help(self.root, self.lang)
 
     def load_settings(self):
         """Load application settings from config file."""
@@ -2498,9 +3030,14 @@ class PDFDuplicateApp:
         """Monitor the search thread and update UI."""
         if hasattr(self, 'search_thread') and self.search_thread.is_alive():
             # Update progress
-            if hasattr(self, 'progress_var'):
-                self.progress_bar['value'] = self.progress_var
-                self.progress_bar.update()
+            if hasattr(self, 'progress_var') and hasattr(self, 'progress_bar'):
+                try:
+                    # Get the integer value from the IntVar
+                    progress_value = self.progress_var.get()
+                    self.progress_bar['value'] = progress_value
+                    self.progress_bar.update()
+                except (AttributeError, tk.TclError) as e:
+                    print(f"Error updating progress bar: {e}")
             
             # Check again after 100ms
             self.root.after(100, self.monitor_search)
@@ -2638,66 +3175,202 @@ class PDFDuplicateApp:
             self.save_btn.config(state=tk.NORMAL if dup_count > 0 else tk.DISABLED)
     
     def save_scan_results(self):
-        """Save the current scan results to a JSON file."""
-        if not hasattr(self, 'duplicates') or not self.duplicates:
-            messagebox.showinfo("No Results", "No scan results to save.")
-            return
-            
-        # Ask user for save location
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Save Scan Results"
-        )
+        """Wrapper per gestire le eccezioni durante il salvataggio dei risultati."""
+        print("\n" + "="*50)
+        print("DEBUG: Starting save_scan_results")
+        print("="*50 + "\n")
         
-        if not file_path:  # User cancelled
-            return
-            
         try:
-            # Prepare data to save
+            print("DEBUG: Calling _save_scan_results_impl")
+            result = self._save_scan_results_impl()
+            print(f"DEBUG: _save_scan_results_impl returned: {result}")
+            return result
+        except Exception as e:
+            error_msg = f"Error in save_scan_results: {str(e)}\n\nType: {type(e).__name__}\n"
+            error_msg += f"\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+            print("\n" + "="*50)
+            print("ERROR IN save_scan_results:")
+            print(error_msg)
+            print("="*50 + "\n", file=sys.stderr)
+            messagebox.showerror("Save Error", f"Failed to save scan results: {str(e)}")
+            return False
+    
+    def _save_scan_results_impl(self):
+        """Implementation of save_scan_results using asksaveasfile."""
+        print("\n" + "="*50)
+        print("DEBUG: Starting save_scan_results (asksaveasfile version)")
+        print(f"DEBUG: Current working directory: {os.getcwd()}")
+        print("="*50)
+        
+        # Check if there are duplicates to save
+        if not hasattr(self, 'duplicates') or not self.duplicates:
+            print("DEBUG: No duplicates to save")
+            messagebox.showinfo("No Results", "No scan results to save.")
+            return False
+            
+        print(f"DEBUG: Found {len(self.duplicates)} duplicate groups to save")
+        
+        try:
+            # Prepare data to save first
+            print("DEBUG: Preparing scan data")
+            print(f"DEBUG: duplicates type: {type(self.duplicates)}")
+            print(f"DEBUG: first group type: {type(self.duplicates[0]) if self.duplicates else 'empty'}")
+            if self.duplicates and len(self.duplicates) > 0 and isinstance(self.duplicates[0], list):
+                print(f"DEBUG: first file in first group type: {type(self.duplicates[0][0]) if self.duplicates[0] else 'empty'}")
+                
             scan_data = {
                 'scan_timestamp': datetime.now().isoformat(),
                 'folder_scanned': self.folder_path.get(),
-                'duplicate_groups': [],
+                'duplicate_groups': self.duplicates,
                 'file_info': {}
             }
             
             # Add file info for all files in duplicates
             file_info = {}
-            for group in self.duplicates:
-                group_info = []
-                for file_path in group:
+            for group_idx, group in enumerate(self.duplicates):
+                if not isinstance(group, (list, tuple)):
+                    print(f"WARNING: Group {group_idx} is not a list/tuple: {type(group)}")
+                    continue
+                    
+                for file_idx, file_path in enumerate(group):
+                    if not isinstance(file_path, str):
+                        print(f"WARNING: File path at group {group_idx}, index {file_idx} is not a string: {type(file_path)}")
+                        continue
                     if file_path not in file_info:
                         try:
-                            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
-                            file_mtime = os.path.getmtime(file_path) if os.path.exists(file_path) else 0
+                            file_size = os.path.getsize(file_path)
+                            file_mtime = os.path.getmtime(file_path)
                             file_info[file_path] = {
                                 'size_bytes': file_size,
-                                'size_mb': file_size / (1024 * 1024) if file_size > 0 else 0,
-                                'modified': datetime.fromtimestamp(file_mtime).isoformat() if file_mtime > 0 else 'Unknown',
-                                'exists': os.path.exists(file_path)
+                                'size_mb': file_size / (1024 * 1024),
+                                'modified_timestamp': file_mtime,
+                                'modified_date': datetime.fromtimestamp(file_mtime).isoformat()
                             }
                         except Exception as e:
+                            print(f"WARNING: Could not get info for {file_path}: {e}")
                             file_info[file_path] = {
                                 'error': str(e),
-                                'exists': False
+                                'size_bytes': 0,
+                                'size_mb': 0,
+                                'modified_timestamp': 0,
+                                'modified_date': 'unknown'
                             }
-                    group_info.append(file_path)
-                scan_data['duplicate_groups'].append(group_info)
             
             scan_data['file_info'] = file_info
             
-            # Save to file
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(scan_data, f, indent=2, ensure_ascii=False)
-                
-            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
+            # Convert data to JSON string
+            json_data = json.dumps(scan_data, indent=2, ensure_ascii=False)
             
+            # Get save location from user and write directly
+            print("DEBUG: Opening save dialog...")
+            try:
+                # Try to use asksaveasfile first
+                with filedialog.asksaveasfile(
+                    mode='w',
+                    defaultextension=".json",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                    title="Save Scan Results"
+                ) as f:
+                    if f is None:  # User cancelled
+                        print("DEBUG: User cancelled save dialog")
+            except AttributeError:
+                # Fallback to asksaveasfilename if asksaveasfile fails
+                print("WARNING: asksaveasfile failed, falling back to asksaveasfilename")
+                file_path = filedialog.asksaveasfilename(
+                    defaultextension=".json",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                    title="Save Scan Results"
+                )
+                
+                if not file_path:
+                    print("DEBUG: User cancelled save dialog")
+                    return False
+                
+                # Ensure .json extension
+                if not file_path.lower().endswith('.json'):
+                    file_path += '.json'
+                
+                # Ensure we have a string path
+                if isinstance(file_path, (list, tuple)) and file_path:
+                    file_path = str(file_path[0])
+                elif not isinstance(file_path, str):
+                    file_path = str(file_path)
+                
+                # Clean up the path
+                file_path = file_path.strip()
+                if not file_path:
+                    error_msg = "Invalid file path provided"
+                    print(f"ERROR: {error_msg}")
+                    messagebox.showerror("Save Error", error_msg)
+                    return False
+                
+                # Save the file
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(json_data)
+                    
+                    print("DEBUG: Save completed successfully (fallback method)")
+                    messagebox.showinfo("Success", f"Scan results saved to:\n{file_path}")
+                    return True
+                except Exception as e:
+                    error_msg = f"Error writing to file: {str(e)}"
+                    print(f"ERROR: {error_msg}")
+                    messagebox.showerror("Save Error", error_msg)
+                    return False
+                    
         except Exception as e:
-            messagebox.showerror("Save Error", f"Failed to save scan results: {str(e)}")
-            print(f"Error saving scan results: {e}")
-            import traceback
-            traceback.print_exc()
+            error_msg = f"Error saving scan results: {str(e)}"
+            print(f"ERROR: {error_msg}")
+            print("Traceback:", traceback.format_exc())
+            messagebox.showerror("Save Error", error_msg)
+            return False
+            print(f"ERROR: {error_msg}")
+            messagebox.showerror("Save Error", error_msg)
+            return
+        
+        # Save to file with explicit error handling
+        print(f"DEBUG: Attempting to save to: {file_path}")
+        print(f"DEBUG: File path type: {type(file_path)}")
+        
+        # Try to create the file first to check permissions
+        test_file = None
+        try:
+            test_file = open(file_path, 'w', encoding='utf-8')
+            test_file.close()
+            # If we get here, the file was created successfully, so remove it
+            os.remove(file_path)
+        except Exception as e:
+            error_msg = f"Cannot write to file {file_path}: {e}"
+            print(f"ERROR: {error_msg}")
+            messagebox.showerror("Save Error", error_msg)
+            if test_file and not test_file.closed:
+                test_file.close()
+            return
+        finally:
+            if test_file and not test_file.closed:
+                test_file.close()
+        
+        # Now save the actual data
+        file_handle = None
+        try:
+            file_handle = open(file_path, 'w', encoding='utf-8')
+            json.dump(scan_data, file_handle, indent=2, ensure_ascii=False)
+            file_handle.close()  # Chiudi esplicitamente il file
+            
+            print("DEBUG: Save completed successfully")
+            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
+            return True
+        except Exception as e:
+            error_msg = f"Error while saving file: {str(e)}"
+            print(f"ERROR: {error_msg}")
+            messagebox.showerror("Save Error", error_msg)
+            if file_handle and not file_handle.closed:
+                file_handle.close()
+            return False
+        finally:
+            # Assicurati che il file venga chiuso in ogni caso
+            if file_handle and not file_handle.closed:
+                file_handle.close()
     
     def load_scan_results(self):
         """Load scan results from a previously saved JSON file."""

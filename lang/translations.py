@@ -8,6 +8,8 @@ TRANSLATIONS = {
         'file_menu': 'File',
         'edit_menu': 'Edit',
         'view_menu': 'View',
+        'tools_menu': 'Tools',
+        'log_menu': 'Logs',
         'help_menu': 'Help',
         'about_menu': 'About',
         'sponsor_menu': 'Sponsor',
@@ -117,6 +119,7 @@ TRANSLATIONS = {
         'original_file': 'Original File',
         'no_recent_folders': 'No recent folders',
         'clear_recent_folders': 'Clear Recent Folders',
+        'clear_filters':'Clear Filters',
     },
     'it': {
         # Main application strings
@@ -125,6 +128,8 @@ TRANSLATIONS = {
         'edit_menu': 'Modifica',
         'view_menu': 'Visualizza',
         'help_menu': 'Aiuto',
+        'tools_menu': 'Strumenti',
+        'log_menu': 'Log',
         'about_menu': 'Informazioni',
         'sponsor_menu': 'Sponsorizza',
         'theme_menu': 'Tema',
@@ -233,6 +238,7 @@ TRANSLATIONS = {
         'original_file': 'File Originale',
         'no_recent_folders': 'Nessuna cartella recente',
         'clear_recent_folders': 'Cancella cronologia cartelle',
+        'clear_filters':'Cancella filtri',
     },
     'es': {
         # Main application strings
@@ -241,6 +247,8 @@ TRANSLATIONS = {
         'edit_menu': 'Editar',
         'view_menu': 'Ver',
         'help_menu': 'Ayuda',
+        'tools_menu': 'herramientas',
+        'log_menu': 'Log',
         'about_menu': 'Acerca de',
         'sponsor_menu': 'Patrocinar',
         'theme_menu': 'Tema',
@@ -350,6 +358,7 @@ TRANSLATIONS = {
         'original_file': 'Archivo Original',
         'no_recent_folders': 'No hay carpetas recientes',
         'clear_recent_folders': 'Borrar historial de carpetas',
+        'clear_filters':'Borrar filtros',
     },
     'pt': {  # Portuguese
         # Main application strings
@@ -357,6 +366,8 @@ TRANSLATIONS = {
         'file_menu': 'Arquivo',
         'edit_menu': 'Editar',
         'view_menu': 'Visualizar',
+        'tools_menu': 'Ferramentas',
+        'log_menu': 'Log',
         'help_menu': 'Ajuda',
         'about_menu': 'Sobre',
         'sponsor_menu': 'Patrocinar',
@@ -468,6 +479,7 @@ TRANSLATIONS = {
         'original_file': 'Arquivo Original',
         'no_recent_folders': 'Nenhuma pasta recente',
         'clear_recent_folders': 'Limpar histórico de pastas',
+        'clear_filters':'Limpar filtros',
     },
     'ru': {  # Russian
         # Main application strings
@@ -475,6 +487,8 @@ TRANSLATIONS = {
         'file_menu': 'Файл',
         'edit_menu': 'Правка',
         'view_menu': 'Вид',
+        'tools_menu': 'Инструменты',
+        'log_menu': 'Логи',
         'help_menu': 'Справка',
         'about_menu': 'О программе',
         'sponsor_menu': 'Поддержать',
@@ -587,6 +601,7 @@ TRANSLATIONS = {
         'original_file': 'Оригинальный файл',
         'no_recent_folders': 'Нет недавних папок',
         'clear_recent_folders': 'Очистить историю папок',
+        'clear_filters':'Очистить фильтры',
     },
     'ar': {  # Arabic
         # Main application strings
@@ -594,6 +609,8 @@ TRANSLATIONS = {
         'file_menu': 'ملف',
         'edit_menu': 'تحرير',
         'view_menu': 'عرض',
+        'tools_menu': 'أدوات',
+        'log_menu': 'سجلات',
         'help_menu': 'مساعدة',
         'about_menu': 'حول',
         'sponsor_menu': 'دعم',
@@ -708,6 +725,7 @@ TRANSLATIONS = {
         'original_file': 'الملف الأصلي',
         'no_recent_folders': 'لا توجد مجلدات حديثة',
         'clear_recent_folders': 'مسح سجل المجلدات',
+        'clear_filters':'مسح الفلاتر',
     }
 }
 
