@@ -150,12 +150,8 @@ class MenuManager:
         
         # Add commands for each log utility
         log_menu.add_command(
-            label=t('view_logs', self.app.lang, default='View Logs'),
-            command=self._open_log_viewer
-        )
-        log_menu.add_command(
             label=t('view_debug_logs', self.app.lang, default='View Debug Logs'),
-            command=self._open_debug_logs
+            command=self._open_log_viewer
         )
         log_menu.add_command(
             label=t('view_traceback', self.app.lang, default='View Traceback'),

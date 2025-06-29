@@ -39,11 +39,17 @@ def configure_logging(enabled: bool = True, level: str = "INFO",
         backup_count: Numero di file di backup da mantenere
         log_to_console: Se True, scrive anche sulla console
     """
-    global _log_config, LOG_FILE
+    global _log_config, LOG_FILE, _log_initialized
+    
+    # Ensure level is uppercase and valid
+    level = level.upper()
+    if level not in LOG_LEVELS:
+        print(f"[WARNING] Invalid log level: {level}. Defaulting to INFO.")
+        level = "INFO"
     
     _log_config.update({
         'enabled': enabled,
-        'level': level.upper(),
+        'level': level,
         'max_size_mb': max_size_mb,
         'backup_count': backup_count,
         'log_to_console': log_to_console
@@ -60,12 +66,19 @@ def configure_logging(enabled: bool = True, level: str = "INFO",
 
 def _should_log(level: str) -> bool:
     """Determina se un messaggio con il dato livello dovrebbe essere registrato."""
+    if not _log_initialized:
+        configure_logging()
+        
     if not _log_config['enabled']:
         return False
         
     try:
-        return LOG_LEVELS.index(level) >= LOG_LEVELS.index(_log_config['level'])
-    except ValueError:
+        # Debug output to help diagnose logging issues
+        current_level = _log_config['level']
+        should_log = LOG_LEVELS.index(level) >= LOG_LEVELS.index(current_level)
+        return should_log
+    except ValueError as e:
+        print(f"[WARNING] Invalid log level in _should_log: level={level}, config_level={_log_config.get('level')}")
         return False
 
 def _rotate_logs() -> None:
@@ -137,26 +150,44 @@ def _format_message(level: str, message: str) -> str:
 
 def _write_log(level: str, message: str) -> None:
     """Scrive un messaggio di log nel file e/o sulla console."""
-    if not _log_initialized:
-        configure_logging()
-        
-    if not _should_log(level):
-        return
+    global _log_initialized, LOG_FILE
     
     try:
+        if not _log_initialized:
+            configure_logging()
+            
+        # Ensure level is valid
+        if level not in LOG_LEVELS:
+            print(f"[WARNING] Invalid log level: {level}. Defaulting to DEBUG.", file=sys.stderr)
+            level = "DEBUG"
+            
+        if not _should_log(level):
+            if _log_config.get('log_to_console', True):
+                print(f"[DEBUG] Not logging {level} message: {message}", file=sys.stderr)
+            return
+        
         formatted_msg = _format_message(level, message)
         
         # Scrive sulla console se richiesto
-        if _log_config['log_to_console']:
+        if _log_config.get('log_to_console', True):
             print(formatted_msg, file=sys.stderr if level == "ERROR" else sys.stdout)
         
+        # Ensure log directory exists
+        log_dir = os.path.dirname(LOG_FILE) or '.'
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+        
         with _log_lock:
-            # Esegue la rotazione dei log se necessario
-            _rotate_logs()
-            
-            # Scrive sul file
-            with open(LOG_FILE, 'a', encoding='utf-8') as f:
-                f.write(f"{formatted_msg}\n")
+            # Log to file
+            try:
+                with open(LOG_FILE, 'a', encoding='utf-8') as f:
+                    f.write(f"{formatted_msg}\n")
+            except Exception as e:
+                print(f"[ERROR] Failed to write to log file {LOG_FILE}: {e}", file=sys.stderr)
+                # Fallback to console if file writing fails
+                print(f"[FALLBACK] {formatted_msg}", file=sys.stderr)
+    except Exception as e:
+        print(f"[CRITICAL] Error in _write_log: {e}", file=sys.stderr)
                 
     except Exception as e:
         print(f"[ERROR] Failed to write to log: {str(e)}", file=sys.stderr)
