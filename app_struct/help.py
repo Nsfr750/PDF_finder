@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from translations import TRANSLATIONS, t
+from lang.translations import TRANSLATIONS, t
 
 class HelpWindow:
     @staticmethod

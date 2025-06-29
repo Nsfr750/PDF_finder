@@ -1,14 +1,25 @@
 # PDF Duplicate Finder - To Do List
 
-## Completed ✓
+## In Progress 🚧
 
-### Update System
+### Code Quality
 
-- [x] **Improved Update System**
-  - Fixed automatic update checking
-  - Better error handling and user feedback
-  - Version comparison improvements
-  - Automatic check on startup
+- [ ] **Code Refactoring**
+  - [x] Resolved module naming conflicts with Python standard library
+  - [ ] Improve test coverage
+  - [ ] Add type hints throughout the codebase
+  - [ ] Implement CI/CD pipeline
+
+### Performance
+
+- [ ] **Optimization**
+  - [ ] Improve PDF processing speed
+  - [ ] Add caching for better performance
+  - [ ] Optimize memory usage for large PDFs
+
+## Priority Levels
+
+### High Priority
   - Manual check via Help > Check for Updates
 
 ### Multi-language Support
@@ -19,11 +30,20 @@
   - RTL support for Arabic
   - Dynamic language switching
 
-### Menu System
+### Module Structure
 
-- [x] **Menu System**
-  - Complete menu refactoring for better maintainability
-  - Added Recent Folders with keyboard shortcuts (Ctrl+1 to Ctrl+9)
+- [x] **Code Organization**
+  - Renamed `struct` package to `app_struct` to prevent conflicts
+  - Updated all internal imports
+  - Improved package structure for better maintainability
+
+### Menu Implementation
+
+- [x] **Menu Implementation**
+  - Added comprehensive menu structure
+  - Keyboard shortcuts for common actions
+  - Context menus for file operations
+  - Menu bar customization options (Ctrl+1 to Ctrl+9)
   - Undo functionality for file deletions (Ctrl+Z)
   - Better menu organization and accessibility
   - Theme support with light/dark modes
@@ -43,21 +63,12 @@
 - [ ] Add file size information in the duplicates list
 - [ ] Add modification date comparison for duplicates
 
-## Medium Priority
+### Medium Priority
 
 - [ ] Implement drag and drop folder support
 - [ ] Improve status messages and notifications
-- [ ] Add more keyboard shortcuts for common actions
-- [ ] Add support for more file types (e.g., images, documents)
 
-## Future Enhancements
-
-- [ ] Add more languages
-- [ ] Implement a plugin system for custom comparison methods
-- [ ] Add support for cloud storage providers
-- [ ] Implement a command-line interface (CLI) version
-
-## Features
+## Feature Requests
 
 ### Filtering Options
 
@@ -73,7 +84,7 @@
 - [ ] Add support for saving/loading scan results
 - [ ] Implement a command-line interface (CLI) version
 
-## UI/UX Improvements
+## User Interface Improvements
 
 ### Preview and Selection
 
@@ -94,7 +105,7 @@
 - [ ] Create a system tray version for background monitoring
 - [ ] Add support for custom comparison algorithms
 
-## Testing & Quality
+## Testing & Quality Assurance
 
 ### Test Coverage
 
@@ -116,7 +127,7 @@
 - [ ] Create a user guide video
 - [ ] Add more examples to the documentation
 
-## Bug Fixes
+## Known Issues & Bug Fixes
 - [ ] Fix any reported issues (none currently)
 
 ## Completed

@@ -1,6 +1,6 @@
 # PDF Duplicate Finder
 
-[![GitHub release](https://img.shields.io/badge/release-v2.6.0-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/tag/v2.6.0)
+[![GitHub release](https://img.shields.io/badge/release-v2.6.1-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/graphs/commit-activity)
@@ -8,8 +8,19 @@
 [![Tests](https://img.shields.io/badge/tests-passing-green?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/actions)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=for-the-badge)](https://codecov.io/gh/Nsfr750/PDF_finder)
 
-
 A Python application that helps you find and remove duplicate PDF files based on their content. Features an advanced preview system that allows you to verify duplicates before deletion, with a customizable interface that includes light and dark themes.
+
+## What's New in v2.6.1
+
+### Bug Fixes
+
+- Resolved module import conflicts with Python's standard library
+- Fixed package structure for better maintainability
+
+### Improvements
+
+- Improved code organization and module structure
+- Updated dependencies to their latest stable versions
 
 ## Features
 
@@ -110,10 +121,12 @@ A Python application that helps you find and remove duplicate PDF files based on
 ## Requirements
 
 ### Software Requirements
+
 - Python 3.x
 - Operating System: Windows, macOS, or Linux
 
 ### Python Packages
+
 - PyPDF2 >= 3.0.0 (PDF processing and text extraction)
 - pdf2image >= 1.16.3 (PDF to image conversion)
 - Pillow >= 10.0.0 (Image processing and display)
@@ -122,6 +135,7 @@ A Python application that helps you find and remove duplicate PDF files based on
 - tkinter (GUI framework, comes with Python)
 
 ### System Dependencies
+
 - Poppler (required by pdf2image for PDF rendering)
 - Internet connection (for update checks)
   - Windows: Included in the pdf2image package
@@ -131,6 +145,7 @@ A Python application that helps you find and remove duplicate PDF files based on
 ## Installation
 
 ### Prerequisites
+
 - Python 3.8 or higher
 - Poppler (required for PDF rendering)
   - Windows: Included in the pdf2image package
@@ -138,18 +153,22 @@ A Python application that helps you find and remove duplicate PDF files based on
   - Linux: `sudo apt-get install poppler-utils`
 
 ### Setup
+
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/yourusername/PDF_finder.git
    cd PDF_finder
    ```
 
 2. Install required packages:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. Run the application:
+
    ```bash
    python main.py
    ```
@@ -157,16 +176,21 @@ A Python application that helps you find and remove duplicate PDF files based on
 ## Usage
 
 1. Run the application:
-   ```
+
+   ```bash
    python main.py
    ```
+
 2. Click "Browse" to select a folder to scan
+
 3. Click "Find Duplicates" to start scanning
    - Progress and status will be shown
    - Click again to cancel the scan
+
 4. Review the results:
    - Select a PDF to preview its contents
    - Switch between image and text preview modes
+
 5. Manage duplicates:
    - Review the original and duplicate file pairs
    - Select unwanted duplicates
@@ -176,12 +200,13 @@ A Python application that helps you find and remove duplicate PDF files based on
 
 If you find this tool useful, consider supporting the development:
 
-- GitHub Sponsors: https://github.com/sponsors/Nsfr750
-- Patreon: https://www.patreon.com/Nsfr750
-- PayPal: https://paypal.me/3dmega
+- [GitHub Sponsors](https://github.com/sponsors/Nsfr750)
+- [Patreon](https://www.patreon.com/Nsfr750)
+- [PayPal](https://paypal.me/3dmega)
 
 Join our community:
-- Discord: https://discord.gg/BvvkUEP9
+
+- [Discord](https://discord.gg/BvvkUEP9)
 
 ## License
 

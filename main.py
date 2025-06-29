@@ -3,6 +3,9 @@ import hashlib
 import tempfile
 import json
 import math
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock, Event
 import logging
 from typing import List, Dict, Optional, Set
 
@@ -28,12 +31,12 @@ from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox, ttk, Button, Tk, Label,  simpledialog, font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL
 from tkinterdnd2 import TkinterDnD, DND_FILES, DND_ALL
 import imagehash
-from help import HelpWindow
-from about import About
-from sponsor import Sponsor
-from theme import ThemeManager
-from translations import TRANSLATIONS, t
-from updates import check_for_updates
+from app_struct.help import HelpWindow
+from app_struct.about import About
+from app_struct.sponsor import Sponsor
+from app_struct.theme import ThemeManager
+from lang.translations import TRANSLATIONS, t
+from app_struct.updates import check_for_updates
 import threading
 import time
 import os
@@ -62,6 +65,14 @@ except ImportError:
 class PDFDuplicateApp:
     def __init__(self, root):
         self.root = root
+        
+        # Initialize cache directory
+        self.cache_dir = os.path.join(os.path.expanduser('~'), '.pdf_duplicate_finder')
+        os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Add cache settings
+        self.use_cache = tk.BooleanVar(value=True)
+        self.low_priority = tk.BooleanVar(value=False)
         
         # Set window title with version
         self.root.title("PDF Duplicate Finder")
@@ -96,7 +107,7 @@ class PDFDuplicateApp:
         self.suppress_warnings = True  # Default to suppressing PyPDF2 warnings
         
         # Initialize sponsor attribute for the sponsor menu
-        from sponsor import Sponsor
+        from app_struct.sponsor import Sponsor
         self.sponsor = Sponsor(root)
         
         # Initialize config file path
@@ -132,7 +143,7 @@ class PDFDuplicateApp:
         self._setup_drag_drop()
         
         # Create menu bar after everything else is initialized
-        from menu import MenuManager
+        from app_struct.menu import MenuManager
         self.menu_manager = MenuManager(self.root, self)
         self.menu_manager.create_menu_bar()
     
@@ -395,6 +406,25 @@ class PDFDuplicateApp:
         workers_slider = Scale(batch_frame, from_=1, to=os.cpu_count() or 4, orient=HORIZONTAL,
                              variable=self.workers_var, showvalue=1, length=100)
         workers_slider.pack(side=tk.LEFT, padx=5, fill=tk.X)
+        
+        # Cache and low-priority mode controls
+        cache_frame = ttk.LabelFrame(left_frame, text=t('cache_and_priority', self.lang))
+        cache_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        # Cache toggle
+        ttk.Checkbutton(
+            cache_frame, 
+            text=t('enable_cache', self.lang), 
+            variable=self.use_cache,
+            command=self.clear_cache_if_needed
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Low-priority mode toggle
+        ttk.Checkbutton(
+            cache_frame, 
+            text=t('low_priority_mode', self.lang), 
+            variable=self.low_priority
+        ).pack(side=tk.LEFT, padx=5)
         
         # Progress bars frame
         progress_bars_frame = ttk.Frame(self.progress_frame)
@@ -747,17 +777,21 @@ class PDFDuplicateApp:
                 files = re.split(r'(?<!\\)\s+', event.data.strip('{}'))
                 files = [f.replace('\\', '') for f in files if f]
                 
-                # Take the first valid directory
+                # Take the first valid directory or PDF file
                 for path in files:
-                    if os.path.isdir(path):
-                        self.folder_path.set(path)
-                        self.find_duplicates()
-                        break
-                    elif os.path.isfile(path) and path.lower().endswith('.pdf'):
-                        # If a PDF file is dropped, use its directory
-                        self.folder_path.set(os.path.dirname(path))
-                        self.find_duplicates()
-                        break
+                    try:
+                        if os.path.isdir(path):
+                            self.folder_path.set(path)
+                            self.find_duplicates()
+                            break
+                        elif os.path.isfile(path) and path.lower().endswith('.pdf'):
+                            # If a PDF file is dropped, use its directory
+                            self.folder_path.set(os.path.dirname(path))
+                            self.find_duplicates()
+                            break
+                    except Exception as e:
+                        logger.warning(f"Error processing dropped item {path}: {e}")
+                        
         except Exception as e:
             messagebox.showerror("Error", f"Could not process dropped item: {str(e)}")
     
@@ -795,78 +829,68 @@ class PDFDuplicateApp:
                 return None
                 
             # Get file size in KB
-            try:
-                file_size = os.path.getsize(file_path)
-                if file_size == 0:
-                    error_msg = f"Empty file: {file_path}"
-                    file_info['error'] = error_msg
-                    logger.warning(error_msg)
-                    self.problematic_files.append(file_info)
-                    return None
-                    
-                file_info['size_kb'] = file_size / 1024
-                file_info['mod_time'] = os.path.getmtime(file_path)
+            file_size = os.path.getsize(file_path)
+            if file_size == 0:
+                error_msg = f"Empty file: {file_path}"
+                file_info['error'] = error_msg
+                logger.warning(error_msg)
+                self.problematic_files.append(file_info)
+                return None
                 
-                # Get page count with more robust error handling
-                try:
-                    with open(file_path, 'rb') as f:
+            file_info['size_kb'] = file_size / 1024
+            file_info['mod_time'] = os.path.getmtime(file_path)
+            
+            # Get page count with more robust error handling
+            try:
+                with open(file_path, 'rb') as f:
+                    try:
+                        pdf_reader = PdfReader(f)
+                        file_info['page_count'] = len(pdf_reader.pages)
+                        
+                        if file_info['page_count'] == 0:
+                            error_msg = f"No pages in PDF: {os.path.basename(file_path)}"
+                            file_info['error'] = error_msg
+                            logger.warning(error_msg)
+                            self.problematic_files.append(file_info)
+                        
+                        # Try to access some basic metadata to verify PDF is not completely broken
                         try:
-                            pdf_reader = PdfReader(f)
-                            file_info['page_count'] = len(pdf_reader.pages)
-                            
-                            if file_info['page_count'] == 0:
-                                error_msg = f"No pages in PDF: {os.path.basename(file_path)}"
-                                file_info['error'] = error_msg
-                                logger.warning(error_msg)
-                                self.problematic_files.append(file_info)
-                            
-                            # Try to access some basic metadata to verify PDF is not completely broken
-                            try:
-                                _ = pdf_reader.metadata
-                            except Exception as meta_err:
-                                error_msg = f"PDF metadata access error: {str(meta_err)}"
-                                file_info['error'] = error_msg
-                                if not self.suppress_warnings:
-                                    logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
-                                self.problematic_files.append(file_info)
-                            
-                        except (PdfReadError, PyPDF2.errors.PdfReadError) as e:
-                            error_msg = f"Corrupted PDF: {str(e)}"
+                            _ = pdf_reader.metadata
+                        except Exception as meta_err:
+                            error_msg = f"PDF metadata access error: {str(meta_err)}"
                             file_info['error'] = error_msg
                             if not self.suppress_warnings:
                                 logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
                             self.problematic_files.append(file_info)
-                            file_info['page_count'] = 0
-                            
-                        except Exception as e:
-                            error_msg = f"Error reading PDF: {type(e).__name__} - {str(e)}"
-                            file_info['error'] = error_msg
+                        
+                    except (PdfReadError, PyPDF2.errors.PdfReadError) as e:
+                        error_msg = f"Corrupted PDF: {str(e)}"
+                        file_info['error'] = error_msg
+                        if not self.suppress_warnings:
                             logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
-                            self.problematic_files.append(file_info)
-                            file_info['page_count'] = 0
+                        self.problematic_files.append(file_info)
+                        file_info['page_count'] = 0
                         
-                        return file_info
-                        
-                except Exception as e:
-                    error_msg = f"Error processing PDF: {type(e).__name__} - {str(e)}"
-                    file_info['error'] = error_msg
-                    logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
-                    self.problematic_files.append(file_info)
+                    except Exception as e:
+                        error_msg = f"Error reading PDF: {type(e).__name__} - {str(e)}"
+                        file_info['error'] = error_msg
+                        logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
+                        self.problematic_files.append(file_info)
+                        file_info['page_count'] = 0
+                    
                     return file_info
                     
             except Exception as e:
-                error_msg = f"Error getting file info: {type(e).__name__} - {str(e)}"
+                error_msg = f"Error processing PDF: {type(e).__name__} - {str(e)}"
                 file_info['error'] = error_msg
-                logger.error(f"{file_path} - {error_msg}")
+                logger.warning(f"{os.path.basename(file_path)} - {error_msg}")
                 self.problematic_files.append(file_info)
-                return None
+                return file_info
                 
         except Exception as e:
-            error_msg = f"Unexpected error: {type(e).__name__} - {str(e)}"
+            error_msg = f"Error getting file info: {type(e).__name__} - {str(e)}"
             file_info['error'] = error_msg
             logger.error(f"{file_path} - {error_msg}")
-            import traceback
-            traceback.print_exc()
             self.problematic_files.append(file_info)
             return None
 
@@ -916,666 +940,34 @@ class PDFDuplicateApp:
         return True
 
     def calculate_pdf_hash(self, file_info):
-        """Calculate hash for a PDF file with caching of file info."""
+        """Calculate hash for a PDF file with caching of file info.
+        
+        Args:
+            file_info: Dictionary containing file information including 'path'
+            
+        Returns:
+            str: MD5 hash of the file content or None if cancelled
+        """
+        if not self.is_searching:
+            print("[INFO] Processing cancelled")
+            return None
+            
         file_path = file_info['path']
+        
         try:
-            # Update UI with current file being processed
-            self.update_file_status(file_path)
-            
-            if self.compare_mode.get() == 'quick':
-                # For quick compare, use file size + first page content hash
-                with open(file_path, 'rb') as file:
-                    pdf_reader = PdfReader(file)
-                    first_page_text = ''
-                    if len(pdf_reader.pages) > 0:
-                        first_page = pdf_reader.pages[0]
-                        first_page_text = first_page.extract_text() or ''
-                        
-                        # Update progress for first page
-                        self.update_file_progress(1, 1)
-                    
-                    # Combine file size and first page content for hashing
-                    content = f"{file_info['size_kb']}:{first_page_text}"
-                    return (file_path, hashlib.md5(content.encode('utf-8')).hexdigest())
-            else:
-                # Full compare - hash all content
-                with open(file_path, 'rb') as file:
-                    pdf_reader = PdfReader(file)
-                    total_pages = len(pdf_reader.pages)
-                    content_parts = []
-                    
-                    for i, page in enumerate(pdf_reader.pages, 1):
-                        if not self.is_searching:
-                            return (file_path, None)
-                            
-                        # Update progress for current page
-                        self.update_file_progress(i, total_pages)
-                        
-                        # Extract text from current page
-                        page_text = page.extract_text()
-                        if page_text:
-                            content_parts.append(page_text)
-                    
-                    # Combine all page texts and hash
-                    content = ''.join(content_parts)
-                    return (file_path, hashlib.md5(content.encode('utf-8')).hexdigest())
-                    
-        except Exception as e:
-            error_msg = f"Error reading {os.path.basename(file_path)}: {str(e)}"
-            self.update_status_details(error_msg)
-            print(error_msg)
-            return (file_path, None)
-
-    def save_scan_results(self):
-        """Save current scan results to a file."""
-        if not self.scan_results or 'duplicates' not in self.scan_results:
-            messagebox.showwarning("No Results", "No scan results to save.")
-            return
-            
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Save Scan Results As"
-        )
-        
-        if not file_path:
-            return
-            
-        try:
-            # Prepare data for saving
-            save_data = {
-                'version': '1.0',
-                'scanned_folder': self.last_scan_folder,
-                'scan_timestamp': time.time(),
-                'duplicates': self.scan_results['duplicates'],
-                'file_info': self.scan_results['file_info']  # Already a dictionary
-            }
-            
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(save_data, f, indent=2, ensure_ascii=False)
-                
-            messagebox.showinfo("Success", f"Scan results saved to:\n{file_path}")
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to save scan results: {str(e)}")
-            
-    def load_scan_results(self):
-        """Load scan results from a file."""
-        file_path = filedialog.askopenfilename(
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Open Scan Results"
-        )
-        
-        if not file_path:
-            return
-            
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                loaded_data = json.load(f)
-                
-            if 'version' not in loaded_data or loaded_data['version'] != '1.0':
-                raise ValueError("Unsupported file format or version")
-                
-            # Clear current results
-            self.clear_results()
-            
-            # Update UI with loaded data
-            self.folder_path.set(loaded_data.get('scanned_folder', ''))
-            self.last_scan_folder = loaded_data.get('scanned_folder', '')
-            
-            # Store loaded data - keep file_info as a dictionary for direct access
-            self.scan_results = {
-                'duplicates': loaded_data['duplicates'],
-                'file_info': loaded_data['file_info']  # Keep as dictionary
-            }
-            
-            # Update the tree view with all columns
-            self.tree.delete(*self.tree.get_children())
-            for dup in self.scan_results['duplicates']:
-                self.duplicates.append(dup)
-                dup_path = dup[0]
-                orig_path = dup[1] if len(dup) > 1 else ''
-                
-                # Get file info or use empty values if not found
-                dup_info = self.scan_results['file_info'].get(dup_path, {})
-                orig_info = self.scan_results['file_info'].get(orig_path, {}) if orig_path else {}
-                
-                # Format values for display
-                dup_size = f"{dup_info.get('size_kb', 0):.1f}" if dup_info else ''
-                dup_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(dup_info.get('mod_time', 0))) if dup_info and 'mod_time' in dup_info else ''
-                orig_size = f"{orig_info.get('size_kb', 0):.1f}" if orig_info else ''
-                orig_date = time.strftime('%Y-%m-%d %H:%M', time.localtime(orig_info.get('mod_time', 0))) if orig_info and 'mod_time' in orig_info else ''
-                
-                # Insert into tree with all columns
-                self.tree.insert('', 'end', values=(
-                    dup_path,
-                    dup_size,
-                    dup_date,
-                    orig_path,
-                    orig_size,
-                    orig_date
-                ))
-                
-            # Enable save button
-            self.save_btn.config(state=tk.NORMAL)
-            
-            messagebox.showinfo("Success", 
-                f"Loaded {len(self.scan_results['duplicates'])} duplicate entries from:\n{file_path}")
-                
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load scan results: {str(e)}")
-            
-    def update_duplicate_count(self, count):
-        """Update the duplicate count display in the UI."""
-        if hasattr(self, 'duplicate_count_label'):
-            self.duplicate_count_label.config(text=f"Duplicates found: {count}")
-            
-    def clear_results(self):
-        """Clear all results and reset the UI."""
-        self.duplicates = []
-        self.scan_results = {}
-        self.problematic_files = []
-        self.tree.delete(*self.tree.get_children())
-        self.status_text.set("Ready")
-        self.progress_var.set(0)
-        self.overall_progress_var.set(0)
-        self.update_duplicate_count(0)
-        if hasattr(self, 'tools_menu'):
-            self.tools_menu.entryconfig("View Problematic Files", state=tk.DISABLED)
-        
-    def show_problematic_files(self):
-        """Show a dialog with files that had issues during processing."""
-        if not hasattr(self, 'problematic_files') or not self.problematic_files:
-            messagebox.showinfo("No Issues Found", "No problematic files were found during the last scan.")
-            return
-            
-        # Create a new window
-        window = tk.Toplevel(self.root)
-        window.title("Problematic Files")
-        window.transient(self.root)
-        window.grab_set()
-        
-        # Set window size and position
-        window_width = 800
-        window_height = 600
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-        center_x = int(screen_width/2 - window_width/2)
-        center_y = int(screen_height/2 - window_height/2)
-        window.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-        
-        # Add a label
-        label = ttk.Label(
-            window,
-            text=f"Found {len(self.problematic_files)} files with issues:",
-            padding=10
-        )
-        label.pack(fill=tk.X)
-        
-        # Add a treeview to display the files
-        columns = ("File Path", "Size", "Error")
-        tree = ttk.Treeview(window, columns=columns, show="headings", selectmode="browse")
-        
-        # Configure columns
-        tree.column("File Path", width=500, anchor=tk.W)
-        tree.column("Size", width=100, anchor=tk.E)
-        tree.column("Error", width=200, anchor=tk.W)
-        
-        # Add headings
-        for col in columns:
-            tree.heading(col, text=col)
-            
-        # Add a scrollbar
-        scrollbar = ttk.Scrollbar(window, orient=tk.VERTICAL, command=tree.yview)
-        tree.configure(yscroll=scrollbar.set)
-        
-        # Pack the tree and scrollbar
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Add the files to the tree
-        for file_info in self.problematic_files:
-            tree.insert("", tk.END, values=(
-                file_info.get('path', 'N/A'),
-                f"{file_info.get('size_kb', 0):,.0f} KB",
-                file_info.get('error', 'Unknown error')
-            ))
-            
-        # Add a close button
-        btn_frame = ttk.Frame(window)
-        btn_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        close_btn = ttk.Button(
-            btn_frame,
-            text="Close",
-            command=window.destroy
-        )
-        close_btn.pack(side=tk.RIGHT, padx=5, pady=5)
-        
-        # Update the UI
-        window.update_idletasks()
-        
-    def cancel_scan(self):
-        """Cancel the current scan operation."""
-        if hasattr(self, 'is_searching') and self.is_searching:
-            self.is_searching = False
-            self.show_status("Stopping scan... Please wait", "warning")
-            self.stop_btn.config(state=tk.DISABLED)
-            # The actual cancellation will be handled in the scan thread
-            
-    def find_duplicates(self):
-        folder = self.folder_path.get()
-        if not folder:
-            self.show_status("Please select a folder first", "warning")
-            return
-            
-        if not os.path.isdir(folder):
-            self.show_status(f"Folder not found: {folder}", "error")
-            return
-            
-        # Add to recent folders
-        self.add_to_recent_folders(folder)
-            
-        # Clear previous results
-        self.clear_results()
-        self.last_scan_folder = folder
-        
-        # Reset progress and set searching flag
-        self.is_searching = True
-        self.scan_start_time = time.time()
-        self.update_overall_progress(0, 100)
-        self.update_status_details("Preparing to scan...")
-        
-        # Update UI
-        self.find_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
-        
-        # Update status with folder name
-        folder_name = os.path.basename(folder)
-        self.show_status(f"Scanning: {folder_name}", "scanning")
-        
-        # Start scanning in background
-        scan_thread = threading.Thread(target=self._scan_folder, args=(folder,), daemon=True)
-        scan_thread.start()
-    
-    def _scan_folder(self, folder):
-        """Scan folder for PDF files in a background thread."""
-        try:
-            if not self.is_searching:
-                print("[INFO] Scan was cancelled before starting")
-                return
-                
-            if not os.path.isdir(folder):
-                error_msg = f"Folder not found: {folder}"
-                print(f"[ERROR] {error_msg}")
-                self.show_status(error_msg, "error")
-                return
-                
-            print(f"[INFO] Starting scan in folder: {folder}")
-            self.update_status_details("Searching for PDF files...")
-            pdf_files = []
-            
-            # First, collect all PDF files
-            for root, dirs, files in os.walk(folder):
-                if not self.is_searching:
-                    print("[INFO] Scan cancelled by user during file collection")
-                    return
-                    
-                for file in files:
+            # Calculate MD5 hash of the file content
+            hash_md5 = hashlib.md5()
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
                     if not self.is_searching:
-                        print("[INFO] Scan cancelled during file processing")
-                        return
-                        
-                    if file.lower().endswith(".pdf"):
-                        full_path = os.path.join(root, file)
-                        try:
-                            # Verify it's actually a file and not a symlink or other type
-                            if os.path.isfile(full_path):
-                                pdf_files.append(full_path)
-                                
-                                # Update status every 100 files for better performance
-                                if len(pdf_files) % 100 == 0:
-                                    self.update_status_details(f"Found {len(pdf_files)} PDF files so far...")
-                                    
-                        except Exception as e:
-                            print(f"[WARNING] Error accessing {full_path}: {e}")
-                            continue
-            
-            print(f"[INFO] Found {len(pdf_files)} PDF files to process")
-            
-            if not pdf_files:
-                self.show_status("No PDF files found in the selected folder", "warning")
-                self.is_searching = False
-                return
-                
-            self.all_pdf_files = pdf_files
-            total_files = len(pdf_files)
-            
-            # Update progress
-            self.update_overall_progress(10, 100)
-            self.update_status_details(f"Found {total_files} PDF files, analyzing...")
-            
-            # Process files in batches and get results
-            processed_count, duplicate_count = self._process_files_in_batches(pdf_files)
-            
-            if not self.is_searching:
-                print("[INFO] Scan was cancelled during processing")
-                return
-                
-            # Update progress
-            self.update_overall_progress(90)
-            
-            # Finalize results
-            self._finalize_scan_results(total_files, duplicate_count)
+                        print(f"[INFO] Cancelled while reading {file_path}")
+                        return None
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
             
         except Exception as e:
-            print(f"[ERROR] Error in _scan_folder: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            self.is_searching = False
-            return
-            
-    def _populate_duplicates_treeview(self):
-        """Populate the treeview with the current duplicates."""
-        try:
-            # Clear existing items in the treeview
-            for item in self.tree.get_children():
-                self.tree.delete(item)
-            
-            # If no duplicates, we're done
-            if not hasattr(self, 'duplicates') or not self.duplicates:
-                return
-                
-            # Populate the treeview with duplicates
-            for group_id, (file_hash, files) in enumerate(self.duplicates, 1):
-                # Create a parent item for each group of duplicates
-                parent = self.tree.insert("", "end", text=f"Duplicate Group {group_id}", 
-                                       values=("", "", "", "", "", ""))
-                
-                # Add each file in the duplicate group
-                for file_info in files:
-                    file_path = file_info["path"]
-                    file_size = file_info.get("size", 0) / 1024  # Convert to KB
-                    file_mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(file_info.get("mtime", 0)))
-                    
-                    # Insert file with parent
-                    self.tree.insert(parent, "end", 
-                                  values=(
-                                      file_path,
-                                      f"{file_size:.1f} KB",
-                                      file_mtime,
-                                      "",  # Original path (empty for duplicates)
-                                      "",  # Original size
-                                      ""   # Original date
-                                  ))
-            
-            # Expand all groups
-            for item in self.tree.get_children():
-                self.tree.item(item, open=True)
-                
-            # Enable save button since we have results
-            self.save_btn.config(state=tk.NORMAL)
-            
-        except Exception as e:
-            error_msg = f"Error populating duplicates treeview: {str(e)}"
-            print(f"[ERROR] {error_msg}")
-            import traceback
-            traceback.print_exc()
-            self.show_status(error_msg, "error")
-    
-    def _finalize_scan_results(self, total_files, duplicate_count):
-        """Finalize the scan results and update the UI.
-        
-        Args:
-            total_files (int): Total number of files processed
-            duplicate_count (int): Number of duplicates found
-        """
-        try:
-            # Update progress to 100%
-            self.update_overall_progress(100)
-            
-            # Calculate processing time
-            scan_time = time.time() - self.scan_start_time
-            time_str = time.strftime("%H:%M:%S", time.gmtime(scan_time))
-            
-            # Update status
-            if duplicate_count > 0:
-                status_msg = f"Found {duplicate_count} duplicate(s) in {total_files} files. Time: {time_str}"
-                self.show_status(status_msg, "warning")
-                if hasattr(self, 'menu_manager') and self.problematic_files:
-                    self.menu_manager.update_tools_menu_state(tk.NORMAL)
-                # Populate the treeview with duplicates
-                self._populate_duplicates_treeview()
-            else:
-                status_msg = f"No duplicates found in {total_files} files. Time: {time_str}"
-                self.show_status(status_msg, "success")
-                
-            # Update duplicate count display
-            self.update_duplicate_count(duplicate_count)
-            
-        except Exception as e:
-            error_msg = f"Error finalizing scan results: {str(e)}"
-            print(f"[ERROR] {error_msg}")
-            self.show_status(error_msg, "error")
-        finally:
-            # Reset UI state
-            self.is_searching = False
-            self.find_btn.config(state=tk.NORMAL)
-            self.stop_btn.config(state=tk.DISABLED)
-            self.save_btn.config(state=tk.NORMAL if duplicate_count > 0 else tk.DISABLED)
-            self.root.update()
-            
-    def _process_files_in_batches(self, pdf_files):
-        """Process PDF files in batches to find duplicates.
-        
-        Args:
-            pdf_files: List of PDF file paths to process
-            
-        Returns:
-            tuple: (processed_count, duplicate_count) or (0, 0) if cancelled/errored
-        """
-        try:
-            batch_size = 10  # Process files in batches of 10
-            total_files = len(pdf_files)
-            processed_count = 0
-            duplicate_count = 0
-            
-            # Dictionary to store file hashes and their info
-            # Format: {hash: [file_info1, file_info2, ...]}
-            hash_groups = {}
-            
-            for i in range(0, total_files, batch_size):
-                if not self.is_searching:
-                    return 0, 0
-                    
-                batch = pdf_files[i:i + batch_size]
-                
-                # Process each file in the batch
-                for file_path in batch:
-                    if not self.is_searching:
-                        return processed_count, duplicate_count
-                        
-                    try:
-                        # Get file info
-                        file_info = self.get_pdf_info(file_path)
-                        if not file_info:
-                            continue
-                            
-                        # Calculate file hash
-                        file_hash = self.calculate_pdf_hash(file_info)
-                        
-                        # Add file info to the appropriate hash group
-                        if file_hash not in hash_groups:
-                            hash_groups[file_hash] = []
-                        
-                        hash_groups[file_hash].append(file_info)
-                        
-                        # If we have more than one file with this hash, it's a duplicate
-                        if len(hash_groups[file_hash]) > 1:
-                            duplicate_count += 1
-                            
-                    except Exception as e:
-                        print(f"[ERROR] Error processing {file_path}: {str(e)}")
-                        continue
-                        
-                    # Update progress
-                    processed_count += 1
-                    progress = 10 + int(80 * (processed_count / total_files))  # 10-90% range
-                    self.update_overall_progress(progress)
-                    self.update_file_progress(int((i % batch_size + 1) / batch_size * 100))
-                    
-                    # Update status every 10 files for better performance
-                    if processed_count % 10 == 0:
-                        status_msg = f"Scanned {processed_count}/{total_files} files"
-                        if duplicate_count > 0:
-                            status_msg += f", found {duplicate_count} duplicates"
-                        self.show_status(status_msg, "scanning")
-                        print(f"[DEBUG] {status_msg}")
-                
-                # Allow UI to update between batches
-                self.root.update_idletasks()
-            
-            # Store duplicate groups (only groups with more than one file)
-            self.duplicates = [(h, files) for h, files in hash_groups.items() if len(files) > 1]
-            
-            print(f"[DEBUG] Processing complete. Processed {processed_count} files, found {duplicate_count} duplicates")
-            return processed_count, duplicate_count
-            
-        except Exception as e:
-            error_msg = f"Error in _process_files_in_batches: {str(e)}"
-            print(f"[ERROR] {error_msg}")
-            import traceback
-            traceback.print_exc()
-            self.show_status(error_msg, "error")
-            return 0, 0
-
-    def process_batch(self, file_batch, pdf_hash_map, duplicate_count):
-        """Process a batch of files to find duplicates.
-        
-        Args:
-            file_batch: List of file paths to process in this batch
-            pdf_hash_map: Dictionary mapping file hashes to file info
-            duplicate_count: Current count of duplicates found
-                
-        Returns:
-            tuple: (batch_results, new_duplicate_count, batch_duplicates) or 
-                  (None, None, None) if cancelled
-        """
-        if not self.is_searching:
-            print("[INFO] Batch processing cancelled before starting")
-            return None, None, None
-            
-        batch_results = []
-        batch_duplicates = []
-            
-        print(f"[INFO] Processing batch of {len(file_batch)} files")
-            
-        # First, get file info for all files in batch
-        try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                file_infos = list(filter(None, executor.map(self.get_pdf_info, file_batch)))
-            
-            print(f"[DEBUG] Got file info for {len(file_infos)} files")
-            
-            if not file_infos:
-                print("[WARNING] No file information was retrieved for this batch")
-                return [], 0, []
-                
-            # Apply filters if active
-            filters_active = getattr(self, 'filters_active', None)
-            if filters_active and filters_active.get():
-                filtered_infos = [info for info in file_infos if info and self.apply_filters(info)]
-                print(f"[DEBUG] Filtered from {len(file_infos)} to {len(filtered_infos)} files after applying filters")
-                file_infos = filtered_infos
-            
-            if not file_infos:
-                print("[DEBUG] No files to process after filtering")
-                return [], duplicate_count, []
-                
-        except Exception as e:
-            print(f"[ERROR] Error processing batch: {e}")
-            import traceback
-            traceback.print_exc()
-            return [], duplicate_count, []
-                
-        # For quick compare, first group by file size to reduce number of full comparisons
-        if not self.is_searching:
-            print("[INFO] Scan cancelled before quick compare")
-            return None, None, None
-            
-        if self.compare_mode.get() == 'quick':
-            size_groups = {}
-            
-            # Group files by size
-            for file_info in file_infos:
-                if not self.is_searching:
-                    print("[INFO] Scan cancelled during size grouping")
-                    return None, None, None
-                    
-                size = int(file_info['size_kb'])
-                if size not in size_groups:
-                    size_groups[size] = []
-                size_groups[size].append(file_info)
-                
-                # Only process groups with more than one file of the same size
-                for size, same_size_infos in size_groups.items():
-                    if len(same_size_infos) > 1:
-                        # Process this group of same-sized files
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                            future_to_file = {executor.submit(self.calculate_pdf_hash, file_info): file_info 
-                                          for file_info in same_size_infos}
-                            for future in concurrent.futures.as_completed(future_to_file):
-                                if not self.is_searching:
-                                    return None, None, None
-                                    
-                                file_info = future_to_file[future]
-                                file_path = file_info['path']
-                                try:
-                                    file_path, pdf_hash = future.result()
-                                    batch_results.append(file_path)
-                                    
-                                    if pdf_hash is not None:
-                                        if pdf_hash in pdf_hash_map:
-                                            original_file = pdf_hash_map[pdf_hash]['path']
-                                            batch_duplicates.append((file_path, original_file))
-                                            duplicate_count += 1
-                                        else:
-                                            pdf_hash_map[pdf_hash] = file_info
-                                except Exception as e:
-                                    print(f"Error processing {file_path}: {e}")
-                    else:
-                        # Single file in size group, just add to results
-                        batch_results.append(same_size_infos[0]['path'])
-                        
-            return batch_results, duplicate_count, batch_duplicates
-        else:
-            # Full compare mode - process all files normally
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_to_file = {executor.submit(self.calculate_pdf_hash, file_info): file_info 
-                                for file_info in file_infos}
-                
-                for future in concurrent.futures.as_completed(future_to_file):
-                    if not self.is_searching:
-                        print("[INFO] Scan cancelled during full compare")
-                        return None, None, None
-                        
-                    file_info = future_to_file[future]
-                    file_path = file_info['path']
-                    try:
-                        file_path, pdf_hash = future.result()
-                        batch_results.append(file_path)
-                        
-                        if pdf_hash is not None:
-                            if pdf_hash in pdf_hash_map:
-                                original_file = pdf_hash_map[pdf_hash]['path']
-                                batch_duplicates.append((file_path, original_file))
-                                duplicate_count += 1
-                            else:
-                                pdf_hash_map[pdf_hash] = file_info
-                    except Exception as e:
-                        print(f"Error processing {file_path}: {e}")
-                
-                return batch_results, duplicate_count, batch_duplicates
+            print(f"[ERROR] Error calculating hash for {file_path}: {e}")
+            return None
 
     def toggle_filters(self):
         """Toggle the enabled state of filter controls."""
@@ -1595,144 +987,329 @@ class PDFDuplicateApp:
         # Force UI update
         self.root.update_idletasks()
         
+    def _set_process_priority(self):
+        """Set process priority based on settings."""
+        if hasattr(self, 'low_priority') and self.low_priority.get():
+            try:
+                import psutil
+                p = psutil.Process()
+                p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+            except (ImportError, AttributeError):
+                # Fallback for non-Windows or if psutil not available
+                try:
+                    import os
+                    os.nice(10)  # Lower priority on Unix-like systems
+                except (AttributeError, ImportError):
+                    pass
+    
+    def clear_cache(self):
+        """Clear all cached scan results."""
+        try:
+            for filename in os.listdir(self.cache_dir):
+                if filename.startswith('scan_cache_') and filename.endswith('.json'):
+                    os.remove(os.path.join(self.cache_dir, filename))
+            self.show_status("Cache cleared", "info")
+        except Exception as e:
+            self.show_status(f"Failed to clear cache: {e}", "error")
+    
+    def clear_cache_if_needed(self):
+        """Clear cache if it was disabled and is being re-enabled."""
+        if not hasattr(self, '_cache_was_disabled'):
+            self._cache_was_disabled = not self.use_cache.get()
+            return
+            
+        if self._cache_was_disabled and self.use_cache.get():
+            if messagebox.askyesno(
+                "Clear Cache",
+                "Would you like to clear the existing cache when re-enabling it?"
+            ):
+                self.clear_cache()
+        self._cache_was_disabled = not self.use_cache.get()
+    
+    def _process_pdf_file(self, file_path, hash_map, lock):
+        """Process a single PDF file and update the hash map."""
+        if not self.is_searching:
+            return None
+            
+        # Set process priority for this thread if in low priority mode
+        if hasattr(self, 'low_priority') and self.low_priority.get():
+            self._set_process_priority()
+            
+        try:
+            # Get file info first
+            file_info = self.get_pdf_info(file_path)
+            if not file_info:
+                return None
+                
+            # Calculate hash
+            file_hash = self.calculate_pdf_hash(file_info)
+            if not file_hash:
+                return None, None
+                
+            # Update results thread-safely
+            with results_lock:
+                if file_hash in hash_map:
+                    original_file = hash_map[file_hash]['path']
+                    return file_path, original_file
+                else:
+                    hash_map[file_hash] = file_info
+                    return None, None
+                    
+        except Exception as e:
+            print(f"[ERROR] Error processing {file_path}: {e}")
+            return None, None
+
+    def _find_pdf_files(self, folder, stop_event):
+        """Generator that yields PDF files with cancellation support."""
+        for root, _, files in os.walk(folder):
+            if stop_event.is_set():
+                return
+                
+            for file in files:
+                if stop_event.is_set():
+                    return
+                    
+                if file.lower().endswith(".pdf"):
+                    yield os.path.join(root, file)
+
     def perform_search(self, folder):
         if not self.is_searching:
             return
-
-        pdf_hash_map = {}
-        duplicate_count = 0
-        processed_files = 0
-        start_time = time.time()
-
-        try:
-            # First pass: collect all PDF files
-            self.safe_update_status("Scanning for PDF files...")
-            pdf_files = []
-            for root, _, files in os.walk(folder):
-                if not self.is_searching:
-                    return
-                for file in files:
-                    if file.lower().endswith(".pdf"):
-                        pdf_files.append(os.path.join(root, file))
             
-            self.all_pdf_files = pdf_files  # Store all PDF files found
+        # Set process priority if in low priority mode
+        if hasattr(self, 'low_priority') and self.low_priority.get():
+            self._set_process_priority()
 
+        # Clear previous results
+        self.duplicates = []
+        self.problematic_files = []
+        
+        # For thread-safe operations
+        pdf_hash_map = {}
+        results_lock = threading.Lock()
+        stop_event = threading.Event()
+        duplicate_counter = 0
+        start_time = time.time()
+        
+        # Check cache first if enabled
+        cache_enabled = hasattr(self, 'use_cache') and self.use_cache.get()
+        cache_file = os.path.join(self.cache_dir, f"scan_cache_{hash(folder)}.json")
+        
+        if cache_enabled and os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'r') as f:
+                    cache_data = json.load(f)
+                if cache_data.get('folder') == folder:
+                    cache_time = os.path.getmtime(cache_file)
+                    folder_mtime = max(os.path.getmtime(root) for root, _, _ in os.walk(folder))
+                    
+                    if cache_time > folder_mtime:
+                        self.safe_update_status("Loading results from cache...")
+                        self.duplicates = cache_data.get('duplicates', [])
+                        self.all_pdf_files = cache_data.get('file_info', [])
+                        self._update_results_ui()
+                        self.safe_update_status("Results loaded from cache")
+                        return
+            except Exception as e:
+                print(f"[WARNING] Failed to load cache: {e}")
+        
+        try:
+            # First pass: collect all PDF files with progress
+            self.safe_update_status("Scanning for PDF files...")
+            
+            # Get total number of PDFs for progress tracking
+            pdf_files = list(self._find_pdf_files(folder, stop_event))
             total_pdfs = len(pdf_files)
             if total_pdfs == 0:
                 self.safe_update_status(t('no_pdfs_found', self.lang))
                 return
-
-            # Update batch size from UI
-            self.batch_size = self.batch_size_var.get()
-            self.max_workers = self.workers_var.get()
+                
+            # Configure thread pool based on system capabilities
+            max_workers = min(32, (os.cpu_count() or 1) * 4)
+            processed_count = 0
             
-            # Configure progress bar
-            self.progress_bar['maximum'] = total_pdfs
-            self.progress_var = 0
-            self.progress_bar['value'] = 0
-            self.progress_bar.pack(fill=tk.X, pady=2)
+            self.safe_update_status(f"Found {total_pdfs} PDF files. Starting duplicate detection...")
             
-            # Process files in batches
-            for i in range(0, len(pdf_files), self.batch_size):
-                if not self.is_searching:
-                    return
+            # Process files in batches to balance memory usage and performance
+            batch_size = max(50, min(500, total_pdfs // 10))  # Dynamic batch size
+            
+            # Adjust thread pool size for low priority mode
+            if hasattr(self, 'low_priority') and self.low_priority.get():
+                max_workers = max(1, max_workers // 2)  # Use fewer threads in low priority mode
                 
-                # Update status with current mode
-                mode = "Quick" if self.compare_mode.get() == 'quick' else "Full"
-                self.safe_update_status(f"{mode} compare mode - Scanning batch {i//self.batch_size + 1}/{(len(pdf_files)-1)//self.batch_size + 1}...")
-                
-                batch = pdf_files[i:i + self.batch_size]
-                processed, new_duplicate_count, new_duplicates = self.process_batch(batch, pdf_hash_map, duplicate_count)
-                
-                if processed is None:  # Search was cancelled
-                    return
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Process files in batches
+                for i in range(0, total_pdfs, batch_size):
+                    if stop_event.is_set():
+                        break
+                        
+                    batch = pdf_files[i:i + batch_size]
+                    batch_futures = []
                     
-                processed_files += len(processed)
-                duplicate_count = new_duplicate_count
+                    # Submit batch for processing
+                    for file_path in batch:
+                        if stop_event.is_set():
+                            break
+                        future = executor.submit(
+                            self._process_pdf_file,
+                            file_path,
+                            pdf_hash_map,
+                            results_lock
+                        )
+                        batch_futures.append(future)
+                    
+                    # Process batch results
+                    for future in as_completed(batch_futures):
+                        if stop_event.is_set():
+                            break
+                            
+                        duplicate = future.result()
+                        if duplicate and duplicate[0] and duplicate[1]:
+                            with results_lock:
+                                self.duplicates.append(duplicate)
+                                duplicate_counter += 1
+                        
+                        # Update progress
+                        processed_count += 1
+                        progress = (processed_count / total_pdfs) * 100
+                        self.update_overall_progress(progress, 100)
+                        self.update_status_details(f"Processed {processed_count}/{total_pdfs} files. Found {duplicate_counter} duplicates.")
+                        
+                        # Allow UI to update
+                        if processed_count % 10 == 0:
+                            self.root.update_idletasks()
+            
+            # Save to cache if enabled
+            if cache_enabled and not stop_event.is_set():
+                try:
+                    cache_data = {
+                        'folder': folder,
+                        'timestamp': time.time(),
+                        'duplicates': self.duplicates,
+                        'file_info': list(pdf_hash_map.values())
+                    }
+                    with open(cache_file, 'w') as f:
+                        json.dump(cache_data, f)
+                except Exception as e:
+                    print(f"[WARNING] Failed to save cache: {e}")
+            
+            # Final update
+            if not stop_event.is_set():
+                # Store all processed files for reference
+                self.all_pdf_files = list(pdf_hash_map.values())
                 
-                # Update UI with new duplicates
-                for dup in new_duplicates:
-                    self.duplicates.append(dup)
-                    self.tree.insert("", tk.END, values=dup)
-                
-                # Update progress
-                self.progress_var = processed_files
-                self.progress_bar['value'] = processed_files
-                
-                # Calculate estimated time remaining
+                # Update UI with results
                 elapsed_time = time.time() - start_time
-                files_remaining = total_pdfs - processed_files
-                if processed_files > 0 and files_remaining > 0:
-                    time_per_file = elapsed_time / processed_files
-                    remaining_time = time_per_file * files_remaining
-                    remaining_str = time.strftime("%H:%M:%S", time.gmtime(remaining_time))
-                    self.safe_update_status(
-                        f"Processed {processed_files}/{total_pdfs} files. "
-                        f"Found {duplicate_count} duplicates. "
-                        f"Remaining: ~{remaining_str}"
+                time_str = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+                
+                if duplicate_counter > 0:
+                    self.show_status(
+                        f"Found {duplicate_counter} duplicate(s) in {total_pdfs} files. "
+                        f"Scan completed in {time_str}.",
+                        "warning"
                     )
                 else:
-                    self.safe_update_status(f"Processed {processed_files}/{total_pdfs} files. Found {duplicate_count} duplicates.")
-                
-                # Allow UI to update
-                self.root.update_idletasks()
-
-            # Search complete
-            if not self.is_searching:  # Check if search was cancelled
-                self.show_status("Scan cancelled", "info")
-                return
-                
-            elapsed_time = time.time() - start_time
-            time_str = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-            
-            # Store complete scan results
-            self.scan_results = {
-                'duplicates': self.duplicates,
-                'file_info': [self.get_pdf_info(path) for path in self.all_pdf_files],
-                'scan_time': elapsed_time,
-                'file_count': total_pdfs,
-                'duplicate_count': len(self.duplicates)
-            }
-            
-            # Enable save button since we have results
-            self.save_btn.config(state=tk.NORMAL)
-            
-            # Update status with results
-            if not self.duplicates:
-                self.show_status(
-                    f"No duplicates found. Scanned {total_pdfs} files in {time_str}",
-                    "success"
-                )
-                
-                if total_pdfs > 0:
-                    messagebox.showinfo(
-                        "Scan Complete",
-                        f"No duplicate files found.\n\n"
-                        f"Scanned {total_pdfs} files in {time_str}.",
-                        detail=f"Folder: {os.path.basename(self.last_scan_folder)}"
+                    self.show_status(
+                        f"No duplicates found in {total_pdfs} files. "
+                        f"Scan completed in {time_str}.",
+                        "success"
                     )
-            else:
-                dup_count = len(self.duplicates)
-                self.show_status(
-                    f"Found {dup_count} duplicate(s) in {total_pdfs} files. "
-                    f"Scan completed in {time_str}.",
-                    "success" if dup_count == 0 else "warning"
-                )
-                
-                messagebox.showinfo(
-                    "Scan Complete",
-                    f"Found {dup_count} duplicate file(s).\n\n"
-                    f"Scanned {total_pdfs} files in {time_str}.",
-                    detail=f"Folder: {os.path.basename(self.last_scan_folder)}"
-                )
 
         except Exception as e:
             if self.is_searching:  # Only show error if search wasn't cancelled
-                messagebox.showerror(t('error', self.lang), f"An error occurred while scanning: {str(e)}")
+                self.safe_update_status(f"Error during search: {str(e)}")
+                print(f"Error in perform_search: {e}")
                 import traceback
                 traceback.print_exc()
-
-        finally:
+                
+                try:
+                    messagebox.showerror(
+                        t('error', self.lang) if hasattr(self, 'lang') else "Error", 
+                        f"An error occurred while scanning: {str(e)}"
+                    )
+                except Exception as e:
+                    print(f"Error showing error message: {e}")
+        
+        # Cleanup code that runs in all cases
+        stop_event.set()
+        self.is_searching = False
+        
+        try:
+            self.find_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+            
+            # Reset progress bar
+            self.progress_bar['value'] = 0
+            self.progress_bar['maximum'] = 100
+            self.update_status_details("Ready")
+            
+            # Update UI
+            self.root.update_idletasks()
+            
+            # Clean up any remaining resources
+            if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
+                try:
+                    shutil.rmtree(self.temp_dir, ignore_errors=True)
+                except Exception as e:
+                    print(f"Error cleaning up temporary directory: {e}")
+            
+            # Store scan results if we have them
+            if hasattr(self, 'all_pdf_files') and hasattr(self, 'duplicates'):
+                try:
+                    self.scan_results = {
+                        'duplicates': self.duplicates,
+                        'file_info': [self.get_pdf_info(path) for path in self.all_pdf_files],
+                        'scan_time': time.time() - start_time,
+                        'file_count': len(self.all_pdf_files),
+                        'duplicate_count': len(self.duplicates)
+                    }
+                    
+                    # Enable save button since we have results
+                    if hasattr(self, 'save_btn'):
+                        self.save_btn.config(state=tk.NORMAL)
+                except Exception as e:
+                    print(f"Error saving scan results: {e}")
+            
+            # Calculate elapsed time for status messages
+            elapsed_time = time.time() - start_time
+            time_str = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+            
+            # Update status with results
+            if not hasattr(self, 'duplicates') or not self.duplicates:
+                status_msg = f"No duplicates found. Scanned {total_pdfs} files in {time_str}"
+                self.show_status(status_msg, "success")
+                
+                if total_pdfs > 0 and hasattr(self, 'last_scan_folder') and self.last_scan_folder:
+                    try:
+                        messagebox.showinfo(
+                            "Scan Complete",
+                            f"No duplicate files found.\n\n"
+                            f"Scanned {total_pdfs} files in {time_str}.",
+                            detail=f"Folder: {os.path.basename(self.last_scan_folder)}"
+                        )
+                    except Exception as e:
+                        print(f"Error showing completion message: {e}")
+            else:
+                dup_count = len(self.duplicates)
+                status_msg = (f"Found {dup_count} duplicate(s) in {total_pdfs} files. "
+                             f"Scan completed in {time_str}.")
+                self.show_status(status_msg, "success" if dup_count == 0 else "warning")
+                
+                if hasattr(self, 'last_scan_folder') and self.last_scan_folder:
+                    try:
+                        messagebox.showinfo(
+                            "Scan Complete",
+                            f"Found {dup_count} duplicate file(s).\n\n"
+                            f"Scanned {total_pdfs} files in {time_str}.",
+                            detail=f"Folder: {os.path.basename(self.last_scan_folder)}"
+                        )
+                    except Exception as e:
+                        print(f"Error showing completion message: {e}")
+                        
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+            import traceback
+            traceback.print_exc()
             if self.is_searching:  # Only cleanup if search wasn't cancelled
                 self.progress_bar.stop()
                 self.progress_bar.pack_forget()
@@ -2236,7 +1813,7 @@ class PDFDuplicateApp:
         def run_update_check():
             try:
                 # Get current version
-                from version import get_version
+                from app_struct.version import get_version
                 current_version = get_version()
                 
                 # Check for updates
@@ -2317,6 +1894,250 @@ class PDFDuplicateApp:
         else:
             self.show_status("PDF warnings are now enabled", "info")
             
+    def find_duplicates(self):
+        """Start the duplicate PDF finding process."""
+        if not self.folder_path.get():
+            self.show_status("Please select a folder first", "error")
+            return
+            
+        if not os.path.isdir(self.folder_path.get()):
+            self.show_status("Selected folder does not exist", "error")
+            return
+            
+        if hasattr(self, 'is_searching') and self.is_searching:
+            self.cancel_scan()
+            return
+            
+        # Reset UI state
+        self.duplicates = []
+        self.all_pdf_files = []
+        self.problematic_files = []
+        if hasattr(self, 'tree'):
+            self.tree.delete(*self.tree.get_children())
+        if hasattr(self, 'clear_preview'):
+            self.clear_preview()
+        
+        # Update UI
+        self.is_searching = True
+        if hasattr(self, 'find_btn'):
+            self.find_btn.config(text=t('stop_scan', self.lang) if hasattr(t, 'stop_scan') else 'Stop Scan')
+        if hasattr(self, 'stop_btn'):
+            self.stop_btn.config(state=tk.NORMAL)
+        if hasattr(self, 'save_btn'):
+            self.save_btn.config(state=tk.DISABLED)
+        
+        # Start search in a separate thread
+        self.search_thread = threading.Thread(
+            target=self.perform_search,
+            args=(self.folder_path.get(),),
+            daemon=True
+        )
+        self.search_thread.start()
+        
+        # Start progress monitoring
+        if hasattr(self, 'monitor_search'):
+            self.monitor_search()
+    
+    def monitor_search(self):
+        """Monitor the search thread and update UI."""
+        if hasattr(self, 'search_thread') and self.search_thread.is_alive():
+            # Update progress
+            if hasattr(self, 'progress_var'):
+                self.progress_bar['value'] = self.progress_var
+                self.progress_bar.update()
+            
+            # Check again after 100ms
+            self.root.after(100, self.monitor_search)
+        elif hasattr(self, 'is_searching') and self.is_searching:
+            # Search completed normally
+            self.is_searching = False
+            if hasattr(self, 'find_btn'):
+                self.find_btn.config(text=t('find_duplicates', self.lang))
+            if hasattr(self, 'stop_btn'):
+                self.stop_btn.config(state=tk.DISABLED)
+            
+            # Update UI with results
+            if hasattr(self, '_update_results_ui'):
+                self._update_results_ui()
+    
+    def cancel_scan(self):
+        """Cancel the current scan operation."""
+        if hasattr(self, 'is_searching') and self.is_searching:
+            self.is_searching = False
+            self.show_status("Cancelling scan...", "warning")
+            
+            # Stop any running threads
+            if hasattr(self, 'search_thread') and self.search_thread.is_alive():
+                # Set stop event if it exists
+                if hasattr(self, 'stop_event'):
+                    self.stop_event.set()
+                
+                # Wait for thread to finish (with timeout)
+                self.search_thread.join(timeout=2.0)
+                
+                if self.search_thread.is_alive():
+                    print("Warning: Search thread did not stop gracefully")
+            
+            # Reset UI
+            if hasattr(self, 'find_btn'):
+                self.find_btn.config(text=t('find_duplicates', self.lang))
+            if hasattr(self, 'stop_btn'):
+                self.stop_btn.config(state=tk.DISABLED)
+            self.show_status("Scan cancelled", "info")
+    
+    def _update_results_ui(self):
+        """Update the UI with the scan results."""
+        if not hasattr(self, 'duplicates') or not self.duplicates:
+            self.show_status("No duplicates found", "success")
+            return
+            
+        # Clear existing items
+        if hasattr(self, 'tree'):
+            self.tree.delete(*self.tree.get_children())
+        
+        # Add duplicates to treeview
+        for dup_group in self.duplicates:
+            if not dup_group or len(dup_group) < 2:
+                continue
+                
+            # Sort by file size (descending)
+            dup_group.sort(key=lambda x: os.path.getsize(x) if os.path.exists(x) else 0, reverse=True)
+            
+            # Add to treeview
+            for i, file_path in enumerate(dup_group):
+                try:
+                    file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                    file_mtime = os.path.getmtime(file_path) if os.path.exists(file_path) else 0
+                    file_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S') if file_mtime > 0 else 'Unknown'
+                    
+                    # Mark the first file as the "original" (largest file)
+                    is_original = (i == 0)
+                    
+                    if hasattr(self, 'tree'):
+                        self.tree.insert(
+                            '', 'end',
+                            values=(
+                                os.path.basename(file_path),
+                                f"{file_size / (1024 * 1024):.2f} MB" if file_size > 0 else "0 MB",
+                                file_date,
+                                "Original" if is_original else "Duplicate",
+                                file_path
+                            ),
+                            tags=('original' if is_original else 'duplicate')
+                        )
+                except Exception as e:
+                    print(f"Error adding file to treeview: {e}")
+        
+        # Configure tag colors if tree exists
+        if hasattr(self, 'tree'):
+            self.tree.tag_configure('original', background='#e6f7e6')  # Light green for original
+            self.tree.tag_configure('duplicate', background='#f9f9f9')  # Light gray for duplicates
+        
+        # Update status
+        dup_count = len(self.duplicates) if hasattr(self, 'duplicates') else 0
+        self.show_status(
+            f"Found {dup_count} group(s) of duplicate files",
+            "success" if dup_count == 0 else "warning"
+        )
+        
+        # Enable save button
+        if hasattr(self, 'save_btn'):
+            self.save_btn.config(state=tk.NORMAL if dup_count > 0 else tk.DISABLED)
+    
+    def save_scan_results(self):
+        """Save the current scan results to a JSON file."""
+        if not hasattr(self, 'duplicates') or not self.duplicates:
+            messagebox.showinfo("No Results", "No scan results to save.")
+            return
+            
+        # Ask user for save location
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Save Scan Results"
+        )
+        
+        if not file_path:  # User cancelled
+            return
+            
+        try:
+            # Prepare data to save
+            scan_data = {
+                'scan_timestamp': datetime.now().isoformat(),
+                'folder_scanned': self.folder_path.get(),
+                'duplicate_groups': [],
+                'file_info': {}
+            }
+            
+            # Add file info for all files in duplicates
+            file_info = {}
+            for group in self.duplicates:
+                group_info = []
+                for file_path in group:
+                    if file_path not in file_info:
+                        try:
+                            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                            file_mtime = os.path.getmtime(file_path) if os.path.exists(file_path) else 0
+                            file_info[file_path] = {
+                                'size_bytes': file_size,
+                                'size_mb': file_size / (1024 * 1024) if file_size > 0 else 0,
+                                'modified': datetime.fromtimestamp(file_mtime).isoformat() if file_mtime > 0 else 'Unknown',
+                                'exists': os.path.exists(file_path)
+                            }
+                        except Exception as e:
+                            file_info[file_path] = {
+                                'error': str(e),
+                                'exists': False
+                            }
+                    group_info.append(file_path)
+                scan_data['duplicate_groups'].append(group_info)
+            
+            scan_data['file_info'] = file_info
+            
+            # Save to file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(scan_data, f, indent=2, ensure_ascii=False)
+                
+            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
+            
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Failed to save scan results: {str(e)}")
+            print(f"Error saving scan results: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def load_scan_results(self):
+        """Load scan results from a previously saved JSON file."""
+        file_path = filedialog.askopenfilename(
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Load Scan Results"
+        )
+        
+        if not file_path:  # User cancelled
+            return
+            
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                scan_data = json.load(f)
+                
+            # Reset current state
+            self.duplicates = scan_data.get('duplicate_groups', [])
+            self.folder_path.set(scan_data.get('folder_scanned', ''))
+            
+            # Update UI
+            if hasattr(self, 'tree'):
+                self.tree.delete(*self.tree.get_children())
+                
+            self._update_results_ui()
+            
+            self.show_status("Scan results loaded successfully", "success")
+            
+        except Exception as e:
+            messagebox.showerror("Load Error", f"Failed to load scan results: {str(e)}")
+            print(f"Error loading scan results: {e}")
+            import traceback
+            traceback.print_exc()
+    
     def show_problematic_files(self):
         """Show a dialog with files that had issues during processing."""
         if not hasattr(self, 'problematic_files') or not self.problematic_files:
@@ -2340,13 +2161,17 @@ class PDFDuplicateApp:
         
         # Disable text widget
         text.config(state=tk.DISABLED)
+        
+        # Add a scrollbar
+        scrollbar = ttk.Scrollbar(dialog, command=text.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text.config(yscrollcommand=scrollbar.set)
         
         # Add a close button
-        button_frame = ttk.Frame(window)
+        button_frame = ttk.Frame(dialog)
         button_frame.pack(fill=tk.X, padx=5, pady=5)
         
-        close_button = ttk.Button(button_frame, text="Close", command=window.destroy)
+        close_button = ttk.Button(button_frame, text="Close", command=dialog.destroy)
         close_button.pack(side=tk.RIGHT, padx=5)
 
 def main():

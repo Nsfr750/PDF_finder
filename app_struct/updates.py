@@ -216,7 +216,7 @@ def check_for_updates(parent: Optional[tk.Tk] = None, current_version: str = "__
     """
     try:
         # Import here to avoid circular imports
-        from version import get_version
+        from app_struct.version import get_version
         
         # If default version string is passed, get the real version
         if current_version == "__version__":

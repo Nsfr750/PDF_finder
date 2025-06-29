@@ -69,6 +69,9 @@ TRANSLATIONS = {
         'help_step_5': 'Select files and click "Delete Selected" to remove duplicates',
         'help_note': 'Note: The app compares PDF contents, not just filenames, ensuring accurate duplicate detection.',
         
+        # About
+        'about_text': 'A simple and efficient tool for searching PDF files.',
+
         # Sponsor Dialog
         "sponsor_on_github": "Sponsor on GitHub",
         "join_discord": "Join Discord",
@@ -181,6 +184,9 @@ TRANSLATIONS = {
         'help_step_4': 'Seleziona un PDF per visualizzarne l\'anteprima',
         'help_step_5': 'Seleziona i file e clicca su "Elimina Selezionati" per rimuovere i duplicati',
         'help_note': 'Nota: L\'app confronta il contenuto dei PDF, non solo i nomi dei file, garantendo un rilevamento accurato dei duplicati.',
+        
+        # About
+        'about_text': 'Un semplice e efficiente strumento per la ricerca di file PDF.',
         
         # Sponsor Dialog
         "sponsor_on_github": "Sponsorizza su GitHub",
@@ -296,6 +302,9 @@ TRANSLATIONS = {
         'help_step_5': 'Seleccione archivos y haga clic en "Eliminar Seleccionados" para remover duplicados',
         'help_note': 'Nota: La aplicación compara el contenido de los PDFs, no solo los nombres de archivo, asegurando una detección precisa de duplicados.',
         
+        # About
+        'about_text': 'Un simple y eficiente herramienta para buscar archivos PDF.',
+         
         # Sponsor Dialog
         "sponsor_on_github": "Patrocinar en GitHub",
         "join_discord": "Unirse a Discord",
@@ -411,6 +420,9 @@ TRANSLATIONS = {
         'help_step_5': 'Selecione os arquivos e clique em "Excluir Selecionados" para remover duplicatas',
         'help_note': 'Nota: O aplicativo compara o conteúdo dos PDFs, não apenas os nomes dos arquivos, garantindo uma detecção precisa de duplicatas.',
         
+        # About
+        'about_text': 'Uma ferramenta simples e eficiente para pesquisar ficheiros PDF.',
+                 
         # Diálogo de Apoio
         "sponsor_on_github": "Apoiar no GitHub",
         "join_discord": "Entrar no Discord",
@@ -527,7 +539,10 @@ TRANSLATIONS = {
         'help_step_5': 'Выберите файлы и нажмите "Удалить выбранное" для удаления дубликатов',
         'help_note': 'Примечание: Приложение сравнивает содержимое PDF-файлов, а не только их имена, что обеспечивает точное обнаружение дубликатов.',
         
-        # Диалог поддержки
+        # About
+        'about_text': 'Простой и эффективный инструмент для поиска PDF-файлов.',
+
+        # Sponsor Dialog
         "sponsor_on_github": "Поддержать на GitHub",
         "join_discord": "Присоединиться к Discord",
         "buy_me_a_coffee": "Купить мне кофе",
@@ -643,7 +658,18 @@ TRANSLATIONS = {
         'help_step_4': 'حدد ملف PDF لمعاينة محتواه',
         'help_step_5': 'حدد الملفات وانقر فوق "حذف المحدد" لإزالة الملفات المكررة',
         'help_note': 'ملاحظة: يقارن التطبيق محتوى ملفات PDF، وليس أسماء الملفات فقط، مما يضمن اكتشافًا دقيقًا للملفات المكررة.',
-        
+
+        # About
+        'about_text': 'أداة بسيطة وفعالة للبحث عن ملفات PDF.',
+
+        # Sponsor Dialog
+        'sponsoe': 'دعم',
+        'sponsor_on_github': 'دعم على GitHub',
+        'join_discord': 'انضم إلى Discord',
+        'buy_me_a_coffee': 'شراء قهوة',
+        'join_the_patreon': 'انضم إلى Patreon',
+        'close': 'إغلاق',
+
         # UI Elements
         'recent_folders': 'المجلدات الحديثة',
         'exit': 'خروج',

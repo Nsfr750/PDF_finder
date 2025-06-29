@@ -7,26 +7,27 @@ import traceback
 from tkinter import messagebox
 from pathlib import Path
 
-# Aggiungi la cartella principale al path per gli import
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-try:
-    from struttura import logger
-except ImportError:
-    # Se non si riesce a importare da struttura, prova a importare direttamente
-    try:
-        from . import logger
-    except ImportError:
-        import logger
+# Import the logger module directly
+from utils import logger
 
 APP_ROOT = Path(__file__).parent.parent
-LOG_FILE = os.path.join(APP_ROOT, 'traceback.log')
+LOG_FILE = os.path.join(APP_ROOT, 'application.log')
 
 def clean_log():
     if os.path.exists(LOG_FILE):
         os.remove(LOG_FILE)
+    # Reset logger configuration
+    logger._log_initialized = False
+    # Reinitialize logger with test settings
+    logger.configure_logging(level='DEBUG', log_to_console=False)
 
 def read_log():
+    # Ensure the log file exists and has content
+    if not os.path.exists(LOG_FILE):
+        return ""
     with open(LOG_FILE, 'r', encoding='utf-8') as f:
         return f.read()
 
@@ -35,10 +36,15 @@ def test_log_info_and_warning_and_error():
     logger.log_info('info test')
     logger.log_warning('warn test')
     logger.log_error('error test')
+    # Ensure logs are written to disk
+    logger._write_log('DEBUG', 'flush')
     contents = read_log()
-    assert '[INFO] info test' in contents
-    assert '[WARNING] warn test' in contents
-    assert '[ERROR] error test' in contents
+    assert '[INFO] test_logger.py:test_log_info_and_warning_and_error' in contents
+    assert 'info test' in contents
+    assert '[WARNING] test_logger.py:test_log_info_and_warning_and_error' in contents
+    assert 'warn test' in contents
+    assert '[ERROR] test_logger.py:test_log_info_and_warning_and_error' in contents
+    assert 'error test' in contents
 
 def test_log_exception():
     clean_log()
@@ -46,9 +52,12 @@ def test_log_exception():
         raise ValueError('test exception')
     except Exception as e:
         logger.log_exception(type(e), e, e.__traceback__)
+    # Ensure logs are written to disk
+    logger._write_log('DEBUG', 'flush')
     contents = read_log()
     assert 'Uncaught exception:' in contents
     assert 'ValueError: test exception' in contents
+    assert 'Traceback' in contents
 
 def test_setup_global_exception_logging(monkeypatch):
     clean_log()
@@ -60,6 +69,8 @@ def test_setup_global_exception_logging(monkeypatch):
         raise ValueError('test global exception')
     except ValueError:
         sys.excepthook(*sys.exc_info())
+    # Ensure logs are written to disk
+    logger._write_log('DEBUG', 'flush')
     contents = read_log()
     assert 'Traceback' in contents
     assert 'ValueError: test global exception' in contents

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from version import get_version
+from app_struct.version import get_version
+from lang.translations import t
 
 class About:
     @staticmethod
@@ -19,10 +20,10 @@ class About:
         version = ttk.Label(about_dialog, text=f'Version {get_version()}')
         version.pack()
 
-        description = ttk.Label(about_dialog, text='A simple and efficient tool for searching PDF files.', justify=tk.CENTER)
+        description = ttk.Label(about_dialog, text=t('about_text'), justify=tk.CENTER)
         description.pack(pady=20)
 
         copyright = ttk.Label(about_dialog, text='© 2025 Nsfr750')
         copyright.pack(pady=10)
 
-        ttk.Button(about_dialog, text='Close', command=about_dialog.destroy).pack(pady=20)
+        ttk.Button(about_dialog, text=t('Close'), command=about_dialog.destroy).pack(pady=20)

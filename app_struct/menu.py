@@ -6,7 +6,7 @@ from tkinterdnd2 import DND_FILES
 import os
 import json
 from pathlib import Path
-from translations import t
+from lang.translations import t
 
 class MenuManager:
     def __init__(self, root, app):

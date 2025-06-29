@@ -2,6 +2,24 @@
 
 All notable changes to the PDF Duplicate Finder project will be documented in this file.
 
+## [2.6.1] - 2025-06-29
+
+### Bug Fixes in 2.6.1
+
+- **Import System**
+  - Fixed module import conflicts with Python's built-in `struct` module
+  - Renamed `struct` package to `app_struct` to prevent naming conflicts
+  - Updated all internal imports to use the new package name
+
+### Dependencies
+
+- **Updated Dependencies**
+  - Moved pymupdf to main dependencies as it's required for core functionality
+  - Added pytest-cov for test coverage reporting
+  - Updated development dependencies to their latest stable versions
+
+### Development Tools
+
 ## [2.6.0] - 2025-06-28
 
 ### New Features
@@ -19,7 +37,7 @@ All notable changes to the PDF Duplicate Finder project will be documented in th
   - Included Windows-specific dependencies for improved compatibility
   - Updated minimum required versions for security patches
 
-### Documentation
+### Documentation Updates
 
 - **Content Updates**
   - Updated help documentation with new features
@@ -59,14 +77,14 @@ All notable changes to the PDF Duplicate Finder project will be documented in th
 
 ## [2.3.0] - 2025-05-20
 
-### Theme and UI
+### Theme and UI Improvements
 
-- Theme support with light and dark modes
-- Theme preferences persistence between sessions
-- New View menu for theme selection
-- Horizontal scrolling support for the file list
-- Keyboard shortcuts for common actions
-- Configuration file for user preferences
+- Added theme support with light and dark modes
+- Implemented theme preferences persistence between sessions
+- Added new View menu for theme selection
+- Improved horizontal scrolling support for the file list
+- Added keyboard shortcuts for common actions
+- Added configuration file for user preferences
 
 ## [2.2.0] - 2025-05-20
 
@@ -83,7 +101,7 @@ All notable changes to the PDF Duplicate Finder project will be documented in th
 - Reorganized menu structure to group related items under "Help"
 - Improved code organization with separate modules for different components
 
-### Bug Fixes
+### Bug Fixes in 2.2.0
 
 - Fixed potential memory leaks in PDF preview handling
 - Improved error handling during PDF processing
