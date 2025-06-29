@@ -1,5 +1,6 @@
 import tkinter as tk
 import webbrowser
+from lang.translations import t
 
 # Sponsor Class
 class Sponsor:
@@ -8,7 +9,7 @@ class Sponsor:
 
     def show_sponsor(self):
         dialog = tk.Toplevel(self.root)
-        dialog.title("Sponsor the Project")
+        dialog.title(t('sponsor'))
         dialog.geometry('500x150')
         
         # Sponsor buttons
@@ -16,10 +17,10 @@ class Sponsor:
         btn_frame.pack(pady=20)
         
         buttons = [
-            ("Sponsor on GitHub", "https://github.com/sponsors/Nsfr750"),
-            ("Join Discord", "https://discord.gg/BvvkUEP9"),
-            ("Buy Me a Coffee", "https://paypal.me/3dmega"),
-            ("Join The Patreon", "https://www.patreon.com/Nsfr750")
+            (t('sponsor_on_github'), "https://github.com/sponsors/Nsfr750"),
+            (t('join_discord'), "https://discord.gg/BvvkUEP9"),
+            (t('buy_me_a_coffee'), "https://paypal.me/3dmega"),
+            (t('join_the_patreon'), "https://www.patreon.com/Nsfr750")
         ]
         
         for text, url in buttons:
@@ -28,5 +29,6 @@ class Sponsor:
             btn.pack(side=tk.LEFT, padx=5)
         
         # Close button
-        tk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
+        tk.Button(dialog, text=t('close'), command=dialog.destroy).pack(pady=10)
+
 

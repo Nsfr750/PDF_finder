@@ -3,11 +3,19 @@ import hashlib
 import tempfile
 import json
 import math
+import logging
+import traceback
+import shutil
+import queue
+import webbrowser
 import threading
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Optional, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Event
-import logging
-from typing import List, Dict, Optional, Set
+from functools import partial
 
 # Configure PyPDF2 logger to suppress warnings
 logging.getLogger('PyPDF2').setLevel(logging.ERROR)
@@ -18,46 +26,51 @@ logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
-import traceback
-import concurrent.futures
-import shutil
-from pathlib import Path
+
+# Import PDF processing libraries
 import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2.errors import PdfReadError
 from pdf2image import convert_from_path
+
+# Import GUI libraries
 import tkinter as tk
-from PIL import Image, ImageTk
-from tkinter import filedialog, messagebox, ttk, Button, Tk, Label,  simpledialog, font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL
+from tkinter import (
+    filedialog, messagebox, ttk, Button, Tk, Label, simpledialog, 
+    font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL, scrolledtext
+)
 from tkinterdnd2 import TkinterDnD, DND_FILES, DND_ALL
+
+# Import image processing libraries
+from PIL import Image, ImageTk, ImageOps, ImageDraw, ImageFont
 import imagehash
+
+# Import Windows-specific libraries
+try:
+    import win32ui
+    import win32gui
+    import win32con
+    import win32api
+    import pythoncom
+    from win32com.shell import shell, shellcon
+    WINDOWS_AVAILABLE = True
+except ImportError:
+    WINDOWS_AVAILABLE = False
+    print("Windows-specific features will be disabled")
+
+# Import application modules
 from app_struct.help import HelpWindow
 from app_struct.about import About
 from app_struct.sponsor import Sponsor
 from app_struct.theme import ThemeManager
-from lang.translations import TRANSLATIONS, t
 from app_struct.updates import check_for_updates
-import threading
-import time
-import os
-from datetime import datetime
-import queue
-import webbrowser
-from PIL import ImageOps, ImageDraw, ImageFont
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import partial
-import win32ui
-import win32gui
-import win32con
-import win32api
-import pythoncom
-from win32com.shell import shell, shellcon
+from lang.translations import TRANSLATIONS, t
 
 # Try to import send2trash for safe file deletion
 try:
-    import send2trash
+    from send2trash import send2trash as send_to_trash
 except ImportError:
-    send2trash = None
+    send_to_trash = None
     print("Note: send2trash module not found. Using standard file deletion.")
     print("Install with: pip install send2trash")
 
@@ -73,6 +86,10 @@ class PDFDuplicateApp:
         # Initialize cache directory
         self.cache_dir = os.path.join(os.path.expanduser('~'), '.pdf_duplicate_finder')
         os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Initialize undo stack and max steps
+        self.undo_stack = []
+        self.max_undo_steps = 10  # Numero massimo di azioni annullabili
         
         # Load saved settings if they exist
         self.load_settings()
@@ -331,12 +348,38 @@ class PDFDuplicateApp:
         """Show the help dialog."""
         HelpWindow(self.root, self.lang)
         
+    def select_all_duplicates(self):
+        """Select all items in the duplicates treeview."""
+        if not hasattr(self, 'tree'):
+            return
+            
+        # Temporarily disable the selection event to avoid performance issues
+        self._selection_changed = False
+        
+        # Select all items that are not separators
+        for item in self.tree.get_children():
+            tags = self.tree.item(item, 'tags')
+            if 'separator' not in tags:
+                self.tree.selection_add(item)
+        
+        # Update preview for the first selected item if any
+        selected = self.tree.selection()
+        if selected:
+            self.update_preview()
+    
+    def deselect_all_duplicates(self):
+        """Deselect all items in the duplicates treeview."""
+        if hasattr(self, 'tree'):
+            self.tree.selection_remove(self.tree.selection())
+            self.clear_preview()
+    
     def on_select(self, event):
         """Handle treeview selection event."""
+        # Get the current selection
         selection = self.tree.selection()
         if not selection:
             return
-            
+                
         # Get the selected item
         item = self.tree.item(selection[0])
         
@@ -928,18 +971,31 @@ class PDFDuplicateApp:
         
     def toggle_preview_visibility(self):
         """Toggle the visibility of the preview panel."""
-        self.preview_visible = not self.preview_visible
+        if not hasattr(self, 'preview_visible'):
+            self.preview_visible = True
+        else:
+            self.preview_visible = not self.preview_visible
         
         if self.preview_visible:
-            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
-            self.toggle_preview_btn.config(text="▶")
+            # Show preview panel
+            if hasattr(self, 'right_frame'):
+                self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+            if hasattr(self, 'toggle_preview_btn'):
+                self.toggle_preview_btn.config(text="◀")
+            # Update preview if something is selected
+            if hasattr(self, 'tree') and self.tree.selection():
+                self.update_preview()
         else:
-            self.right_frame.pack_forget()
-            self.toggle_preview_btn.config(text="◀")
-            
+            # Hide preview panel
+            if hasattr(self, 'right_frame'):
+                self.right_frame.pack_forget()
+            if hasattr(self, 'toggle_preview_btn'):
+                self.toggle_preview_btn.config(text="▶")
+        
         # Save the preview visibility state
-        self.settings['preview_visible'] = self.preview_visible
-        self.save_settings()
+        if hasattr(self, 'settings'):
+            self.settings['preview_visible'] = self.preview_visible
+            self.save_settings()
     
     def _set_process_priority(self):
         """Set the process priority to below normal to improve system responsiveness."""
@@ -1270,6 +1326,12 @@ class PDFDuplicateApp:
         self.tree.tag_configure('duplicate', background='white')   # White for duplicates
         self.tree.tag_configure('separator', background='#f0f0f0') # Light gray for separators
         
+        # Configure selection colors
+        style = ttk.Style()
+        style.map('Treeview',
+                 background=[('selected', '#0078d7')],  # Blue background for selected items
+                 foreground=[('selected', 'white')])    # White text for selected items
+        
         # Configure columns
         columns = [
             ("dup_path", t('duplicate_file', self.lang), 250, 'w'),  # Duplicate file name
@@ -1296,7 +1358,48 @@ class PDFDuplicateApp:
         tree_scroll_x = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
         self.tree.configure(yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
 
-        # Pack scrollbars and tree
+        # Add selection buttons frame
+        selection_frame = ttk.Frame(tree_frame)
+        
+        # Add Select All button
+        self.select_all_btn = ttk.Button(
+            selection_frame, 
+            text=t('select_all', self.lang) if hasattr(t, 'select_all') else 'Select All',
+            command=self.select_all_duplicates
+        )
+        self.select_all_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Add Deselect All button
+        self.deselect_all_btn = ttk.Button(
+            selection_frame, 
+            text=t('deselect_all', self.lang) if hasattr(t, 'deselect_all') else 'Deselect All',
+            command=self.deselect_all_duplicates
+        )
+        self.deselect_all_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Add a separator
+        ttk.Separator(selection_frame, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=5, fill=tk.Y, pady=2)
+        
+        # Add Preview button
+        self.preview_btn = ttk.Button(
+            selection_frame,
+            text=t('preview', self.lang) if hasattr(t, 'preview') else 'Preview',
+            command=self.preview_selected,
+            style='Accent.TButton'
+        )
+        self.preview_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Add Delete button next to Preview
+        self.delete_btn = ttk.Button(
+            selection_frame,
+            text=t('delete_selected', self.lang) if hasattr(t, 'delete_selected') else 'Delete',
+            command=self.delete_selected,
+            style='Danger.TButton'  # Use a red button for delete
+        )
+        self.delete_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # Pack the selection frame
+        selection_frame.pack(fill=tk.X, padx=2, pady=2)
         tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
         tree_scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
         self.tree.pack(fill=tk.BOTH, expand=True)
@@ -1304,7 +1407,10 @@ class PDFDuplicateApp:
         # Bind tree selection event
         self.tree.bind('<<TreeviewSelect>>', self.on_select)
         
-        # Right frame for preview
+        # Initialize selection tracking
+        self._selection_changed = False
+        
+        # Create right frame for preview
         self.right_frame = ttk.Frame(self.main_container)
         if self.preview_visible:
             self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
@@ -1312,7 +1418,7 @@ class PDFDuplicateApp:
         # Preview visibility toggle button
         self.toggle_preview_btn = ttk.Button(
             self.main_container,
-            text="▶" if self.preview_visible else "◀",
+            text="▶" if not self.preview_visible else "◀",
             width=2,
             command=self.toggle_preview_visibility
         )
@@ -1321,45 +1427,54 @@ class PDFDuplicateApp:
         # Preview options
         preview_options = ttk.Frame(self.right_frame)
         preview_options.pack(fill=tk.X, pady=(0, 5))
-        ttk.Radiobutton(preview_options, text=t('image_preview', self.lang), variable=self.preview_type, 
-                        value="image", command=self.update_preview).pack(side=tk.LEFT, padx=5)
-        ttk.Radiobutton(preview_options, text=t('text_preview', self.lang), variable=self.preview_type, 
-                        value="text", command=self.update_preview).pack(side=tk.LEFT, padx=5)
-
-        # Preview area
+        
+        self.preview_type = tk.StringVar(value="text")
+        ttk.Radiobutton(
+            preview_options, 
+            text="Testo", 
+            variable=self.preview_type, 
+            value="text",
+            command=self.update_preview
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Radiobutton(
+            preview_options, 
+            text="Immagine", 
+            variable=self.preview_type, 
+            value="image",
+            command=self.update_preview
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Create preview container
         preview_container = ttk.Frame(self.right_frame, relief="solid", borderwidth=1)
         preview_container.pack(fill=tk.BOTH, expand=True)
-
-        # Canvas for image preview
-        self.preview_canvas = tk.Canvas(preview_container, bg="white")
-        self.preview_canvas.pack(fill=tk.BOTH, expand=True)
-
-        # Text widget for text preview
-        self.preview_text = tk.Text(preview_container, wrap=tk.WORD, font=("Arial", 10))
+        
+        # Create text preview
+        self.preview_text = scrolledtext.ScrolledText(
+            preview_container,
+            wrap=tk.WORD,
+            width=40,
+            height=20,
+            font=('Courier', 10),
+            state=tk.DISABLED
+        )
         self.preview_text.pack(fill=tk.BOTH, expand=True)
-        self.preview_text.pack_forget()
+        
+        # Create canvas for image preview
+        self.preview_canvas = tk.Canvas(preview_container, bg='white')
+        self.preview_canvas.pack(fill=tk.BOTH, expand=True)
+        self.preview_canvas.pack_forget()  # Hide by default
+        
+        # Initialize preview attributes
+        self.current_preview_image = None
+        
+        # Overall progress bar
+        self.progress_bar = ttk.Progressbar(progress_bars_frame, mode='determinate')
+        self.progress_bar.pack(fill=tk.X, pady=(0, 2))
 
-        # Buttons frame for delete and preview
-        button_frame = ttk.Frame(self.left_frame)
-        button_frame.pack(fill=tk.X, pady=5)
-        
-        # Preview button
-        preview_btn = ttk.Button(
-            button_frame,
-            text=t('preview', self.lang),
-            command=self.preview_selected,
-            style='Accent.TButton'  # Make it stand out
-        )
-        preview_btn.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=True)
-        
-        # Delete button
-        delete_btn = ttk.Button(
-            button_frame,
-            text=t('delete_selected', self.lang),
-            command=self.delete_selected,
-            style='Danger.TButton'  # Use a red button for delete
-        )
-        delete_btn.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=True)
+        # Individual file progress bar
+        self.file_progress_frame = ttk.Frame(progress_bars_frame)
+        self.file_progress_frame.pack(fill=tk.X, pady=(0, 2))
         
     def choose_color(self, title="Choose a color", initialcolor=None):
         """Open a color chooser dialog and return the selected color."""
@@ -2196,17 +2311,144 @@ class PDFDuplicateApp:
                 self.status_text.set("")
                 self.is_searching = False
 
+    def show_image_preview(self, file_path):
+        """Show image preview of the first page of the PDF file."""
+        try:
+            # Clear previous image
+            self.preview_canvas.delete("all")
+            
+            # Convert first page to image
+            with tempfile.TemporaryDirectory() as path:
+                images = convert_from_path(
+                    file_path,
+                    first_page=1,
+                    last_page=1,
+                    output_folder=path,
+                    fmt='png',
+                    size=(400, 600)  # Limit size for preview
+                )
+                
+                if not images:
+                    raise ValueError("Could not convert PDF to image")
+                
+                # Convert to PhotoImage
+                image = images[0]
+                
+                # Resize image to fit canvas while maintaining aspect ratio
+                canvas_width = self.preview_canvas.winfo_width() or 400
+                canvas_height = self.preview_canvas.winfo_height() or 600
+                
+                # Calculate aspect ratio
+                img_ratio = image.width / image.height
+                canvas_ratio = canvas_width / canvas_height
+                
+                if canvas_ratio > img_ratio:
+                    # Canvas is wider than image (relative to height)
+                    new_height = canvas_height
+                    new_width = int(canvas_height * img_ratio)
+                else:
+                    # Canvas is taller than image (relative to width)
+                    new_width = canvas_width
+                    new_height = int(canvas_width / img_ratio)
+                
+                # Resize image
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Convert to PhotoImage
+                self.current_preview_image = ImageTk.PhotoImage(image)
+                
+                # Display image centered on canvas
+                x = (canvas_width - new_width) // 2
+                y = (canvas_height - new_height) // 2
+                self.preview_canvas.create_image(x, y, anchor=tk.NW, image=self.current_preview_image)
+                
+        except Exception as e:
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.insert(tk.END, f"Error loading image preview: {str(e)}\n")
+            self.preview_text.insert(tk.END, "Falling back to text preview...\n")
+            self.preview_text.config(state=tk.DISABLED)
+            self.show_text_preview(file_path)
+    
+    def show_text_preview(self, file_path):
+        """Show text preview of the PDF file."""
+        try:
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            
+            # Extract text from PDF
+            text = ""
+            with open(file_path, 'rb') as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                num_pages = len(pdf_reader.pages)
+                
+                # Show basic file info
+                text += f"File: {os.path.basename(file_path)}\n"
+                text += f"Pages: {num_pages}\n"
+                text += f"Size: {os.path.getsize(file_path) / 1024:.1f} KB\n\n"
+                
+                # Extract text from first few pages
+                for page_num in range(min(5, num_pages)):
+                    page = pdf_reader.pages[page_num]
+                    page_text = page.extract_text()
+                    if page_text.strip():
+                        text += f"--- Page {page_num + 1} ---\n{page_text}\n\n"
+                
+                if num_pages > 5:
+                    text += "\n[Content truncated - showing first 5 pages only]"
+                    
+            if not text.strip() or len(text.strip()) < 20:  # If very little text was extracted
+                text += "\nNo text content could be extracted from this PDF.\n"
+                text += "Try using the image preview instead."
+                
+            self.preview_text.insert(tk.END, text)
+            self.preview_text.see(tk.END)
+            
+        except Exception as e:
+            self.preview_text.insert(tk.END, f"Error loading preview: {str(e)}")
+        finally:
+            self.preview_text.config(state=tk.DISABLED)
+
     def preview_selected(self):
         """Preview the selected file(s)."""
         selected_items = self.tree.selection()
         if not selected_items:
-            self.show_status("No files selected for preview", "warning")
+            self.show_status("Nessun file selezionato per l'anteprima", "warning")
+            return
+        
+        # Get the first selected file path
+        item = self.tree.item(selected_items[0])
+        file_path = item['values'][0]  # First column contains the file path
+        
+        if not os.path.exists(file_path):
+            self.show_status(f"File non trovato: {file_path}", "error")
             return
             
-        # For now, just preview the first selected file
-        self.update_preview()
+        # Show the preview panel if not visible
+        if not hasattr(self, 'preview_visible') or not self.preview_visible:
+            self.toggle_preview_visibility()
+        
+        try:
+            # Determine preview type based on file extension and settings
+            if hasattr(self, 'preview_type') and self.preview_type.get() == "image":
+                self.show_image_preview(file_path)
+            else:
+                self.show_text_preview(file_path)
+            
+            # Update status
+            self.show_status(f"Preview: {os.path.basename(file_path)}", "info")
+            
+            # Switch to the preview tab if not already there
+            if hasattr(self, 'preview_notebook'):
+                self.preview_notebook.select(0)  # Select first tab (preview)
+                
+        except Exception as e:
+            error_msg = f"Error loading preview: {str(e)}"
+            self.show_status(error_msg, "error")
+            logger.error(error_msg, exc_info=True)
 
     def delete_selected(self):
+        """Delete the selected files after confirmation."""
         selected_items = self.tree.selection()
         if not selected_items:
             self.show_status("No files selected for deletion", "warning")
@@ -2226,35 +2468,92 @@ class PDFDuplicateApp:
         failed_deletions = []
         
         for item in selected_items:
-            file_path = self.tree.item(item)['values'][0]  # Get file path from first column
-            try:
-                # Add to undo stack before deleting
-                if not hasattr(self, 'undo_stack'):
-                    self.undo_stack = []
+            # Ottieni tutti i valori della riga dal treeview
+            values = self.tree.item(item)['values']
+            
+            # Il percorso completo del file dovrebbe essere il primo valore
+            if not values or len(values) < 1:
+                error_msg = "Dati del file non validi"
+                print(f"DEBUG - {error_msg}")
+                failed_deletions.append(("", error_msg))
+                continue
                 
-                # Store file info for potential undo
-                file_info = {
-                    'path': file_path,
-                    'values': self.tree.item(item)['values']
-                }
-                
-                # Try to use send2trash if available, otherwise use os.remove
-                if send2trash is not None:
-                    send2trash(file_path)
+            file_path = str(values[0])
+            
+            # Se il percorso non è assoluto, prova a usare la directory di origine della scansione
+            if not os.path.isabs(file_path):
+                if hasattr(self, 'folder_path') and self.folder_path.get():
+                    source_dir = self.folder_path.get()
+                    file_path = os.path.join(source_dir, file_path)
                 else:
+                    error_msg = f"Impossibile determinare il percorso assoluto per: {file_path}"
+                    print(f"DEBUG - {error_msg}")
+                    failed_deletions.append((file_path, error_msg))
+                    continue
+            
+            # Normalizza il percorso (converte / in \ su Windows)
+            file_path = os.path.normpath(file_path)
+            
+            # Debug: stampa il percorso che stiamo cercando di eliminare
+            print(f"DEBUG - Tentativo di eliminare: {file_path}")
+            print(f"DEBUG - File esiste: {os.path.exists(file_path)}")
+            
+            # Verifica se il file esiste
+            if not os.path.exists(file_path):
+                error_msg = f"File non trovato: {file_path}"
+                print(f"DEBUG - {error_msg}")
+                failed_deletions.append((file_path, error_msg))
+                continue
+                
+            # Verifica se il file esiste
+            if not os.path.exists(file_path):
+                error_msg = f"File non trovato: {file_path}"
+                print(f"DEBUG - {error_msg}")
+                print(f"DEBUG - Working directory: {os.getcwd()}")
+                failed_deletions.append((file_path, error_msg))
+                continue
+            
+            # Verifica se il file esiste
+            if not os.path.exists(file_path):
+                error_msg = f"File non trovato: {file_path}"
+                print(f"DEBUG - {error_msg}")
+                print(f"DEBUG - Working directory: {os.getcwd()}")
+                failed_deletions.append((file_path, error_msg))
+                continue
+                
+            # Add to undo stack before deleting
+            if not hasattr(self, 'undo_stack'):
+                self.undo_stack = []
+            
+            # Store file info for potential undo
+            file_info = {
+                'path': file_path,
+                'values': self.tree.item(item)['values']
+            }
+            
+            # Move to trash if available, otherwise delete permanently
+            try:
+                print(f"Tentativo di eliminare: {file_path}")
+                if send_to_trash is not None:
+                    # Usa direttamente send2trash che gestisce già correttamente i percorsi
+                    send_to_trash(file_path)
+                else:
+                    # Usa os.remove con il percorso assoluto
                     os.remove(file_path)
                 
-                # Remove from tree
+                # Only remove from tree and mark as deleted if deletion was successful
                 self.tree.delete(item)
                 deleted_files.append(file_info)
                 
                 # Remove from duplicates list if it exists there
                 if hasattr(self, 'duplicates'):
                     self.duplicates = [d for d in self.duplicates if d[0] != file_path]
-                
+                    
             except Exception as e:
-                print(f"Error deleting {file_path}: {e}")
-                failed_deletions.append((file_path, str(e)))
+                error_msg = f"Error deleting {file_path}: {str(e)}"
+                print(error_msg)
+                failed_deletions.append((file_path, error_msg))
+                continue
         
         # Add to undo stack if any files were deleted
         if deleted_files:
@@ -2283,6 +2582,10 @@ class PDFDuplicateApp:
             )
         else:
             self.show_status("Failed to delete selected files", "error")
+            
+        # Clear the preview after deletion
+        if hasattr(self, 'clear_preview'):
+            self.clear_preview()
             
         # Log any failures
         for file_path, error in failed_deletions:
@@ -2818,37 +3121,315 @@ class PDFDuplicateApp:
     
     def refresh_language(self):
         """Refresh the UI with the new language."""
-    def update_preview(self):
-        """Update the preview based on the selected item."""
-        self.clear_preview()
+        pass
         
-        selection = self.tree.selection()
-        if not selection:
-            return
-            
-        item = self.tree.item(selection[0])
-        file_path = item['values'][0]  # First column contains the file path
-        
-        if not os.path.exists(file_path):
+    def show_text_preview(self, file_path):
+        """Show text preview of the PDF file."""
+        try:
+            # Clear previous content
             self.preview_text.config(state=tk.NORMAL)
             self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, "File not found")
+            
+            # Extract text from PDF
+            text_content = []
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                # Limit to first 5 pages for performance
+                max_pages = min(5, len(reader.pages))
+                for i in range(max_pages):
+                    page = reader.pages[i]
+                    text = page.extract_text()
+                    if text:
+                        text_content.append(f"--- Page {i+1} ---\n{text}\n")
+            
+            if text_content:
+                self.preview_text.insert(tk.END, ''.join(text_content))
+                if len(reader.pages) > 5:
+                    self.preview_text.insert(tk.END, "\n[Preview limited to first 5 pages]")
+            else:
+                self.preview_text.insert(tk.END, "No text content found in PDF")
+                
             self.preview_text.config(state=tk.DISABLED)
+            
+        except Exception as e:
+            error_msg = f"Error extracting text from PDF: {str(e)}"
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.insert(tk.END, f"Error: {error_msg}")
+            self.preview_text.config(state=tk.DISABLED)
+            logger.error(error_msg, exc_info=True)
+    
+    def show_image_preview(self, file_path):
+        """Show image preview of the first page of the PDF file."""
+        try:
+            # Clear previous content
+            if hasattr(self, 'preview_canvas'):
+                self.preview_canvas.delete("all")
+            
+            # Convert first page of PDF to image
+            images = convert_from_path(file_path, first_page=1, last_page=1)
+            if not images:
+                raise ValueError("Could not convert PDF to image")
+                
+            # Get the first page image
+            img = images[0]
+            
+            # Calculate aspect ratio
+            img_width, img_height = img.size
+            canvas_width = self.preview_canvas.winfo_width()
+            canvas_height = self.preview_canvas.winfo_height()
+            
+            # Calculate new dimensions maintaining aspect ratio
+            ratio = min(canvas_width / img_width, canvas_height / img_height)
+            new_width = int(img_width * ratio)
+            new_height = int(img_height * ratio)
+            
+            # Resize image
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Convert to PhotoImage
+            self.preview_photo = ImageTk.PhotoImage(img)
+            
+            # Display image on canvas
+            self.preview_canvas.create_image(
+                canvas_width // 2, 
+                canvas_height // 2, 
+                image=self.preview_photo,
+                anchor=tk.CENTER
+            )
+            
+            # Bind canvas resize event
+            self.preview_canvas.bind("<Configure>", lambda e: self._resize_preview_image(e, file_path))
+            
+        except Exception as e:
+            error_msg = f"Error showing PDF preview: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.insert(tk.END, f"Error: {error_msg}")
+            self.preview_text.config(state=tk.DISABLED)
+    
+    def _resize_preview_image(self, event, file_path):
+        """Handle canvas resize event to update the image preview."""
+        if not hasattr(self, 'preview_photo') or not hasattr(self, 'preview_canvas'):
             return
             
-        if self.preview_type.get() == "image":
-            self.show_image_preview(file_path)
-        else:
-            self.show_text_preview(file_path)
+        # Only resize if the canvas has been resized significantly
+        if (hasattr(self, '_last_canvas_size') and 
+            abs(event.width - self._last_canvas_size[0]) < 10 and 
+            abs(event.height - self._last_canvas_size[1]) < 10):
+            return
+            
+        self._last_canvas_size = (event.width, event.height)
+        self.show_image_preview(file_path)
+    
+    def clear_preview(self):
+        """Clear the preview panel."""
+        if hasattr(self, 'preview_text') and self.preview_text:
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.config(state=tk.DISABLED)
+            
+        if hasattr(self, 'preview_canvas'):
+            self.preview_canvas.delete("all")
+    
+    def _update_file_info(self, file_path):
+        """Update the file information tab with metadata."""
+        try:
+            self.info_text.config(state=tk.NORMAL)
+            self.info_text.delete(1.0, tk.END)
+            
+            # Basic file info
+            file_stat = os.stat(file_path)
+            size_kb = file_stat.st_size / 1024
+            mod_time = datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            
+            info = f"File: {os.path.basename(file_path)}\n"
+            info += f"Path: {file_path}\n"
+            info += f"Size: {size_kb:.2f} KB\n"
+            info += f"Modified: {mod_time}\n"
+            
+            # PDF specific info
+            try:
+                with open(file_path, 'rb') as f:
+                    pdf_reader = PyPDF2.PdfReader(f)
+                    num_pages = len(pdf_reader.pages)
+                    info += f"\nPDF Pages: {num_pages}\n"
+                    
+                    # Extract metadata if available
+                    if pdf_reader.metadata:
+                        info += "\n--- Metadata ---\n"
+                        for key, value in pdf_reader.metadata.items():
+                            info += f"{key}: {value}\n"
+            except Exception as e:
+                info += f"\nError reading PDF info: {str(e)}\n"
+            
+            self.info_text.insert(tk.END, info)
+            self.info_text.see(tk.END)
+            
+        except Exception as e:
+            self.info_text.insert(tk.END, f"Error getting file info: {str(e)}")
+        finally:
+            self.info_text.config(state=tk.DISABLED)
 
     def clear_preview(self):
-        """Clear the preview area."""
+        """Clear the preview panel."""
+        if hasattr(self, 'preview_text') and self.preview_text:
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.config(state=tk.DISABLED)
+            
+        if hasattr(self, 'preview_canvas'):
+            self.preview_canvas.delete("all")
+            
         if hasattr(self, 'current_preview_image'):
             self.current_preview_image = None
+    
+    def update_preview(self, event=None):
+        """Update the preview based on the current selection and preview type."""
+        if not hasattr(self, 'tree'):
+            return
+            
+        selected_items = self.tree.selection()
+        if not selected_items:
+            self.clear_preview()
+            return
+            
+        item = selected_items[0]
+        file_path = self.tree.item(item, 'values')[0]
+        
+        if not file_path or not os.path.exists(file_path):
+            self.clear_preview()
+            return
+            
+        try:
+            if hasattr(self, 'preview_type') and self.preview_type.get() == "image":
+                self.show_image_preview(file_path)
+            else:
+                self.show_text_preview(file_path)
+        except Exception as e:
+            logger.error(f"Error updating preview: {str(e)}", exc_info=True)
+            self.show_status(f"Error updating preview: {str(e)}", "error")
+    
+    def show_text_preview(self, file_path):
+        """Show text preview of the PDF file."""
+        if not hasattr(self, 'preview_text') or not hasattr(self, 'preview_canvas'):
+            return
+            
+        try:
+            # Hide canvas and show text widget
+            self.preview_canvas.pack_forget()
+            self.preview_text.pack(fill=tk.BOTH, expand=True)
+            
+            # Clear previous content
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            
+            # Extract text from PDF (first 5 pages max)
+            text = ""
+            with open(file_path, 'rb') as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                num_pages = len(pdf_reader.pages)
+                
+                # Add file info
+                text += f"File: {os.path.basename(file_path)}\n"
+                text += f"Pagine: {num_pages}\n"
+                text += f"Dimensione: {os.path.getsize(file_path) / 1024:.1f} KB\n\n"
+                
+                # Extract text from first few pages
+                for page_num in range(min(5, num_pages)):
+                    try:
+                        page = pdf_reader.pages[page_num]
+                        page_text = page.extract_text()
+                        if page_text.strip():
+                            text += f"--- Pagina {page_num + 1} ---\n{page_text}\n\n"
+                    except Exception as e:
+                        text += f"Errore nell'estrazione della pagina {page_num + 1}: {str(e)}\n\n"
+                
+                if num_pages > 5:
+                    text += "\n[Contenuto troncato - visualizzate solo le prime 5 pagine]"
+            
+            if not text.strip() or len(text.strip()) < 20:
+                text += "\nImpossibile estrarre il testo dal PDF.\n"
+                text += "Prova a utilizzare l'anteprima immagine invece."
+            
+            self.preview_text.insert(tk.END, text)
+            self.preview_text.see(tk.END)
+            
+        except Exception as e:
+            error_msg = f"Errore nell'apertura del file: {str(e)}"
+            self.preview_text.insert(tk.END, error_msg)
+            logger.error(f"Error showing text preview for {file_path}: {str(e)}", exc_info=True)
+        finally:
+            self.preview_text.config(state=tk.DISABLED)
+    
+    def show_image_preview(self, file_path):
+        """Show image preview of the first page of the PDF file."""
+        if not hasattr(self, 'preview_text') or not hasattr(self, 'preview_canvas'):
+            return
+            
+        try:
+            # Show canvas and hide text widget
+            self.preview_text.pack_forget()
+            self.preview_canvas.pack(fill=tk.BOTH, expand=True)
             self.preview_canvas.delete("all")
-        self.preview_text.config(state=tk.NORMAL)
-        self.preview_text.delete(1.0, tk.END)
-        self.preview_text.config(state=tk.DISABLED)
+            
+            # Convert first page to image
+            with tempfile.TemporaryDirectory() as path:
+                images = convert_from_path(
+                    file_path,
+                    first_page=1,
+                    last_page=1,
+                    output_folder=path,
+                    fmt='png',
+                    size=(800, 1000)  # Reasonable size for preview
+                )
+                
+                if not images:
+                    raise ValueError("Impossibile convertire la prima pagina in immagine")
+                
+                # Convert to PhotoImage
+                image = images[0]
+                
+                # Get canvas dimensions
+                canvas_width = self.preview_canvas.winfo_width()
+                canvas_height = self.preview_canvas.winfo_height()
+                
+                # If canvas is too small, use default size
+                if canvas_width < 100 or canvas_height < 100:
+                    canvas_width = 400
+                    canvas_height = 600
+                
+                # Calculate aspect ratio
+                img_ratio = image.width / image.height
+                canvas_ratio = canvas_width / canvas_height
+                
+                if canvas_ratio > img_ratio:
+                    # Canvas is wider than image (relative to height)
+                    new_height = canvas_height
+                    new_width = int(canvas_height * img_ratio)
+                else:
+                    # Canvas is taller than image (relative to width)
+                    new_width = canvas_width
+                    new_height = int(canvas_width / img_ratio)
+                
+                # Resize image
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Convert to PhotoImage
+                self.current_preview_image = ImageTk.PhotoImage(image)
+                
+                # Display image centered on canvas
+                x = (canvas_width - new_width) // 2
+                y = (canvas_height - new_height) // 2
+                self.preview_canvas.create_image(x, y, anchor=tk.NW, image=self.current_preview_image)
+                
+        except Exception as e:
+            # Fall back to text preview on error
+            error_msg = f"Errore nel caricamento dell'anteprima immagine: {str(e)}"
+            logger.error(f"Error showing image preview for {file_path}: {str(e)}", exc_info=True)
+            self.show_text_preview(file_path)
+            self.show_status(error_msg, "error")
 
     def show_image_preview(self, file_path):
         """Show an image preview of the PDF."""
@@ -2856,16 +3437,44 @@ class PDFDuplicateApp:
             # Convert first page of PDF to image
             images = convert_from_path(file_path, first_page=1, last_page=1)
             if images:
-                # Resize image to fit preview area
-                width, height = self.preview_canvas.winfo_width(), self.preview_canvas.winfo_height()
-                if width <= 1 or height <= 1:  # If canvas not yet sized
-                    width, height = 400, 500  # Default size
-                    
-                image = images[0].resize((width, height), Image.Resampling.LANCZOS)
-                self.current_preview_image = ImageTk.PhotoImage(image)
-                self.preview_canvas.create_image(0, 0, anchor=tk.NW, image=self.current_preview_image)
+                # Get canvas dimensions or use default if not yet rendered
+                canvas_width = self.preview_canvas.winfo_width() or 400
+                canvas_height = self.preview_canvas.winfo_height() or 500
+                
+                # Calculate aspect ratio of the original image
+                img = images[0]
+                img_ratio = img.width / img.height
+                canvas_ratio = canvas_width / canvas_height
+                
+                # Calculate new dimensions maintaining aspect ratio
+                if img_ratio > canvas_ratio:
+                    new_width = canvas_width
+                    new_height = int(canvas_width / img_ratio)
+                else:
+                    new_height = canvas_height
+                    new_width = int(canvas_height * img_ratio)
+                
+                # Resize the image
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Create the photo image and store reference
+                self.current_preview_image = ImageTk.PhotoImage(img)
+                
+                # Clear previous image and display new one
+                self.preview_canvas.delete("all")
+                self.preview_canvas.config(width=new_width, height=new_height)
+                self.preview_canvas.create_image(
+                    (canvas_width - new_width) // 2,  # Center horizontally
+                    (canvas_height - new_height) // 2,  # Center vertically
+                    anchor=tk.NW, 
+                    image=self.current_preview_image
+                )
         except Exception as e:
             print(f"Error generating preview: {e}")
+            self.preview_text.config(state=tk.NORMAL)
+            self.preview_text.delete(1.0, tk.END)
+            self.preview_text.insert(tk.END, f"Error loading preview: {str(e)}")
+            self.preview_text.config(state=tk.DISABLED)
 
     def show_text_preview(self, file_path):
         """Show a text preview of the PDF."""
@@ -3162,6 +3771,12 @@ class PDFDuplicateApp:
             self.tree.tag_configure('original', background='#e6f7e6')  # Light green for original
             self.tree.tag_configure('duplicate', background='#f9f9f9')  # Light gray for duplicates
             self.tree.tag_configure('separator', background='#cccccc')  # Gray for separators
+            
+            # Update selection colors
+            style = ttk.Style()
+            style.map('Treeview',
+                     background=[('selected', '#0078d7')],  # Blue background for selected items
+                     foreground=[('selected', 'white')])    # White text for selected items
         
         # Update status
         dup_count = len(self.duplicates) if hasattr(self, 'duplicates') else 0
@@ -3210,167 +3825,99 @@ class PDFDuplicateApp:
             
         print(f"DEBUG: Found {len(self.duplicates)} duplicate groups to save")
         
-        try:
-            # Prepare data to save first
-            print("DEBUG: Preparing scan data")
-            print(f"DEBUG: duplicates type: {type(self.duplicates)}")
-            print(f"DEBUG: first group type: {type(self.duplicates[0]) if self.duplicates else 'empty'}")
-            if self.duplicates and len(self.duplicates) > 0 and isinstance(self.duplicates[0], list):
-                print(f"DEBUG: first file in first group type: {type(self.duplicates[0][0]) if self.duplicates[0] else 'empty'}")
-                
-            scan_data = {
-                'scan_timestamp': datetime.now().isoformat(),
-                'folder_scanned': self.folder_path.get(),
-                'duplicate_groups': self.duplicates,
-                'file_info': {}
-            }
+        # Prepare data to save first
+        print("DEBUG: Preparing scan data")
+        print(f"DEBUG: duplicates type: {type(self.duplicates)}")
+        print(f"DEBUG: first group type: {type(self.duplicates[0]) if self.duplicates else 'empty'}")
+        if self.duplicates and len(self.duplicates) > 0 and isinstance(self.duplicates[0], list):
+            print(f"DEBUG: first file in first group type: {type(self.duplicates[0][0]) if self.duplicates[0] else 'empty'}")
             
-            # Add file info for all files in duplicates
-            file_info = {}
-            for group_idx, group in enumerate(self.duplicates):
-                if not isinstance(group, (list, tuple)):
-                    print(f"WARNING: Group {group_idx} is not a list/tuple: {type(group)}")
+        scan_data = {
+            'scan_timestamp': datetime.now().isoformat(),
+            'folder_scanned': self.folder_path.get(),
+            'duplicate_groups': self.duplicates,
+            'file_info': {}
+        }
+        
+        # Add file info for all files in duplicates
+        file_info = {}
+        for group_idx, group in enumerate(self.duplicates):
+            if not isinstance(group, (list, tuple)):
+                print(f"WARNING: Group {group_idx} is not a list/tuple: {type(group)}")
+                continue
+                
+            for file_idx, file_path in enumerate(group):
+                if not isinstance(file_path, str):
+                    print(f"WARNING: File path at group {group_idx}, index {file_idx} is not a string: {type(file_path)}")
                     continue
-                    
-                for file_idx, file_path in enumerate(group):
-                    if not isinstance(file_path, str):
-                        print(f"WARNING: File path at group {group_idx}, index {file_idx} is not a string: {type(file_path)}")
-                        continue
-                    if file_path not in file_info:
-                        try:
-                            file_size = os.path.getsize(file_path)
-                            file_mtime = os.path.getmtime(file_path)
-                            file_info[file_path] = {
-                                'size_bytes': file_size,
-                                'size_mb': file_size / (1024 * 1024),
-                                'modified_timestamp': file_mtime,
-                                'modified_date': datetime.fromtimestamp(file_mtime).isoformat()
-                            }
-                        except Exception as e:
-                            print(f"WARNING: Could not get info for {file_path}: {e}")
-                            file_info[file_path] = {
-                                'error': str(e),
-                                'size_bytes': 0,
-                                'size_mb': 0,
-                                'modified_timestamp': 0,
-                                'modified_date': 'unknown'
-                            }
+                if file_path not in file_info:
+                    try:
+                        file_size = os.path.getsize(file_path)
+                        file_mtime = os.path.getmtime(file_path)
+                        file_info[file_path] = {
+                            'size_bytes': file_size,
+                            'size_mb': file_size / (1024 * 1024),
+                            'modified_timestamp': file_mtime,
+                            'modified_date': datetime.fromtimestamp(file_mtime).isoformat()
+                        }
+                    except Exception as e:
+                        print(f"WARNING: Could not get info for {file_path}: {e}")
+                        file_info[file_path] = {
+                            'error': str(e),
+                            'size_bytes': 0,
+                            'size_mb': 0,
+                            'modified_timestamp': 0,
+                            'modified_date': 'unknown'
+                        }
+        
+        scan_data['file_info'] = file_info
+        
+        # Convert data to JSON string
+        json_data = json.dumps(scan_data, indent=2, ensure_ascii=False)
+        
+        # Try to use asksaveasfile first
+        file_path = None
+        try:
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                title="Save Scan Results"
+            )
             
-            scan_data['file_info'] = file_info
+            if not file_path:  # User cancelled
+                print("DEBUG: User cancelled save dialog")
+                return False
             
-            # Convert data to JSON string
-            json_data = json.dumps(scan_data, indent=2, ensure_ascii=False)
+            # Ensure .json extension
+            if not file_path.lower().endswith('.json'):
+                file_path += '.json'
             
-            # Get save location from user and write directly
-            print("DEBUG: Opening save dialog...")
+            # Test if we can write to the file
             try:
-                # Try to use asksaveasfile first
-                with filedialog.asksaveasfile(
-                    mode='w',
-                    defaultextension=".json",
-                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                    title="Save Scan Results"
-                ) as f:
-                    if f is None:  # User cancelled
-                        print("DEBUG: User cancelled save dialog")
-            except AttributeError:
-                # Fallback to asksaveasfilename if asksaveasfile fails
-                print("WARNING: asksaveasfile failed, falling back to asksaveasfilename")
-                file_path = filedialog.asksaveasfilename(
-                    defaultextension=".json",
-                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                    title="Save Scan Results"
-                )
-                
-                if not file_path:
-                    print("DEBUG: User cancelled save dialog")
-                    return False
-                
-                # Ensure .json extension
-                if not file_path.lower().endswith('.json'):
-                    file_path += '.json'
-                
-                # Ensure we have a string path
-                if isinstance(file_path, (list, tuple)) and file_path:
-                    file_path = str(file_path[0])
-                elif not isinstance(file_path, str):
-                    file_path = str(file_path)
-                
-                # Clean up the path
-                file_path = file_path.strip()
-                if not file_path:
-                    error_msg = "Invalid file path provided"
-                    print(f"ERROR: {error_msg}")
-                    messagebox.showerror("Save Error", error_msg)
-                    return False
-                
-                # Save the file
-                try:
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(json_data)
-                    
-                    print("DEBUG: Save completed successfully (fallback method)")
-                    messagebox.showinfo("Success", f"Scan results saved to:\n{file_path}")
-                    return True
-                except Exception as e:
-                    error_msg = f"Error writing to file: {str(e)}"
-                    print(f"ERROR: {error_msg}")
-                    messagebox.showerror("Save Error", error_msg)
-                    return False
-                    
+                with open(file_path, 'w', encoding='utf-8') as test_file:
+                    test_file.write('')
+                os.remove(file_path)  # Remove test file if successful
+            except Exception as e:
+                error_msg = f"Cannot write to file {file_path}: {e}"
+                print(f"ERROR: {error_msg}")
+                messagebox.showerror("Save Error", error_msg)
+                return False
+            
+            # Save the actual data
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(json_data)
+            
+            print("DEBUG: Save completed successfully")
+            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
+            messagebox.showinfo("Success", f"Scan results saved to:\n{file_path}")
+            return True
+            
         except Exception as e:
             error_msg = f"Error saving scan results: {str(e)}"
             print(f"ERROR: {error_msg}")
             print("Traceback:", traceback.format_exc())
             messagebox.showerror("Save Error", error_msg)
             return False
-            print(f"ERROR: {error_msg}")
-            messagebox.showerror("Save Error", error_msg)
-            return
-        
-        # Save to file with explicit error handling
-        print(f"DEBUG: Attempting to save to: {file_path}")
-        print(f"DEBUG: File path type: {type(file_path)}")
-        
-        # Try to create the file first to check permissions
-        test_file = None
-        try:
-            test_file = open(file_path, 'w', encoding='utf-8')
-            test_file.close()
-            # If we get here, the file was created successfully, so remove it
-            os.remove(file_path)
-        except Exception as e:
-            error_msg = f"Cannot write to file {file_path}: {e}"
-            print(f"ERROR: {error_msg}")
-            messagebox.showerror("Save Error", error_msg)
-            if test_file and not test_file.closed:
-                test_file.close()
-            return
-        finally:
-            if test_file and not test_file.closed:
-                test_file.close()
-        
-        # Now save the actual data
-        file_handle = None
-        try:
-            file_handle = open(file_path, 'w', encoding='utf-8')
-            json.dump(scan_data, file_handle, indent=2, ensure_ascii=False)
-            file_handle.close()  # Chiudi esplicitamente il file
-            
-            print("DEBUG: Save completed successfully")
-            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
-            return True
-        except Exception as e:
-            error_msg = f"Error while saving file: {str(e)}"
-            print(f"ERROR: {error_msg}")
-            messagebox.showerror("Save Error", error_msg)
-            if file_handle and not file_handle.closed:
-                file_handle.close()
-            return False
-        finally:
-            # Assicurati che il file venga chiuso in ogni caso
-            if file_handle and not file_handle.closed:
-                file_handle.close()
     
     def load_scan_results(self):
         """Load scan results from a previously saved JSON file."""
@@ -3383,12 +3930,39 @@ class PDFDuplicateApp:
             return
             
         try:
+            # First check if file exists and is not empty
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
+                
+            if os.path.getsize(file_path) == 0:
+                raise ValueError("The selected file is empty")
+            
+            # Read and validate JSON
             with open(file_path, 'r', encoding='utf-8') as f:
-                scan_data = json.load(f)
+                content = f.read().strip()
+                if not content:
+                    raise ValueError("The selected file is empty")
+                
+                try:
+                    scan_data = json.loads(content)
+                except json.JSONDecodeError as e:
+                    # Try to read as UTF-8 with BOM
+                    if content.startswith('\ufeff'):
+                        scan_data = json.loads(content[1:])
+                    else:
+                        raise
+                
+            # Validate required fields
+            if 'duplicate_groups' not in scan_data:
+                raise ValueError("Invalid scan results file: missing 'duplicate_groups' field")
                 
             # Reset current state
             self.duplicates = scan_data.get('duplicate_groups', [])
             self.folder_path.set(scan_data.get('folder_scanned', ''))
+            
+            # Clear any existing problem files
+            if hasattr(self, 'problematic_files'):
+                self.problematic_files = []
             
             # Update UI
             if hasattr(self, 'tree'):
@@ -3399,10 +3973,10 @@ class PDFDuplicateApp:
             self.show_status("Scan results loaded successfully", "success")
             
         except Exception as e:
-            messagebox.showerror("Load Error", f"Failed to load scan results: {str(e)}")
-            print(f"Error loading scan results: {e}")
-            import traceback
-            traceback.print_exc()
+            error_msg = f"Failed to load scan results: {str(e)}"
+            print(f"ERROR: {error_msg}")
+            print("Traceback:", traceback.format_exc())
+            messagebox.showerror("Load Error", error_msg)
     
     def show_problematic_files(self):
         """Show a dialog with files that had issues during processing."""
@@ -3507,51 +4081,86 @@ def main():
 
 def test_filters():
     """Test the filter functionality with sample data."""
-    # Create a test app instance
-    root = tk.Tk()
-    app = PDFDuplicateApp(root)
-    
-    # Test data
-    test_files = [
-        {'path': 'test1.pdf', 'size': 1024, 'mtime': 1625000000, 'pages': 10},  # 1KB
-        {'path': 'test2.pdf', 'size': 2048, 'mtime': 1625086400, 'pages': 5},   # 2KB
-        {'path': 'test3.pdf', 'size': 5120, 'mtime': 1625172800, 'pages': 20}   # 5KB
-    ]
-    
-    # Enable filters
-    app.filters_active.set(True)
-    
-    # Test 1: Size filter
-    print("\n=== Testing Size Filter ===")
-    app.size_min_var.set('1.5')
-    app.size_max_var.set('3')
-    for file in test_files:
-        result = app.apply_filters(file)
-        print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Passes: {result}")
-    
-    # Test 2: Date filter
-    print("\n=== Testing Date Filter ===")
-    app.date_from_var.set('2021-06-29')
-    app.date_to_var.set('2021-06-30')
-    for file in test_files:
-        result = app.apply_filters(file)
-        mtime_str = datetime.datetime.fromtimestamp(file['mtime']).strftime('%Y-%m-%d')
-        print(f"File: {file['path']} - Date: {mtime_str} - Passes: {result}")
-    
-    # Test 3: Page count filter
-    print("\n=== Testing Page Count Filter ===")
-    app.pages_min_var.set('5')
-    app.pages_max_var.set('15')
-    for file in test_files:
-        result = app.apply_filters(file)
-        print(f"File: {file['path']} - Pages: {file['pages']} - Passes: {result}")
-    
-    root.destroy()
+    try:
+        # Create a test app instance
+        root = tk.Tk()
+        app = PDFDuplicateApp(root)
+        
+        # Test data
+        test_files = [
+            {'path': 'test1.pdf', 'size': 1024, 'mtime': 1625000000, 'pages': 10},  # 1KB
+            {'path': 'test2.pdf', 'size': 2048, 'mtime': 1625086400, 'pages': 5},   # 2KB
+            {'path': 'test3.pdf', 'size': 5120, 'mtime': 1625172800, 'pages': 20}   # 5KB
+        ]
+        
+        # Enable filters if the attribute exists
+        if hasattr(app, 'filters_active'):
+            app.filters_active.set(True)
+        
+        # Test 1: Size filter
+        print("\n=== Testing Size Filter ===")
+        if hasattr(app, 'filter_size_min') and hasattr(app, 'filter_size_max'):
+            app.filter_size_min.set('1.5')
+            app.filter_size_max.set('3')
+            for file in test_files:
+                result = app.apply_filters(file)
+                print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Passes: {result}")
+        else:
+            print("Size filter variables not found in app instance")
+        
+        # Test 2: Date filter
+        print("\n=== Testing Date Filter ===")
+        if hasattr(app, 'filter_date_from') and hasattr(app, 'filter_date_to'):
+            app.filter_date_from.set('2021-06-29')
+            app.filter_date_to.set('2021-06-30')
+            for file in test_files:
+                result = app.apply_filters(file)
+                mtime_str = datetime.datetime.fromtimestamp(file['mtime']).strftime('%Y-%m-%d')
+                print(f"File: {file['path']} - Date: {mtime_str} - Passes: {result}")
+        else:
+            print("Date filter variables not found in app instance")
+        
+        # Test 3: Page count filter
+        print("\n=== Testing Page Count Filter ===")
+        if hasattr(app, 'filter_pages_min') and hasattr(app, 'filter_pages_max'):
+            app.filter_pages_min.set('1')
+            app.filter_pages_max.set('15')
+            for file in test_files:
+                result = app.apply_filters(file)
+                print(f"File: {file['path']} - Pages: {file['pages']} - Passes: {result}")
+        else:
+            print("Page count filter variables not found in app instance")
+                
+        # Test 4: Combined filters
+        print("\n=== Testing Combined Filters ===")
+        if (hasattr(app, 'filter_size_min') and hasattr(app, 'filter_size_max') and
+            hasattr(app, 'filter_pages_min') and hasattr(app, 'filter_pages_max')):
+            app.filter_size_min.set('1.5')
+            app.filter_size_max.set('3')
+            app.filter_pages_min.set('1')
+            app.filter_pages_max.set('15')
+            for file in test_files:
+                result = app.apply_filters(file)
+                print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Pages: {file['pages']} - Passes: {result}")
+        else:
+            print("One or more filter variables not found in app instance")
+            
+    except Exception as e:
+        print(f"Error in test_filters: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # Clean up the Tkinter root window
+        if 'root' in locals() and root:
+            root.destroy()
 
 if __name__ == "__main__":
     import sys
     
+    # Only run test code if explicitly requested
     if '--test-filters' in sys.argv:
+        print("Running filter tests...")
         test_filters()
     else:
+        # Run the main application
         main()
