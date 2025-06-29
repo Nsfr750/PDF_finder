@@ -156,13 +156,6 @@ class PDFDuplicateApp:
         # Search and filter variables
         self.folder_path = tk.StringVar(self.root)
         self.search_text = tk.StringVar(self.root)
-        self.min_size = tk.IntVar(self.root, value=0)
-        self.max_size = tk.IntVar(self.root, value=100000)  # 100MB default max
-        self.ignore_small = tk.BooleanVar(self.root, value=False)
-        self.ignore_large = tk.BooleanVar(self.root, value=False)
-        self.ignore_blank = tk.BooleanVar(self.root, value=True)
-        self.ignore_small_size = tk.IntVar(self.root, value=5)  # 5KB
-        self.ignore_large_size = tk.IntVar(self.root, value=50000)  # 50MB
         
         # Progress variables
         self.progress_var = tk.IntVar(self.root, value=0)
@@ -180,14 +173,23 @@ class PDFDuplicateApp:
         self.suppress_warnings = self.settings.get('suppress_warnings', False)
         self.suppress_warnings_var = tk.BooleanVar(self.root, value=self.suppress_warnings)
         
-        # Filter variables
-        self.filter_size_min = tk.StringVar(self.root)
-        self.filter_size_max = tk.StringVar(self.root)
-        self.filter_date_from = tk.StringVar(self.root)
-        self.filter_date_to = tk.StringVar(self.root)
-        self.filter_pages_min = tk.StringVar(self.root)
-        self.filter_pages_max = tk.StringVar(self.root)
+        # Filter variables with defaults
         self.filters_active = tk.BooleanVar(self.root, value=False)
+        
+        # Size filter (in KB)
+        self.filter_size_min = tk.StringVar(self.root, value='')
+        self.filter_size_max = tk.StringVar(self.root, value='')
+        
+        # Date filter (YYYY-MM-DD format)
+        self.filter_date_from = tk.StringVar(self.root, value='')
+        self.filter_date_to = tk.StringVar(self.root, value='')
+        
+        # Page count filter
+        self.filter_pages_min = tk.StringVar(self.root, value='')
+        self.filter_pages_max = tk.StringVar(self.root, value='')
+        
+        # Load saved filter settings
+        self._load_filter_settings()
         
         # Other UI state variables
         self.recent_folders = self.settings.get('recent_folders', [])
@@ -231,12 +233,279 @@ class PDFDuplicateApp:
         if hasattr(self, 'preview_text'):
             self.update_preview()
 
+    def _add_to_notification_history(self, message, message_type):
+        """Add a message to the notification history."""
+        if not hasattr(self, 'notification_history'):
+            self.notification_history = []
+            
+        # Add new message to beginning of list
+        timestamp = datetime.now()
+        self.notification_history.insert(0, {
+            'message': message,
+            'type': message_type,
+            'timestamp': timestamp
+        })
+        
+        # Trim history if needed
+        if len(self.notification_history) > self.max_history:
+            self.notification_history = self.notification_history[:self.max_history]
+    
+    def show_notification_history(self):
+        """Show a window with notification history."""
+        if not hasattr(self, 'notification_history') or not self.notification_history:
+            messagebox.showinfo("Notification History", "No notifications in history.")
+            return
+            
+        history_win = tk.Toplevel(self.root)
+        history_win.title("Notification History")
+        history_win.geometry("600x400")
+        
+        # Create a text widget with scrollbar
+        frame = ttk.Frame(history_win)
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        text = tk.Text(
+            frame,
+            wrap=tk.WORD,
+            font=('Segoe UI', 10),
+            padx=10,
+            pady=10,
+            state=tk.DISABLED
+        )
+        
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=text.yview)
+        text.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Add notifications to text widget
+        text.config(state=tk.NORMAL)
+        for idx, note in enumerate(self.notification_history):
+            # Add separator between entries (except first one)
+            if idx > 0:
+                text.insert(tk.END, "\n" + "-" * 80 + "\n\n")
+                
+            # Format timestamp
+            timestamp = note['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Get style for message type
+            style = self.message_styles.get(note['type'], self.message_styles['info'])
+            
+            # Insert message with timestamp
+            text.insert(tk.END, f"[{timestamp}]\n", 'timestamp')
+            text.insert(tk.END, f"{note['message']}\n")
+            
+            # Configure tags for styling
+            text.tag_configure('timestamp', font=('Segoe UI', 8, 'italic'), foreground='#666666')
+            text.tag_configure(note['type'], 
+                             foreground=style['fg'], 
+                             background=style['bg'],
+                             font=('Segoe UI', 10, 'bold'))
+            
+            # Apply style to the message
+            text.tag_add(note['type'], f"{idx*3+2}.0", f"{idx*3+2}.end")
+        
+        # Add clear button
+        btn_frame = ttk.Frame(history_win)
+        btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        clear_btn = ttk.Button(
+            btn_frame,
+            text="Clear History",
+            command=lambda: self._clear_notification_history(history_win)
+        )
+        clear_btn.pack(side=tk.RIGHT)
+        
+        close_btn = ttk.Button(
+            btn_frame,
+            text="Close",
+            command=history_win.destroy
+        )
+        close_btn.pack(side=tk.RIGHT, padx=5)
+        
+        text.config(state=tk.DISABLED)
+        text.see(tk.END)
+    
+    def _clear_notification_history(self, window):
+        """Clear the notification history."""
+        if hasattr(self, 'notification_history'):
+            self.notification_history = []
+            window.destroy()
+            self.show_status("Notification history cleared", "info")
+    
+    def _play_notification_sound(self, message_type):
+        """Play a sound for the notification if enabled."""
+        if not self.settings.get('enable_sounds', True):
+            return
+            
+        try:
+            import winsound
+            if message_type == 'error':
+                winsound.MessageBeep(winsound.MB_ICONHAND)
+            elif message_type == 'warning':
+                winsound.MessageBeep(winsound.MB_ICONWARNING)
+            elif message_type == 'success':
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
+        except Exception as e:
+            print(f"Could not play sound: {e}")
+    
+    def _create_filter_ui(self, parent):
+        """Create the filter controls UI."""
+        # Filters frame
+        filter_frame = ttk.LabelFrame(parent, text=t('filters', self.lang))
+        filter_frame.pack(fill=tk.X, pady=5, padx=5)
+        
+        # Size filter frame
+        size_frame = ttk.LabelFrame(filter_frame, text=t('file_size_kb', self.lang))
+        size_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Min size
+        ttk.Label(size_frame, text=t('min', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        ttk.Entry(size_frame, textvariable=self.filter_size_min, width=8, 
+                 validate='key', 
+                 validatecommand=(self.root.register(self._validate_number), '%P'))\
+            .pack(side=tk.LEFT, padx=2)
+        
+        # Max size
+        ttk.Label(size_frame, text=t('max', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        ttk.Entry(size_frame, textvariable=self.filter_size_max, width=8,
+                 validate='key',
+                 validatecommand=(self.root.register(self._validate_number), '%P'))\
+            .pack(side=tk.LEFT, padx=2)
+        
+        # Date filter frame
+        date_frame = ttk.LabelFrame(filter_frame, text=t('modified_date', self.lang))
+        date_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        # From date
+        ttk.Label(date_frame, text=t('from', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        from_entry = ttk.Entry(date_frame, textvariable=self.filter_date_from, width=10,
+                             validate='key',
+                             validatecommand=(self.root.register(self._validate_date), '%P'))
+        from_entry.pack(side=tk.LEFT, padx=2)
+        
+        # To date
+        ttk.Label(date_frame, text=t('to', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        to_entry = ttk.Entry(date_frame, textvariable=self.filter_date_to, width=10,
+                           validate='key',
+                           validatecommand=(self.root.register(self._validate_date), '%P'))
+        to_entry.pack(side=tk.LEFT, padx=2)
+        
+        # Add date picker buttons
+        ttk.Button(date_frame, text="📅", width=3,
+                  command=lambda: self._show_calendar(from_entry, self.filter_date_from))\
+            .pack(side=tk.LEFT, padx=2)
+        ttk.Button(date_frame, text="📅", width=3,
+                  command=lambda: self._show_calendar(to_entry, self.filter_date_to))\
+            .pack(side=tk.LEFT, padx=2)
+        
+        # Page count filter frame
+        page_frame = ttk.LabelFrame(filter_frame, text=t('page_count', self.lang))
+        page_frame.pack(fill=tk.X, padx=5, pady=2)
+        
+        # Min pages
+        ttk.Label(page_frame, text=t('min', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        ttk.Entry(page_frame, textvariable=self.filter_pages_min, width=5,
+                 validate='key',
+                 validatecommand=(self.root.register(self._validate_number), '%P'))\
+            .pack(side=tk.LEFT, padx=2)
+        
+        # Max pages
+        ttk.Label(page_frame, text=t('max', self.lang) + ":").pack(side=tk.LEFT, padx=2)
+        ttk.Entry(page_frame, textvariable=self.filter_pages_max, width=5,
+                 validate='key',
+                 validatecommand=(self.root.register(self._validate_number), '%P'))\
+            .pack(side=tk.LEFT, padx=2)
+        
+        # Filter toggle button with save on change
+        def on_filter_toggle():
+            self.filters_active.set(not self.filters_active.get())
+            self._save_filter_settings()
+            self.toggle_filters()
+        
+        ttk.Checkbutton(
+            filter_frame, 
+            text=t('enable_filters', self.lang), 
+            variable=self.filters_active,
+            command=on_filter_toggle
+        ).pack(pady=5)
+        
+        # Add clear filters button
+        ttk.Button(
+            filter_frame,
+            text=t('clear_filters', self.lang),
+            command=self.clear_filters
+        ).pack(pady=2)
+    
+    def _validate_number(self, value):
+        """Validate that the input is a valid number or empty."""
+        if value == '':
+            return True
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    
+    def _validate_date(self, value):
+        """Validate that the input is a valid date (YYYY-MM-DD) or empty."""
+        if value == '':
+            return True
+        try:
+            datetime.strptime(value, '%Y-%m-%d')
+            return True
+        except ValueError:
+            return len(value) <= 10 and all(c.isdigit() or c == '-' for c in value)
+    
+    def _show_calendar(self, entry_widget, date_var):
+        """Show a calendar dialog for date selection."""
+        try:
+            from tkcalendar import Calendar
+            
+            def set_date():
+                date_var.set(cal.selection_get().strftime('%Y-%m-%d'))
+                top.destroy()
+            
+            top = tk.Toplevel(self.root)
+            top.title("Select Date")
+            
+            # Try to parse current date or use today
+            try:
+                current_date = datetime.strptime(date_var.get(), '%Y-%m-%d')
+            except (ValueError, AttributeError):
+                current_date = datetime.now()
+            
+            cal = Calendar(top, selectmode='day', year=current_date.year, 
+                          month=current_date.month, day=current_date.day)
+            cal.pack(padx=10, pady=10)
+            
+            ttk.Button(top, text="OK", command=set_date).pack(pady=5)
+            
+        except ImportError:
+            # Fallback to simple date entry if tkcalendar is not available
+            entry_widget.focus()
+    
+    def clear_filters(self):
+        """Clear all filter values."""
+        self.filter_size_min.set('')
+        self.filter_size_max.set('')
+        self.filter_date_from.set('')
+        self.filter_date_to.set('')
+        self.filter_pages_min.set('')
+        self.filter_pages_max.set('')
+        self._save_filter_settings()
+        self.show_status("All filters cleared", "info")
+    
     def _setup_ui(self):
         """Set up the user interface components."""
         print("Setting up UI...")
         # Create main container
         self.main_container = ttk.Frame(self.root, padding="10")
         self.main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Create filter UI
+        self._create_filter_ui(self.main_container)
         
         # Initialize suppress_warnings_var for the menu
         self.suppress_warnings_var = tk.BooleanVar(value=self.suppress_warnings)
@@ -444,11 +713,55 @@ class PDFDuplicateApp:
         self.file_progress_bar = ttk.Progressbar(self.file_progress_frame, mode='determinate')
         self.file_progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # Status label
-        self.status_label = ttk.Label(self.progress_frame, textvariable=self.status_text)
-        self.status_label.pack(pady=2)
+        # Status bar frame
+        self.status_frame = ttk.Frame(self.root, padding="2 1 2 1")
+        self.status_frame.pack(side=tk.BOTTOM, fill=tk.X)
         
-        # Status details label
+        # Status label with timestamp
+        self.status_text = tk.StringVar()
+        self.status_label = ttk.Label(
+            self.status_frame,
+            textvariable=self.status_text,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(5, 2)
+        )
+        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # Notification history button
+        self.history_btn = ttk.Button(
+            self.status_frame,
+            text="⏱️",
+            width=3,
+            command=self.show_notification_history,
+            style='TButton'
+        )
+        self.history_btn.pack(side=tk.RIGHT, padx=(0, 5))
+        
+        # Initialize notification history
+        self.notification_history = []
+        self.max_history = 50  # Maximum number of notifications to keep
+        
+        # Define message type styles
+        self.message_styles = {
+            'info': {'fg': '#000000', 'bg': '#e6f3ff', 'icon': 'ℹ️'},
+            'success': {'fg': '#155724', 'bg': '#d4edda', 'icon': '✅'},
+            'warning': {'fg': '#856404', 'bg': '#fff3cd', 'icon': '⚠️'},
+            'error': {'fg': '#721c24', 'bg': '#f8d7da', 'icon': '❌'},
+            'scanning': {'fg': '#004e8c', 'bg': '#cce4f7', 'icon': '⏳'},
+            'progress': {'fg': '#0c5460', 'bg': '#d1ecf1', 'icon': '⏳'},
+            'debug': {'fg': '#383d41', 'bg': '#e2e3e5', 'icon': '🐛'}
+        }
+        
+        # Configure styles for different message types
+        style = ttk.Style()
+        for msg_type, style_info in self.message_styles.items():
+            style.configure(f'{msg_type}.TFrame', background=style_info['bg'])
+            style.configure(f'{msg_type}.TLabel', 
+                          foreground=style_info['fg'], 
+                          background=style_info['bg'])
+                          
+        # Status details label (moved to progress frame)
         self.status_details = ttk.Label(self.progress_frame, text="", wraplength=600, justify=tk.LEFT)
         self.status_details.pack(fill=tk.X, pady=(0, 5))
         
@@ -467,12 +780,15 @@ class PDFDuplicateApp:
         
         # Configure columns
         columns = [
-            ("dup_path", t('duplicate_file', self.lang), 300, 'w'),  # 'w' for west (left)
-            ("dup_size", t('size_kb', self.lang), 80, 'e'),      # 'e' for east (right)
-            ("dup_date", t('modified', self.lang), 150, 'w'),     # 'w' for west (left)
-            ("orig_path", t('original_file', self.lang), 300, 'w'), # 'w' for west (left)
-            ("orig_size", t('size_kb', self.lang), 80, 'e'),     # 'e' for east (right)
-            ("orig_date", t('modified', self.lang), 150, 'w')      # 'w' for west (left)
+            ("dup_path", t('duplicate_file', self.lang), 250, 'w'),  # Duplicate file name
+            ("dup_size", t('size', self.lang), 80, 'e'),            # Duplicate size
+            ("dup_date", t('modified', self.lang), 150, 'w'),        # Duplicate modification date
+            ("size_diff", t('size_diff', self.lang), 80, 'e'),       # Size difference from original
+            ("date_diff", t('date_diff', self.lang), 100, 'w'),      # Date difference from original
+            ("orig_path", t('original_file', self.lang), 250, 'w'),  # Original file name
+            ("orig_size", t('size', self.lang), 80, 'e'),           # Original size
+            ("orig_date", t('modified', self.lang), 150, 'w'),       # Original modification date
+            ("full_path", "", 1, 'w')  # Hidden column for full path
         ]
         
         for col_id, heading, width, anchor in columns:
@@ -708,12 +1024,21 @@ class PDFDuplicateApp:
         if hasattr(self, 'file_progress_label'):
             self.file_progress_label.config(text=t('current_file', self.lang) + ":")
         self.root.update_idletasks()
-    def update_status_details(self, message):
-        """Update the status text with detailed information."""
+    def update_status_details(self, message, message_type="info"):
+        """Update the status text with detailed information.
+        
+        Args:
+            message (str): Detailed status message
+            message_type (str): Type of message (info, success, warning, error, etc.)
+        """
         if not self.is_searching:
             return
             
-        self.status_text.set(message)
+        # Show as a progress message if not specified otherwise
+        if message_type == "info":
+            message_type = "progress"
+            
+        self.show_status(message, message_type=message_type, show_notification=False)
         self.root.update_idletasks()
         
     def tree_sort_column(self, col, reverse):
@@ -965,100 +1290,83 @@ class PDFDuplicateApp:
                     hash_md5.update(chunk)
             return hash_md5.hexdigest()
             
+            return True  # Passed all filters
+            
+        except Exception as e:
+            self.show_status(f"Error applying filters: {str(e)}", "error")
+            return True  # If there's an error, include the file to be safe
+    
+    def calculate_pdf_hash(self, file_info):
+        """Calculate hash for a PDF file with caching of file info.
+        
+        Args:
+            file_info: Dictionary containing file information including 'path'
+            
+        Returns:
+            str: MD5 hash of the file content or None if cancelled
+        """
+        if not self.is_searching:
+            print("[INFO] Processing cancelled")
+            return None
+            
+        file_path = file_info['path']
+        
+        try:
+            # Calculate MD5 hash of the file content
+            hash_md5 = hashlib.md5()
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    if not self.is_searching:
+                        print(f"[INFO] Cancelled while reading {file_path}")
+                        return None
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+            
         except Exception as e:
             print(f"[ERROR] Error calculating hash for {file_path}: {e}")
             return None
 
-    def toggle_filters(self):
-        """Toggle the enabled state of filter controls."""
-        state = 'normal' if self.filters_active.get() else 'disabled'
-        
-        # Get all filter widgets and change their state
-        for widget in self.root.winfo_children():
-            if isinstance(widget, (ttk.Entry, ttk.Combobox)) and 'filter' in str(widget):
-                widget.state([state])
-        
-        # Update status
-        if self.filters_active.get():
-            self.status_text.set("Filters enabled. Only matching files will be processed.")
-        else:
-            self.status_text.set("Filters disabled. All files will be processed.")
-            
-        # Force UI update
-        self.root.update_idletasks()
-        
-    def _set_process_priority(self):
-        """Set process priority based on settings."""
-        if hasattr(self, 'low_priority') and self.low_priority.get():
-            try:
-                import psutil
-                p = psutil.Process()
-                p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-            except (ImportError, AttributeError):
-                # Fallback for non-Windows or if psutil not available
-                try:
-                    import os
-                    os.nice(10)  # Lower priority on Unix-like systems
-                except (AttributeError, ImportError):
-                    pass
-    
-    def clear_cache(self):
-        """Clear all cached scan results."""
-        try:
-            for filename in os.listdir(self.cache_dir):
-                if filename.startswith('scan_cache_') and filename.endswith('.json'):
-                    os.remove(os.path.join(self.cache_dir, filename))
-            self.show_status("Cache cleared", "info")
-        except Exception as e:
-            self.show_status(f"Failed to clear cache: {e}", "error")
-    
-    def clear_cache_if_needed(self):
-        """Clear cache if it was disabled and is being re-enabled."""
-        if not hasattr(self, '_cache_was_disabled'):
-            self._cache_was_disabled = not self.use_cache.get()
-            return
-            
-        if self._cache_was_disabled and self.use_cache.get():
-            if messagebox.askyesno(
-                "Clear Cache",
-                "Would you like to clear the existing cache when re-enabling it?"
-            ):
-                self.clear_cache()
-        self._cache_was_disabled = not self.use_cache.get()
-    
     def _process_pdf_file(self, file_path, hash_map, lock):
         """Process a single PDF file and update the hash map."""
-        if not self.is_searching:
-            return None
-            
-        # Set process priority for this thread if in low priority mode
-        if hasattr(self, 'low_priority') and self.low_priority.get():
-            self._set_process_priority()
-            
         try:
-            # Get file info first
+            # Skip if search was cancelled
+            if hasattr(self, 'stop_search') and self.stop_search:
+                return
+                
+            # Update progress
+            self.update_file_status(os.path.basename(file_path))
+            
+            # Get file info
             file_info = self.get_pdf_info(file_path)
             if not file_info:
-                return None
+                return
+            
+            # Apply filters if active
+            if hasattr(self, 'filters_active') and self.filters_active.get():
+                if not self.apply_filters(file_info):
+                    return  # Skip file if it doesn't match filters
                 
             # Calculate hash
             file_hash = self.calculate_pdf_hash(file_info)
             if not file_hash:
-                return None, None
+                return
                 
-            # Update results thread-safely
-            with results_lock:
+            # Add to hash map
+            with lock:
                 if file_hash in hash_map:
-                    original_file = hash_map[file_hash]['path']
-                    return file_path, original_file
+                    hash_map[file_hash].append(file_path)
                 else:
-                    hash_map[file_hash] = file_info
-                    return None, None
+                    hash_map[file_hash] = [file_path]
                     
         except Exception as e:
-            print(f"[ERROR] Error processing {file_path}: {e}")
-            return None, None
-
+            error_msg = f"Error processing {file_path}: {e}"
+            print(error_msg)
+            self.show_status(error_msg, "error")
+            with lock:
+                if 'errors' not in hash_map:
+                    hash_map['errors'] = []
+                hash_map['errors'].append((file_path, str(e)))
+    
     def _find_pdf_files(self, folder, stop_event):
         """Generator that yields PDF files with cancellation support."""
         for root, _, files in os.walk(folder):
@@ -1542,35 +1850,217 @@ class PDFDuplicateApp:
         # Update menu
         self.update_recent_folders_menu()
     
-    def show_status(self, message, message_type="info", timeout=5000):
-        """Show a status message with appropriate styling."""
-        # Set text and color based on message type
-        colors = {
-            'info': ('#000000', '#e6f3ff'),  # Black on light blue
-            'success': ('#155724', '#d4edda'),  # Dark green on light green
-            'warning': ('#856404', '#fff3cd'),  # Dark yellow on light yellow
-            'error': ('#721c24', '#f8d7da'),    # Dark red on light red
-            'scanning': ('#004e8c', '#cce4f7')  # Dark blue on light blue
+    def _setup_status_bar(self):
+        """Set up the status bar and notification system."""
+        # Status bar frame
+        self.status_frame = ttk.Frame(self.root, padding="5 1 5 1")
+        self.status_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Status label
+        self.status_text = tk.StringVar()
+        self.status_label = ttk.Label(
+            self.status_frame,
+            textvariable=self.status_text,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            padding=(5, 2)
+        )
+        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # Notification history button
+        self.history_btn = ttk.Button(
+            self.status_frame,
+            text="⏱️",
+            width=3,
+            command=self.show_notification_history,
+            style='TButton'
+        )
+        self.history_btn.pack(side=tk.RIGHT, padx=(0, 5))
+        
+        # Initialize notification history
+        self.notification_history = []
+        self.max_history = 50  # Maximum number of notifications to keep
+        
+        # Define message type styles
+        self.message_styles = {
+            'info': {'fg': '#000000', 'bg': '#e6f3ff', 'icon': 'ℹ️'},
+            'success': {'fg': '#155724', 'bg': '#d4edda', 'icon': '✅'},
+            'warning': {'fg': '#856404', 'bg': '#fff3cd', 'icon': '⚠️'},
+            'error': {'fg': '#721c24', 'bg': '#f8d7da', 'icon': '❌'},
+            'scanning': {'fg': '#004e8c', 'bg': '#cce4f7', 'icon': '⏳'},
+            'progress': {'fg': '#0c5460', 'bg': '#d1ecf1', 'icon': '⏳'},
+            'debug': {'fg': '#383d41', 'bg': '#e2e3e5', 'icon': '🐛'}
         }
         
-        fg, bg = colors.get(message_type.lower(), ('#000000', '#e6f3ff'))
+        # Configure styles for different message types
+        style = ttk.Style()
+        for msg_type, style_info in self.message_styles.items():
+            style.configure(f'{msg_type}.TFrame', background=style_info['bg'])
+            style.configure(f'{msg_type}.TLabel', 
+                          foreground=style_info['fg'], 
+                          background=style_info['bg'])
+    
+    def show_status(self, message, message_type="info", timeout=5000, show_notification=True):
+        """Show a status message with appropriate styling.
         
-        # Update status label
-        self.status_text.set(message)
-        self.status_label.config(foreground=fg)
+        Args:
+            message (str): The message to display
+            message_type (str): Type of message (info, success, warning, error, scanning, progress, debug)
+            timeout (int): Time in milliseconds before message clears (0 for no timeout)
+            show_notification (bool): Whether to add to notification history
+        """
+        if not hasattr(self, 'status_label') or not hasattr(self, 'status_text'):
+            return
+            
+        # Get style for message type
+        style = self.message_styles.get(message_type.lower(), self.message_styles['info'])
         
-        # Update status bar background
-        self.status_label.master.configure(style=f'{message_type}.TFrame' if message_type != 'info' else 'TFrame')
+        # Update status label with timestamp and icon
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        formatted_message = f"{style['icon']} [{timestamp}] {message}"
+        self.status_text.set(formatted_message)
+        
+        # Update styling
+        self.status_label.config(
+            foreground=style['fg'],
+            background=style['bg']
+        )
+        self.status_frame.configure(style=f'{message_type}.TFrame')
+        
+        # Add to notification history
+        if show_notification and message_type not in ('progress', 'scanning'):
+            self._add_to_notification_history(formatted_message, message_type)
         
         # Schedule clearing the message
         if hasattr(self, '_status_timeout'):
             self.root.after_cancel(self._status_timeout)
-        
-        if timeout > 0 and message_type not in ('scanning',):
+            
+        if timeout > 0 and message_type not in ('scanning', 'progress'):
             self._status_timeout = self.root.after(
                 timeout, 
-                lambda: self.clear_status() if message_type != 'scanning' else None
+                self.clear_status
             )
+            
+        # Play sound for important notifications
+        if message_type in ('error', 'warning') and self.settings.get('enable_sounds', True):
+            self._play_notification_sound(message_type)
+    
+    def _add_to_notification_history(self, message, message_type):
+        """Add a message to the notification history."""
+        if not hasattr(self, 'notification_history'):
+            self.notification_history = []
+            
+        # Add new message to beginning of list
+        timestamp = datetime.now()
+        self.notification_history.insert(0, {
+            'message': message,
+            'type': message_type,
+            'timestamp': timestamp
+        })
+        
+        # Trim history if needed
+        if len(self.notification_history) > self.max_history:
+            self.notification_history = self.notification_history[:self.max_history]
+    
+    def show_notification_history(self):
+        """Show a window with notification history."""
+        if not hasattr(self, 'notification_history') or not self.notification_history:
+            messagebox.showinfo("Notification History", "No notifications in history.")
+            return
+            
+        history_win = tk.Toplevel(self.root)
+        history_win.title("Notification History")
+        history_win.geometry("600x400")
+        
+        # Create a text widget with scrollbar
+        frame = ttk.Frame(history_win)
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        text = tk.Text(
+            frame,
+            wrap=tk.WORD,
+            font=('Segoe UI', 10),
+            padx=10,
+            pady=10,
+            state=tk.DISABLED
+        )
+        
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=text.yview)
+        text.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Add notifications to text widget
+        text.config(state=tk.NORMAL)
+        for idx, note in enumerate(self.notification_history):
+            # Add separator between entries (except first one)
+            if idx > 0:
+                text.insert(tk.END, "\n" + "-" * 80 + "\n\n")
+                
+            # Format timestamp
+            timestamp = note['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Get style for message type
+            style = self.message_styles.get(note['type'], self.message_styles['info'])
+            
+            # Insert message with timestamp
+            text.insert(tk.END, f"[{timestamp}]\n", 'timestamp')
+            text.insert(tk.END, f"{note['message']}\n")
+            
+            # Configure tags for styling
+            text.tag_configure('timestamp', font=('Segoe UI', 8, 'italic'), foreground='#666666')
+            text.tag_configure(note['type'], 
+                             foreground=style['fg'], 
+                             background=style['bg'],
+                             font=('Segoe UI', 10, 'bold'))
+            
+            # Apply style to the message
+            text.tag_add(note['type'], f"{idx*3+2}.0", f"{idx*3+2}.end")
+        
+        # Add clear button
+        btn_frame = ttk.Frame(history_win)
+        btn_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        clear_btn = ttk.Button(
+            btn_frame,
+            text="Clear History",
+            command=lambda: self._clear_notification_history(history_win)
+        )
+        clear_btn.pack(side=tk.RIGHT)
+        
+        close_btn = ttk.Button(
+            btn_frame,
+            text="Close",
+            command=history_win.destroy
+        )
+        close_btn.pack(side=tk.RIGHT, padx=5)
+        
+        text.config(state=tk.DISABLED)
+        text.see(tk.END)
+    
+    def _clear_notification_history(self, window):
+        """Clear the notification history."""
+        if hasattr(self, 'notification_history'):
+            self.notification_history = []
+            window.destroy()
+            self.show_status("Notification history cleared", "info")
+    
+    def _play_notification_sound(self, message_type):
+        """Play a sound for the notification if enabled."""
+        if not self.settings.get('enable_sounds', True):
+            return
+            
+        try:
+            import winsound
+            if message_type == 'error':
+                winsound.MessageBeep(winsound.MB_ICONHAND)
+            elif message_type == 'warning':
+                winsound.MessageBeep(winsound.MB_ICONWARNING)
+            elif message_type == 'success':
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
+        except Exception as e:
+            print(f"Could not play sound: {e}")
     
     def clear_status(self):
         """Clear the status message and reset progress bars."""
@@ -1686,47 +2176,113 @@ class PDFDuplicateApp:
     def _setup_drag_drop(self):
         """Set up drag and drop functionality."""
         try:
-            # Try to remove any existing drop target handlers if the method exists
-            if hasattr(self.root, 'drop_target_remove'):
-                self.root.drop_target_remove()
+            # Remove any existing drop target handlers
+            if hasattr(self, '_drop_target_registered'):
+                self.root.drop_target_unregister()
             
-            # Enable drag and drop
+            # Enable drag and drop for files and folders
             self.root.drop_target_register(DND_FILES)
-            self.root.dnd_bind('<<Drop>>', self._on_drop)
             
             # Bind drag and drop events
-            self.root.drop_target = DND_FILES
             self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
             self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
+            self.root.dnd_bind('<<Drop>>', self._on_drop)
+            
+            # Set flag to indicate drop target is registered
+            self._drop_target_registered = True
+            
+            # Create drop highlight if it doesn't exist
+            if not hasattr(self, 'drop_highlight'):
+                self.drop_highlight = ttk.Label(
+                    self.root, 
+                    text=t('drop_folder_here', self.lang),
+                    background='#e6f3ff',
+                    foreground='#0066cc',
+                    font=('Arial', 12, 'bold'),
+                    relief='solid',
+                    borderwidth=2,
+                    padding=20
+                )
+            
+            print("Drag and drop initialized successfully")
+            
         except Exception as e:
             print(f"Warning: Could not set up drag and drop: {e}")
-            # Continue without drag and drop functionality
+            if hasattr(self, 'drop_highlight'):
+                self.drop_highlight.place_forget()
     
     def _on_drop_enter(self, event):
         """Handle drag enter event."""
-        if event.data:
-            return True  # Accept the drop
-        return False  # Reject the drop
+        try:
+            if hasattr(self, 'drop_highlight'):
+                # Position the highlight over the main container
+                self.drop_highlight.lift()
+                self.drop_highlight.place(relx=0.5, rely=0.5, anchor='center', 
+                                        relwidth=0.8, relheight=0.8)
+                self.root.update_idletasks()
+            return 'copy'  # Show copy cursor
+        except Exception as e:
+            print(f"Error in drop enter: {e}")
+            return 'refuse'
     
     def _on_drop_leave(self, event):
         """Handle drag leave event."""
-        pass
+        try:
+            if hasattr(self, 'drop_highlight'):
+                self.drop_highlight.place_forget()
+        except Exception as e:
+            print(f"Error in drop leave: {e}")
     
     def _on_drop(self, event):
         """Handle drop event."""
-        if not event.data:
-            return
+        try:
+            # Hide the drop highlight
+            if hasattr(self, 'drop_highlight'):
+                self.drop_highlight.place_forget()
             
-        # Get the dropped file/folder path
-        file_path = event.data.strip('{}')
-        
-        # Handle the dropped path
-        if os.path.isdir(file_path):
-            self.folder_path.set(file_path)
-            self.find_duplicates()
-        elif file_path.lower().endswith('.pdf'):
-            self.folder_path.set(os.path.dirname(file_path))
-            self.find_duplicates()
+            if not event.data:
+                return
+            
+            # Process the dropped items (can be multiple files/folders)
+            import re
+            # Split by spaces not preceded by a backslash
+            items = re.split(r'(?<!\\)\s+', event.data.strip('{}'))
+            
+            # Clean up paths (remove quotes and escape characters)
+            cleaned_paths = []
+            for item in items:
+                # Remove surrounding quotes if present
+                item = item.strip('"\'')
+                # Replace escaped spaces with regular spaces
+                item = item.replace('\\ ', ' ')
+                if os.path.exists(item):
+                    cleaned_paths.append(item)
+            
+            if not cleaned_paths:
+                self.show_status("No valid files or folders were dropped", "error")
+                return
+            
+            # Find the first valid folder or get parent directory of first file
+            target_folder = None
+            for path in cleaned_paths:
+                if os.path.isdir(path):
+                    target_folder = path
+                    break
+                elif os.path.isfile(path) and path.lower().endswith('.pdf'):
+                    target_folder = os.path.dirname(path)
+                    break
+            
+            if target_folder:
+                self.folder_path.set(target_folder)
+                self.show_status(f"Scanning folder: {target_folder}", "info")
+                self.find_duplicates()
+            else:
+                self.show_status("No valid PDF files or folders were dropped", "error")
+                
+        except Exception as e:
+            error_msg = f"Error processing dropped items: {str(e)}"
+            print(error_msg)
+            self.show_status(error_msg, "error")
     
     def refresh_language(self):
         """Refresh the UI with the new language."""
@@ -2000,8 +2556,20 @@ class PDFDuplicateApp:
             if not dup_group or len(dup_group) < 2:
                 continue
                 
-            # Sort by file size (descending)
-            dup_group.sort(key=lambda x: os.path.getsize(x) if os.path.exists(x) else 0, reverse=True)
+            # Sort by file size (descending) and modification time (newest first)
+            dup_group.sort(
+                key=lambda x: (
+                    os.path.getsize(x) if os.path.exists(x) else 0,
+                    os.path.getmtime(x) if os.path.exists(x) else 0
+                ),
+                reverse=True
+            )
+            
+            # Get original file info (first in the sorted list)
+            original_path = dup_group[0]
+            original_size = os.path.getsize(original_path) if os.path.exists(original_path) else 0
+            original_mtime = os.path.getmtime(original_path) if os.path.exists(original_path) else 0
+            original_date = datetime.fromtimestamp(original_mtime).strftime('%Y-%m-%d %H:%M:%S') if original_mtime > 0 else 'Unknown'
             
             # Add to treeview
             for i, file_path in enumerate(dup_group):
@@ -2010,28 +2578,53 @@ class PDFDuplicateApp:
                     file_mtime = os.path.getmtime(file_path) if os.path.exists(file_path) else 0
                     file_date = datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d %H:%M:%S') if file_mtime > 0 else 'Unknown'
                     
-                    # Mark the first file as the "original" (largest file)
+                    # Calculate size difference from original
+                    size_diff = ""
+                    if i > 0 and original_size > 0:
+                        diff_percent = ((file_size - original_size) / original_size) * 100
+                        size_diff = f"{diff_percent:+.2f}%"
+                    
+                    # Calculate date difference from original
+                    date_diff = ""
+                    if i > 0 and original_mtime > 0 and file_mtime > 0:
+                        diff_days = (file_mtime - original_mtime) / (24 * 3600)
+                        if abs(diff_days) >= 1:
+                            date_diff = f"{diff_days:+.1f} days"
+                        else:
+                            diff_hours = diff_days * 24
+                            date_diff = f"{diff_hours:+.1f} hours"
+                    
+                    # Mark the first file as the "original" (largest file, newest)
                     is_original = (i == 0)
                     
                     if hasattr(self, 'tree'):
                         self.tree.insert(
                             '', 'end',
                             values=(
-                                os.path.basename(file_path),
-                                f"{file_size / (1024 * 1024):.2f} MB" if file_size > 0 else "0 MB",
-                                file_date,
-                                "Original" if is_original else "Duplicate",
-                                file_path
+                                os.path.basename(file_path),  # Duplicate file name
+                                f"{file_size / (1024 * 1024):.2f} MB" if file_size > 0 else "0 MB",  # Size
+                                file_date,  # Modification date
+                                size_diff,  # Size difference from original
+                                date_diff,  # Date difference from original
+                                os.path.basename(original_path),  # Original file name
+                                f"{original_size / (1024 * 1024):.2f} MB" if original_size > 0 else "0 MB",  # Original size
+                                original_date,  # Original modification date
+                                file_path  # Full path (hidden)
                             ),
                             tags=('original' if is_original else 'duplicate')
                         )
                 except Exception as e:
                     print(f"Error adding file to treeview: {e}")
+                    
+            # Add a separator between groups
+            if hasattr(self, 'tree'):
+                self.tree.insert('', 'end', values=('',) * 9, tags=('separator',))
         
         # Configure tag colors if tree exists
         if hasattr(self, 'tree'):
             self.tree.tag_configure('original', background='#e6f7e6')  # Light green for original
             self.tree.tag_configure('duplicate', background='#f9f9f9')  # Light gray for duplicates
+            self.tree.tag_configure('separator', background='#cccccc')  # Gray for separators
         
         # Update status
         dup_count = len(self.duplicates) if hasattr(self, 'duplicates') else 0
@@ -2239,5 +2832,53 @@ def main():
     # Start the main loop
     root.mainloop()
 
+def test_filters():
+    """Test the filter functionality with sample data."""
+    # Create a test app instance
+    root = tk.Tk()
+    app = PDFDuplicateApp(root)
+    
+    # Test data
+    test_files = [
+        {'path': 'test1.pdf', 'size': 1024, 'mtime': 1625000000, 'pages': 10},  # 1KB
+        {'path': 'test2.pdf', 'size': 2048, 'mtime': 1625086400, 'pages': 5},   # 2KB
+        {'path': 'test3.pdf', 'size': 5120, 'mtime': 1625172800, 'pages': 20}   # 5KB
+    ]
+    
+    # Enable filters
+    app.filters_active.set(True)
+    
+    # Test 1: Size filter
+    print("\n=== Testing Size Filter ===")
+    app.size_min_var.set('1.5')
+    app.size_max_var.set('3')
+    for file in test_files:
+        result = app.apply_filters(file)
+        print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Passes: {result}")
+    
+    # Test 2: Date filter
+    print("\n=== Testing Date Filter ===")
+    app.date_from_var.set('2021-06-29')
+    app.date_to_var.set('2021-06-30')
+    for file in test_files:
+        result = app.apply_filters(file)
+        mtime_str = datetime.datetime.fromtimestamp(file['mtime']).strftime('%Y-%m-%d')
+        print(f"File: {file['path']} - Date: {mtime_str} - Passes: {result}")
+    
+    # Test 3: Page count filter
+    print("\n=== Testing Page Count Filter ===")
+    app.pages_min_var.set('5')
+    app.pages_max_var.set('15')
+    for file in test_files:
+        result = app.apply_filters(file)
+        print(f"File: {file['path']} - Pages: {file['pages']} - Passes: {result}")
+    
+    root.destroy()
+
 if __name__ == "__main__":
-    main()
+    import sys
+    
+    if '--test-filters' in sys.argv:
+        test_filters()
+    else:
+        main()

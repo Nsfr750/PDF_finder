@@ -19,6 +19,9 @@
 
 ## Application Features
 
+- [x] Implement drag and drop folder support
+- [x] Improve status messages and notifications
+
 ### Update Management
 
 - [ ] Manual check via Help > Check for Updates
@@ -61,23 +64,9 @@
   - Comprehensive CHANGELOG
   - Better code documentation
 
-## High Priority Tasks
-
-- [ ] Implement batch processing for large PDF collections
-- [ ] Add progress bar for individual file processing
-- [ ] Add file size information in the duplicates list
-- [ ] Add modification date comparison for duplicates
-
-### Medium Priority
-
-- [ ] Implement drag and drop folder support
-- [ ] Improve status messages and notifications
-
-## Feature Requests
-
 ### Filtering Options
 
-- [ ] Add advanced filtering options
+- [x] Add advanced filtering options
   - Filter by file size range
   - Filter by modification date
   - Filter by page count
@@ -89,17 +78,6 @@
 - [ ] Add support for saving/loading scan results
 - [ ] Implement a command-line interface (CLI) version
 
-## User Interface Improvements
-
-### Preview and Selection
-
-- [ ] Implement a more detailed preview panel
-- [ ] Improve status messages and notifications
-- [ ] Add a "Select All" option for duplicates
-- [ ] Implement a "Select by Pattern" feature
-
-## Performance Improvements
-
 ### Optimization Tasks
 
 - [ ] Implement caching for previously scanned folders
@@ -110,8 +88,6 @@
 - [ ] Create a system tray version for background monitoring
 - [ ] Add support for custom comparison algorithms
 
-## Testing & Quality Assurance
-
 ### Test Coverage Goals
 
 - [ ] Add unit tests for core functionality
@@ -120,7 +96,7 @@
 - [ ] Implement error tracking
 - [ ] Add test coverage reporting
 
-## Documentation Updates
+## Documentation
 
 ### Planned Content Additions
 
@@ -129,8 +105,6 @@
 - [ ] Add API documentation for developers
 - [ ] Document the update check functionality
 - [ ] Add contribution guidelines
-- [ ] Create a user guide video
-- [ ] Add more examples to the documentation
 
 ## Known Issues & Bug Fixes
 - [ ] Fix any reported issues (none currently)
