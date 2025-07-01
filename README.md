@@ -1,6 +1,6 @@
 # PDF Duplicate Finder
 
-[![GitHub release](https://img.shields.io/badge/release-v2.6.2-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/latest)
+[![GitHub release](https://img.shields.io/badge/release-v2.6.3-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/graphs/commit-activity)
@@ -12,7 +12,22 @@
 
 A Python application that helps you find and remove duplicate PDF files based on their content. Features an advanced preview system that allows you to verify duplicates before deletion, with a customizable interface that includes light and dark themes.
 
-## What's New in v2.6.2
+## What's New in v2.6.3
+
+### Bug Fixes in v2.6.3
+
+- Fixed CSV file saving functionality
+- Resolved path handling issues in ScanManager
+- Improved error handling for file operations
+- Fixed issues with file dialogs on Windows
+
+### Improvements in v2.6.3
+
+- Enhanced error messages for file operations
+- Improved status feedback during file operations
+- Better handling of file paths across different operating systems
+
+## Previous Version (v2.6.2)
 
 ### Bug Fixes in v2.6.2
 
@@ -174,7 +189,7 @@ A Python application that helps you find and remove duplicate PDF files based on
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/yourusername/PDF_finder.git
+   git clone https://github.com/Nsfr750/PDF_finder.git
    cd PDF_finder
    ```
 

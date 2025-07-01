@@ -8,6 +8,8 @@
   - [x] Resolved module naming conflicts with Python standard library
   - [x] Fixed file saving and loading functionality
   - [x] Improved error handling for JSON operations
+  - [x] Fixed CSV file saving functionality
+  - [x] Improved path handling in ScanManager
   - [ ] Improve test coverage
   - [ ] Add type hints throughout the codebase
   - [ ] Implement CI/CD pipeline
@@ -19,6 +21,7 @@
   - [ ] Add caching for better performance
   - [ ] Optimize memory usage for large PDFs
   - [ ] Profile and optimize file operations
+  - [ ] Optimize file dialog performance on Windows
 
 ## Application Features
 
@@ -27,7 +30,7 @@
 
 ### Update Management
 
-- [ ] Manual check via Help > Check for Updates
+- [x] Manual check via Help > Check for Updates
 
 ### Multi-language Support
 
@@ -76,9 +79,8 @@
 
 ### File Management
 
-- [ ] Add batch rename functionality for keeping files
 - [ ] Implement a "Quick Compare" mode for faster scanning
-- [ ] Add support for saving/loading scan results
+- [x] Add support for saving/loading scan results
 - [ ] Implement a command-line interface (CLI) version
 
 ### Optimization Tasks

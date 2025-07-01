@@ -2,6 +2,19 @@
 
 All notable changes to the PDF Duplicate Finder project will be documented in this file.
 
+## [2.6.3] - 2025-07-01
+
+### Bug Fixes in 2.6.3
+
+- **File Handling**
+  - Fixed CSV file saving functionality
+  - Resolved path handling issues in ScanManager
+  - Improved error handling for file operations
+
+- **User Interface**
+  - Enhanced error messages for file operations
+  - Improved status feedback during file operations
+
 ## [2.6.2] - 2025-06-29
 
 ### Bug Fixes in 2.6.2
