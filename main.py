@@ -2,20 +2,17 @@ import os
 import hashlib
 import tempfile
 import json
-import math
-import logging
-import traceback
-import shutil
-import queue
-import webbrowser
-import threading
 import time
-from datetime import datetime
-from pathlib import Path
-from typing import List, Dict, Optional, Set
+from tkinter import messagebox
+from app_struct.drag_drop import DragDropManager
+from app_struct.gest_scan import ScanManager
+from app_struct.delete import FileDeleter
+import math
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Event
-from functools import partial
+import logging
+from typing import List, Dict, Optional, Set
 
 # Configure PyPDF2 logger to suppress warnings
 logging.getLogger('PyPDF2').setLevel(logging.ERROR)
@@ -26,51 +23,46 @@ logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
-
-# Import PDF processing libraries
+import traceback
+import concurrent.futures
+import shutil
+from pathlib import Path
 import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2.errors import PdfReadError
 from pdf2image import convert_from_path
-
-# Import GUI libraries
 import tkinter as tk
-from tkinter import (
-    filedialog, messagebox, ttk, Button, Tk, Label, simpledialog, 
-    font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL, scrolledtext
-)
+from PIL import Image, ImageTk
+from tkinter import filedialog, messagebox, ttk, Button, Tk, Label,  simpledialog, font as tkfont, colorchooser, Toplevel, Frame, IntVar, Scale, HORIZONTAL
 from tkinterdnd2 import TkinterDnD, DND_FILES, DND_ALL
-
-# Import image processing libraries
-from PIL import Image, ImageTk, ImageOps, ImageDraw, ImageFont
 import imagehash
-
-# Import Windows-specific libraries
-try:
-    import win32ui
-    import win32gui
-    import win32con
-    import win32api
-    import pythoncom
-    from win32com.shell import shell, shellcon
-    WINDOWS_AVAILABLE = True
-except ImportError:
-    WINDOWS_AVAILABLE = False
-    print("Windows-specific features will be disabled")
-
-# Import application modules
 from app_struct.help import HelpWindow
 from app_struct.about import About
 from app_struct.sponsor import Sponsor
 from app_struct.theme import ThemeManager
-from app_struct.updates import check_for_updates
 from lang.translations import TRANSLATIONS, t
+from app_struct.updates import check_for_updates
+import threading
+import time
+import os
+from datetime import datetime
+import queue
+import webbrowser
+from PIL import ImageOps, ImageDraw, ImageFont
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
+import win32ui
+import win32gui
+import win32con
+import win32api
+import pythoncom
+from win32com.shell import shell, shellcon
 
 # Try to import send2trash for safe file deletion
 try:
-    from send2trash import send2trash as send_to_trash
+    from send2trash import send2trash
 except ImportError:
-    send_to_trash = None
+    send2trash = None
     print("Note: send2trash module not found. Using standard file deletion.")
     print("Install with: pip install send2trash")
 
@@ -86,10 +78,6 @@ class PDFDuplicateApp:
         # Initialize cache directory
         self.cache_dir = os.path.join(os.path.expanduser('~'), '.pdf_duplicate_finder')
         os.makedirs(self.cache_dir, exist_ok=True)
-        
-        # Initialize undo stack and max steps
-        self.undo_stack = []
-        self.max_undo_steps = 10  # Numero massimo di azioni annullabili
         
         # Load saved settings if they exist
         self.load_settings()
@@ -168,9 +156,10 @@ class PDFDuplicateApp:
         self.batch_size = 10  # Default batch size for processing files
         self.max_workers = min(4, (os.cpu_count() or 1))  # Default to 4 workers or number of CPUs, whichever is smaller
         
-        # Initialize recent folders list
-        self.recent_folders = []  # List to store recently accessed folders
-        self.max_recent_folders = 10  # Maximum number of recent folders to remember
+        # Initialize recent folders
+        from app_struct.recents import RecentFolders
+        self.recents = RecentFolders(self)
+        self.recents.on_folder_selected = self.load_recent_folder
         
         # Initialize filters visibility state
         self.filters_visible = self.settings.get('filters_visible', True)  # Default to visible
@@ -189,11 +178,17 @@ class PDFDuplicateApp:
                  background=[('active', '#c82333'), ('disabled', '#f5c6cb')],
                  foreground=[('disabled', '#721c24')])
         
+        # Initialize FileDeleter for handling file deletion
+        self.file_deleter = FileDeleter(self)
+        
         # Set up the UI without menu first
         self._setup_ui()
         
         # Set up drag and drop
         self._setup_drag_drop()
+        
+        # Initialize ScanManager for handling scan results
+        self.scan_manager = ScanManager(self.root, self)
         
         # Create menu bar after everything else is initialized
         from app_struct.menu import MenuManager
@@ -348,46 +343,16 @@ class PDFDuplicateApp:
         """Show the help dialog."""
         HelpWindow(self.root, self.lang)
         
-    def select_all_duplicates(self):
-        """Select all items in the duplicates treeview."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        # Temporarily disable the selection event to avoid performance issues
-        self._selection_changed = False
-        
-        # Select all items that are not separators
-        for item in self.tree.get_children():
-            tags = self.tree.item(item, 'tags')
-            if 'separator' not in tags:
-                self.tree.selection_add(item)
-        
-        # Update preview for the first selected item if any
-        selected = self.tree.selection()
-        if selected:
-            self.update_preview()
-    
-    def deselect_all_duplicates(self):
-        """Deselect all items in the duplicates treeview."""
-        if hasattr(self, 'tree'):
-            self.tree.selection_remove(self.tree.selection())
-            self.clear_preview()
-    
     def on_select(self, event):
         """Handle treeview selection event."""
-        # Get the current selection
-        selection = self.tree.selection()
-        if not selection:
-            return
-                
-        # Get the selected item
-        item = self.tree.item(selection[0])
+        selected_items = self.tree.selection()
+        if hasattr(self, 'delete_btn'):
+            self.delete_btn['state'] = tk.NORMAL if selected_items else tk.DISABLED
         
-        # Update preview if preview area exists
-        if hasattr(self, 'preview_text'):
-            self.update_preview()
+        # Update preview
+        self.update_preview()
 
-    def _add_to_notification_history(self, message, message_type):
+    def _add_to_notification_history(self):
         """Add a message to the notification history."""
         if not hasattr(self, 'notification_history'):
             self.notification_history = []
@@ -682,20 +647,13 @@ class PDFDuplicateApp:
     
     def find_duplicates(self):
         """Find duplicate PDF files in the selected folder."""
-        folder_path = self.folder_path.get()
-        if not folder_path or not os.path.isdir(folder_path):
-            messagebox.showerror("Error", "Please select a valid folder first.")
-            return
-            
-        # Reset UI
-        if hasattr(self, 'tree'):
-            for item in self.tree.get_children():
-                self.tree.delete(item)
+        from app_struct.search_dup import DuplicateFinder
         
-        # Update UI for scanning
-        self.find_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
-        self.progress_var.set(0)
+        if not hasattr(self, 'duplicate_finder'):
+            self.duplicate_finder = DuplicateFinder(self)
+            
+        folder_path = self.folder_path.get()
+        self.duplicate_finder.find_duplicates(folder_path)
         self.overall_progress_var.set(0)
         self.status_text.set("Scanning for PDF files...")
         self.root.update_idletasks()
@@ -971,31 +929,18 @@ class PDFDuplicateApp:
         
     def toggle_preview_visibility(self):
         """Toggle the visibility of the preview panel."""
-        if not hasattr(self, 'preview_visible'):
-            self.preview_visible = True
-        else:
-            self.preview_visible = not self.preview_visible
+        self.preview_visible = not self.preview_visible
         
         if self.preview_visible:
-            # Show preview panel
-            if hasattr(self, 'right_frame'):
-                self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
-            if hasattr(self, 'toggle_preview_btn'):
-                self.toggle_preview_btn.config(text="◀")
-            # Update preview if something is selected
-            if hasattr(self, 'tree') and self.tree.selection():
-                self.update_preview()
+            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+            self.toggle_preview_btn.config(text="▶")
         else:
-            # Hide preview panel
-            if hasattr(self, 'right_frame'):
-                self.right_frame.pack_forget()
-            if hasattr(self, 'toggle_preview_btn'):
-                self.toggle_preview_btn.config(text="▶")
-        
+            self.right_frame.pack_forget()
+            self.toggle_preview_btn.config(text="◀")
+            
         # Save the preview visibility state
-        if hasattr(self, 'settings'):
-            self.settings['preview_visible'] = self.preview_visible
-            self.save_settings()
+        self.settings['preview_visible'] = self.preview_visible
+        self.save_settings()
     
     def _set_process_priority(self):
         """Set the process priority to below normal to improve system responsiveness."""
@@ -1027,15 +972,15 @@ class PDFDuplicateApp:
         self.root.bind('<F5>', lambda e: self.find_duplicates() if self.folder_path.get() else None)
         self.root.bind('<Control-z>', lambda e: self.undo_last_delete() if hasattr(self, 'menu_manager') and hasattr(self.menu_manager, 'undo_menu_item') and self.menu_manager.undo_menu_item['state'] == tk.NORMAL else None)
         
-        # Enable drag and drop with tkinterdnd2
-        self.root.drop_target_register(DND_FILES)
-        self.root.dnd_bind('<<Drop>>', self._on_drop)
-        self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
-        self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
+        # Drag and drop is now handled by DragDropManager
         
-        # Create left frame for controls and treeview
+        # Create left and right frames for the main layout
         self.left_frame = ttk.Frame(self.main_container)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Create right frame for preview
+        self.right_frame = ttk.Frame(self.main_container, width=300)
+        # Don't pack it yet, it will be packed when preview is shown
         
         # Treeview visibility toggle button
         self.toggle_tree_btn = ttk.Button(
@@ -1070,12 +1015,22 @@ class PDFDuplicateApp:
         tk.Entry(search_frame, textvariable=self.folder_path, width=50, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
         tk.Button(search_frame, text=t('browse', self.lang), command=self.browse_folder, font=("Arial", 10)).pack(side=tk.LEFT, padx=5)
 
-        # Search buttons frame
-        button_frame = ttk.Frame(self.left_frame)
-        button_frame.pack(fill=tk.X, pady=5)
+        # Create buttons frame
+        self.button_frame = ttk.Frame(self.left_frame)
+        self.button_frame.pack(fill=tk.X, pady=5)
         
-        # Buttons frame for find/stop
-        action_frame = ttk.Frame(button_frame)
+        # Add delete button first
+        self.delete_btn = ttk.Button(
+            self.button_frame,
+            text="Elimina Selezionati",
+            command=self.file_deleter.delete_selected,
+            style='Danger.TButton',
+            state=tk.DISABLED  # Initially disabled
+        )
+        self.delete_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # Add other buttons frame for find/stop
+        action_frame = ttk.Frame(self.button_frame)
         action_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Find duplicates button
@@ -1091,28 +1046,51 @@ class PDFDuplicateApp:
                                 state=tk.DISABLED)
         self.stop_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
                  
-        # Save results button
-        self.save_btn = tk.Button(button_frame, text=t('save_results', self.lang), command=self.save_scan_results,
+        # Save and load buttons
+        self.save_btn = tk.Button(self.button_frame, text=t('save_results', self.lang), command=self.save_scan_results,
                                font=("Arial", 10), state=tk.DISABLED)
         self.save_btn.pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
         
         # Load results button
-        tk.Button(button_frame, text=t('load_results', self.lang), command=self.load_scan_results,
+        tk.Button(self.button_frame, text=t('load_results', self.lang), command=self.load_scan_results,
                  font=("Arial", 10)).pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
+        
+        # Quick Compare checkbox
+        self.quick_compare_var = tk.BooleanVar()
+        self.quick_compare = ttk.Checkbutton(
+            self.button_frame,
+            text=t('quick_compare', self.lang) if hasattr(t, 'quick_compare') else 'Quick Compare',
+            variable=self.quick_compare_var,
+            command=self._on_quick_compare_toggle
+        )
+        self.quick_compare.pack(side=tk.RIGHT, padx=5, pady=2)
 
         # Progress bar and status
         self.progress_frame = ttk.Frame(self.left_frame)
         self.progress_frame.pack(fill=tk.X, pady=5)
         
+        # Overall progress bar
+        self.progress_bar = ttk.Progressbar(self.progress_frame, mode='determinate')
+        self.progress_bar.pack(fill=tk.X, pady=(0, 2))
+        
+        # Individual file progress bar
+        self.file_progress_frame = ttk.Frame(self.progress_frame)
+        self.file_progress_frame.pack(fill=tk.X, pady=(0, 2))
+        
+        self.file_progress_label = ttk.Label(self.file_progress_frame, text=t('current_file', self.lang) + ":")
+        self.file_progress_label.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.file_progress_bar = ttk.Progressbar(self.file_progress_frame, mode='determinate')
+        self.file_progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
         # Filters section with toggle
-        self.filters_visible = True        # Track filters visibility
         self.filter_frame = ttk.LabelFrame(self.left_frame, text=t('filters', self.lang))
         self.filter_frame.pack(fill=tk.X, pady=5, padx=5)
         
         # Add toggle button in the title bar of the filter frame
         self.toggle_filters_btn = ttk.Button(
             self.filter_frame, 
-            text="-", 
+            text="-" if self.filters_visible else "+", 
             width=2,
             command=self.toggle_filters_visibility
         )
@@ -1122,9 +1100,6 @@ class PDFDuplicateApp:
         self.filters_container = ttk.Frame(self.filter_frame)
         if self.filters_visible:
             self.filters_container.pack(fill=tk.X, padx=5, pady=5)
-            self.toggle_filters_btn.config(text="-")
-        else:
-            self.toggle_filters_btn.config(text="+")
         
         # Size filter
         size_frame = ttk.LabelFrame(self.filters_container, text=t('file_size_kb', self.lang))
@@ -1171,311 +1146,139 @@ class PDFDuplicateApp:
             command=self.clear_filters
         ).pack(side=tk.RIGHT, padx=5)
         
-        # Compare mode selection
-        compare_frame = ttk.LabelFrame(self.left_frame, text=t('compare_mode', self.lang))
-        compare_frame.pack(fill=tk.X, pady=5, padx=5)
+        # Treeview frame
+        self.tree_frame = ttk.Frame(self.left_frame)
+        self.tree_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         
-        ttk.Radiobutton(
-            compare_frame, 
-            text=t('full_compare', self.lang), 
-            variable=self.compare_mode,
-            value="full"
-        ).pack(anchor=tk.W, padx=5, pady=2)
-        
-        ttk.Radiobutton(
-            compare_frame, 
-            text=t('quick_compare', self.lang), 
-            variable=self.compare_mode,
-            value="quick"
-        ).pack(anchor=tk.W, padx=5, pady=2)
-        
-        # Batch processing controls
-        batch_frame = ttk.LabelFrame(self.left_frame, text=t('processing_options', self.lang))
-        batch_frame.pack(fill=tk.X, pady=5, padx=5)
-        
-        # Batch size control
-        ttk.Label(batch_frame, text=t('batch_size', self.lang) + ":").pack(side=tk.LEFT, padx=5)
-        self.batch_size_var = IntVar(value=self.batch_size)
-        batch_slider = Scale(batch_frame, from_=1, to=50, orient=HORIZONTAL, 
-                           variable=self.batch_size_var, showvalue=1, length=200)
-        batch_slider.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        
-        # Worker threads control
-        ttk.Label(batch_frame, text=t('threads', self.lang) + ":").pack(side=tk.LEFT, padx=5)
-        self.workers_var = IntVar(value=self.max_workers)
-        workers_slider = Scale(batch_frame, from_=1, to=os.cpu_count() or 4, orient=HORIZONTAL,
-                             variable=self.workers_var, showvalue=1, length=100)
-        workers_slider.pack(side=tk.LEFT, padx=5, fill=tk.X)
-        
-        # Cache and low-priority mode controls
-        cache_frame = ttk.LabelFrame(self.left_frame, text=t('cache_and_priority', self.lang))
-        cache_frame.pack(fill=tk.X, pady=5, padx=5)
-        
-        # Cache toggle
-        ttk.Checkbutton(
-            cache_frame, 
-            text=t('enable_cache', self.lang), 
-            variable=self.use_cache,
-            command=self.clear_cache_if_needed
-        ).pack(side=tk.LEFT, padx=5)
-        
-        # Low-priority mode toggle
-        ttk.Checkbutton(
-            cache_frame, 
-            text=t('low_priority_mode', self.lang), 
-            variable=self.low_priority
-        ).pack(side=tk.LEFT, padx=5)
-        
-        # Quick Compare toggle
-        self.quick_compare_cb = ttk.Checkbutton(
-            cache_frame, 
-            text="Quick Compare (faster, less accurate)", 
-            variable=self.quick_compare,
-            command=self._on_quick_compare_toggle
-        )
-        self.quick_compare_cb.pack(side=tk.LEFT, padx=5)
-        
-        # Progress bars frame
-        progress_bars_frame = ttk.Frame(self.progress_frame)
-        progress_bars_frame.pack(fill=tk.X, pady=2)
-        
-        # Overall progress bar
-        self.progress_bar = ttk.Progressbar(progress_bars_frame, mode='determinate')
-        self.progress_bar.pack(fill=tk.X, pady=(0, 2))
-        
-        # Individual file progress bar
-        self.file_progress_frame = ttk.Frame(progress_bars_frame)
-        self.file_progress_frame.pack(fill=tk.X, pady=(0, 2))
-        
-        self.file_progress_label = ttk.Label(self.file_progress_frame, text=t('current_file', self.lang) + ":")
-        self.file_progress_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.file_progress_bar = ttk.Progressbar(self.file_progress_frame, mode='determinate')
-        self.file_progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # Status bar frame
-        self.status_frame = ttk.Frame(self.root, padding="2 1 2 1")
-        self.status_frame.pack(side=tk.BOTTOM, fill=tk.X)
-        
-        # Status label with timestamp
-        self.status_text = tk.StringVar()
-        self.status_label = ttk.Label(
-            self.status_frame,
-            textvariable=self.status_text,
-            relief=tk.SUNKEN,
-            anchor=tk.W,
-            padding=(5, 2)
-        )
-        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # Notification history button
-        self.history_btn = ttk.Button(
-            self.status_frame,
-            text="⏱️",
-            width=3,
-            command=self.show_notification_history,
-            style='TButton'
-        )
-        self.history_btn.pack(side=tk.RIGHT, padx=(0, 5))
-        
-        # Initialize notification history
-        self.notification_history = []
-        self.max_history = 50  # Maximum number of notifications to keep
-        
-        # Define message type styles
-        self.message_styles = {
-            'info': {'fg': '#000000', 'bg': '#e6f3ff', 'icon': 'ℹ️'},
-            'success': {'fg': '#155724', 'bg': '#d4edda', 'icon': '✅'},
-            'warning': {'fg': '#856404', 'bg': '#fff3cd', 'icon': '⚠️'},
-            'error': {'fg': '#721c24', 'bg': '#f8d7da', 'icon': '❌'},
-            'scanning': {'fg': '#004e8c', 'bg': '#cce4f7', 'icon': '⏳'},
-            'progress': {'fg': '#0c5460', 'bg': '#d1ecf1', 'icon': '⏳'},
-            'debug': {'fg': '#383d41', 'bg': '#e2e3e5', 'icon': '🐛'}
-        }
-        
-        # Configure styles for different message types
-        style = ttk.Style()
-        for msg_type, style_info in self.message_styles.items():
-            style.configure(f'{msg_type}.TFrame', background=style_info['bg'])
-            style.configure(f'{msg_type}.TLabel', 
-                          foreground=style_info['fg'], 
-                          background=style_info['bg'])
-                          
-        # Status details label (moved to progress frame)
-        self.status_details = ttk.Label(self.progress_frame, text="", wraplength=600, justify=tk.LEFT)
-        self.status_details.pack(fill=tk.X, pady=(0, 5))
-        
-        # Configure progress bars
-        self.progress_bar.configure(maximum=100, variable=self.overall_progress_var)
-        self.file_progress_bar.configure(maximum=100, variable=self.progress_var)
-        self.current_file = ""
-        
-        # Create tree frame for results
-        tree_frame = ttk.Frame(self.left_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        # Configure and pack tree in its frame
-        self.tree = ttk.Treeview(tree_frame, 
-                              columns=("dup_path", "dup_size", "dup_date", "size_diff", "date_diff", "orig_path", "orig_size", "orig_date", "full_path"),
-                              show="headings", 
-                              height=15, 
-                              selectmode='extended')
-                              
-        # Configure tags for row styling
-        self.tree.tag_configure('original', background='#e6f7ff')  # Light blue for original files
-        self.tree.tag_configure('duplicate', background='white')   # White for duplicates
-        self.tree.tag_configure('separator', background='#f0f0f0') # Light gray for separators
-        
-        # Configure selection colors
-        style = ttk.Style()
-        style.map('Treeview',
-                 background=[('selected', '#0078d7')],  # Blue background for selected items
-                 foreground=[('selected', 'white')])    # White text for selected items
-        
-        # Configure columns
-        columns = [
-            ("dup_path", t('duplicate_file', self.lang), 250, 'w'),  # Duplicate file name
-            ("dup_size", t('size', self.lang), 80, 'e'),            # Duplicate size
-            ("dup_date", t('modified', self.lang), 150, 'w'),        # Duplicate modification date
-            ("size_diff", t('size_diff', self.lang), 80, 'e'),       # Size difference from original
-            ("date_diff", t('date_diff', self.lang), 100, 'w'),      # Date difference from original
-            ("orig_path", t('original_file', self.lang), 250, 'w'),  # Original file name
-            ("orig_size", t('size', self.lang), 80, 'e'),           # Original size
-            ("orig_date", t('modified', self.lang), 150, 'w'),       # Original modification date
-            ("full_path", "", 1, 'w')  # Hidden column for full path
-        ]
-        
-        for col_id, heading, width, anchor in columns:
-            self.tree.heading(col_id, text=heading, command=lambda c=col_id: self.tree_sort_column(c, False))
-            self.tree.column(col_id, width=width, anchor=anchor)
-        
-        # Store sort state
-        self.tree_sort_column_id = None
-        self.tree_sort_reverse = False
-        
-        # Add scrollbars to tree
-        tree_scroll_y = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        tree_scroll_x = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        self.tree.configure(yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
-
-        # Add selection buttons frame
-        selection_frame = ttk.Frame(tree_frame)
-        
-        # Add Select All button
-        self.select_all_btn = ttk.Button(
-            selection_frame, 
-            text=t('select_all', self.lang) if hasattr(t, 'select_all') else 'Select All',
-            command=self.select_all_duplicates
-        )
-        self.select_all_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        
-        # Add Deselect All button
-        self.deselect_all_btn = ttk.Button(
-            selection_frame, 
-            text=t('deselect_all', self.lang) if hasattr(t, 'deselect_all') else 'Deselect All',
-            command=self.deselect_all_duplicates
-        )
-        self.deselect_all_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        
-        # Add a separator
-        ttk.Separator(selection_frame, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=5, fill=tk.Y, pady=2)
-        
-        # Add Preview button
-        self.preview_btn = ttk.Button(
-            selection_frame,
-            text=t('preview', self.lang) if hasattr(t, 'preview') else 'Preview',
-            command=self.preview_selected,
-            style='Accent.TButton'
-        )
-        self.preview_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        
-        # Add Delete button next to Preview
-        self.delete_btn = ttk.Button(
-            selection_frame,
-            text=t('delete_selected', self.lang) if hasattr(t, 'delete_selected') else 'Delete',
-            command=self.delete_selected,
-            style='Danger.TButton'  # Use a red button for delete
-        )
-        self.delete_btn.pack(side=tk.LEFT, padx=2, pady=2)
-        
-        # Pack the selection frame
-        selection_frame.pack(fill=tk.X, padx=2, pady=2)
+        # Add scrollbars to treeview
+        tree_scroll_y = ttk.Scrollbar(self.tree_frame)
         tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        tree_scroll_x = ttk.Scrollbar(self.tree_frame, orient=tk.HORIZONTAL)
         tree_scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Create treeview with all necessary columns
+        self.tree = ttk.Treeview(
+            self.tree_frame,
+            yscrollcommand=tree_scroll_y.set,
+            xscrollcommand=tree_scroll_x.set,
+            selectmode='extended',
+            columns=('filename', 'size', 'modified', 'size_diff', 'date_diff', 'original_name', 'original_size', 'original_date', 'full_path'),
+            show='headings'  # Nasconde la colonna #0 vuota
+        )
         self.tree.pack(fill=tk.BOTH, expand=True)
-
-        # Bind tree selection event
+        
+        # Configure scrollbars
+        tree_scroll_y.config(command=self.tree.yview)
+        tree_scroll_x.config(command=self.tree.xview)
+        
+        # Configure treeview columns
+        self.tree.heading('filename', text=t('filename', self.lang), anchor=tk.W)
+        self.tree.heading('size', text=t('size', self.lang), anchor=tk.E)
+        self.tree.heading('modified', text=t('modified', self.lang), anchor=tk.W)
+        self.tree.heading('size_diff', text=t('size_diff', self.lang), anchor=tk.E)
+        self.tree.heading('date_diff', text=t('date_diff', self.lang), anchor=tk.W)
+        self.tree.heading('original_name', text=t('original_file', self.lang), anchor=tk.W)
+        self.tree.heading('original_size', text=t('original_size', self.lang), anchor=tk.E)
+        self.tree.heading('original_date', text=t('original_date', self.lang), anchor=tk.W)
+        
+        # Set column widths and properties
+        self.tree.column('filename', width=200, minwidth=150, stretch=tk.YES, anchor=tk.W)
+        self.tree.column('size', width=80, minwidth=60, stretch=tk.NO, anchor=tk.E)
+        self.tree.column('modified', width=140, minwidth=100, stretch=tk.NO, anchor=tk.W)
+        self.tree.column('size_diff', width=80, minwidth=60, stretch=tk.NO, anchor=tk.E)
+        self.tree.column('date_diff', width=100, minwidth=80, stretch=tk.NO, anchor=tk.W)
+        self.tree.column('original_name', width=200, minwidth=150, stretch=tk.YES, anchor=tk.W)
+        self.tree.column('original_size', width=80, minwidth=60, stretch=tk.NO, anchor=tk.E)
+        self.tree.column('original_date', width=140, minwidth=100, stretch=tk.NO, anchor=tk.W)
+        
+        # Hide the full path column (it's only used for reference)
+        self.tree.column('full_path', width=0, stretch=tk.NO, minwidth=0)
+        
+        # Add tag for alternate row colors
+        self.tree.tag_configure('oddrow', background='#f0f0f0')
+        self.tree.tag_configure('evenrow', background='#ffffff')
+        
+        # Bind selection event
         self.tree.bind('<<TreeviewSelect>>', self.on_select)
         
-        # Initialize selection tracking
-        self._selection_changed = False
+        # Delete button is now created with other buttons in the button_frame
         
-        # Create right frame for preview
-        self.right_frame = ttk.Frame(self.main_container)
-        if self.preview_visible:
-            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
-            
-        # Preview visibility toggle button
-        self.toggle_preview_btn = ttk.Button(
-            self.main_container,
-            text="▶" if not self.preview_visible else "◀",
-            width=2,
-            command=self.toggle_preview_visibility
+        # Add toggle button for treeview visibility
+        self.toggle_tree_btn = ttk.Button(
+            self.left_frame,
+            text="Hide" if self.tree_visible else "Show",
+            command=self.toggle_tree_visibility
         )
-        self.toggle_preview_btn.pack(side=tk.RIGHT, fill=tk.Y, padx=2)
-
-        # Preview options
-        preview_options = ttk.Frame(self.right_frame)
-        preview_options.pack(fill=tk.X, pady=(0, 5))
+        self.toggle_tree_btn.pack(side=tk.BOTTOM, pady=5)
         
-        self.preview_type = tk.StringVar(value="text")
-        ttk.Radiobutton(
-            preview_options, 
-            text="Testo", 
-            variable=self.preview_type, 
-            value="text",
-            command=self.update_preview
-        ).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Radiobutton(
-            preview_options, 
-            text="Immagine", 
-            variable=self.preview_type, 
-            value="image",
-            command=self.update_preview
-        ).pack(side=tk.LEFT, padx=5)
-        
-        # Create preview container
-        preview_container = ttk.Frame(self.right_frame, relief="solid", borderwidth=1)
+        # Create preview container in the right frame
+        preview_container = ttk.Frame(self.right_frame, padding=5)
         preview_container.pack(fill=tk.BOTH, expand=True)
         
-        # Create text preview
-        self.preview_text = scrolledtext.ScrolledText(
-            preview_container,
-            wrap=tk.WORD,
-            width=40,
-            height=20,
-            font=('Courier', 10),
-            state=tk.DISABLED
-        )
-        self.preview_text.pack(fill=tk.BOTH, expand=True)
+        # Preview label
+        preview_label = ttk.Label(preview_container, text=t('preview', self.lang), font=('Arial', 12, 'bold'))
+        preview_label.pack(anchor='w', pady=(0, 5))
         
-        # Create canvas for image preview
-        self.preview_canvas = tk.Canvas(preview_container, bg='white')
+        # Preview type selector
+        preview_type_frame = ttk.Frame(preview_container)
+        preview_type_frame.pack(fill=tk.X, pady=5)
+        
+        self.preview_type = tk.StringVar(value="image")
+        ttk.Radiobutton(preview_type_frame, text="Image", variable=self.preview_type, 
+                       value="image", command=self.update_preview).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(preview_type_frame, text="Text", variable=self.preview_type,
+                       value="text", command=self.update_preview).pack(side=tk.LEFT, padx=5)
+        
+        # Canvas for image preview
+        self.preview_canvas = tk.Canvas(preview_container, bg='white', highlightthickness=0)
         self.preview_canvas.pack(fill=tk.BOTH, expand=True)
-        self.preview_canvas.pack_forget()  # Hide by default
         
-        # Initialize preview attributes
-        self.current_preview_image = None
+        # Text widget for text preview
+        self.preview_text = tk.Text(preview_container, wrap=tk.WORD, font=("Arial", 10))
+        self.preview_text.pack(fill=tk.BOTH, expand=True)
+        self.preview_text.pack_forget()  # Hide by default
         
-        # Overall progress bar
-        self.progress_bar = ttk.Progressbar(progress_bars_frame, mode='determinate')
-        self.progress_bar.pack(fill=tk.X, pady=(0, 2))
+        # Buttons frame for selection controls
+        selection_frame = ttk.Frame(self.left_frame)
+        selection_frame.pack(fill=tk.X, pady=2)
+        
+        # Select All button
+        self.select_all_btn = ttk.Button(
+            selection_frame,
+            text=t('select_all', self.lang) if hasattr(t, 'select_all') else 'Select All',
+            command=self.select_all_items,
+            style='TButton'
+        )
+        self.select_all_btn.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.X, expand=True)
+        
+        # Deselect All button
+        self.deselect_all_btn = ttk.Button(
+            selection_frame,
+            text=t('deselect_all', self.lang) if hasattr(t, 'deselect_all') else 'Deselect All',
+            command=self.deselect_all_items,
+            style='TButton'
+        )
+        self.deselect_all_btn.pack(side=tk.LEFT, padx=2, pady=2, fill=tk.X, expand=True)
+        
+        # Buttons frame for delete and preview - renamed to avoid conflict
+        action_buttons_frame = ttk.Frame(self.left_frame)
+        action_buttons_frame.pack(fill=tk.X, pady=2)
+        
+        # Preview button
+        self.preview_btn = ttk.Button(
+            action_buttons_frame,
+            text=t('preview', self.lang),
+            command=self.preview_selected,
+            style='Accent.TButton',  # Make it stand out
+            state=tk.DISABLED  # Disabled by default until files are selected
+        )
+        self.preview_btn.pack(side=tk.LEFT, padx=5, pady=2, fill=tk.X, expand=True)
+        
+        # Pack the right frame if preview is visible
+        if self.preview_visible:
+            self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
 
-        # Individual file progress bar
-        self.file_progress_frame = ttk.Frame(progress_bars_frame)
-        self.file_progress_frame.pack(fill=tk.X, pady=(0, 2))
-        
     def choose_color(self, title="Choose a color", initialcolor=None):
         """Open a color chooser dialog and return the selected color."""
         color = colorchooser.askcolor(color=initialcolor, title=title)
@@ -1512,6 +1315,18 @@ class PDFDuplicateApp:
         
         self.show_status("Custom theme applied successfully", "success")
 
+    def select_all_items(self):
+        """Select all items in the treeview."""
+        if hasattr(self, 'tree'):
+            self.tree.selection_set(self.tree.get_children())
+            self.on_select(None)  # Update UI based on selection
+    
+    def deselect_all_items(self):
+        """Deselect all items in the treeview."""
+        if hasattr(self, 'tree'):
+            self.tree.selection_remove(self.tree.selection())
+            self.on_select(None)  # Update UI based on selection
+    
     def open_theme_editor(self):
         """Open a dialog to customize the application theme."""
         dialog = tk.Toplevel(self.root)
@@ -2311,286 +2126,16 @@ class PDFDuplicateApp:
                 self.status_text.set("")
                 self.is_searching = False
 
-    def show_image_preview(self, file_path):
-        """Show image preview of the first page of the PDF file."""
-        try:
-            # Clear previous image
-            self.preview_canvas.delete("all")
-            
-            # Convert first page to image
-            with tempfile.TemporaryDirectory() as path:
-                images = convert_from_path(
-                    file_path,
-                    first_page=1,
-                    last_page=1,
-                    output_folder=path,
-                    fmt='png',
-                    size=(400, 600)  # Limit size for preview
-                )
-                
-                if not images:
-                    raise ValueError("Could not convert PDF to image")
-                
-                # Convert to PhotoImage
-                image = images[0]
-                
-                # Resize image to fit canvas while maintaining aspect ratio
-                canvas_width = self.preview_canvas.winfo_width() or 400
-                canvas_height = self.preview_canvas.winfo_height() or 600
-                
-                # Calculate aspect ratio
-                img_ratio = image.width / image.height
-                canvas_ratio = canvas_width / canvas_height
-                
-                if canvas_ratio > img_ratio:
-                    # Canvas is wider than image (relative to height)
-                    new_height = canvas_height
-                    new_width = int(canvas_height * img_ratio)
-                else:
-                    # Canvas is taller than image (relative to width)
-                    new_width = canvas_width
-                    new_height = int(canvas_width / img_ratio)
-                
-                # Resize image
-                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                
-                # Convert to PhotoImage
-                self.current_preview_image = ImageTk.PhotoImage(image)
-                
-                # Display image centered on canvas
-                x = (canvas_width - new_width) // 2
-                y = (canvas_height - new_height) // 2
-                self.preview_canvas.create_image(x, y, anchor=tk.NW, image=self.current_preview_image)
-                
-        except Exception as e:
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, f"Error loading image preview: {str(e)}\n")
-            self.preview_text.insert(tk.END, "Falling back to text preview...\n")
-            self.preview_text.config(state=tk.DISABLED)
-            self.show_text_preview(file_path)
-    
-    def show_text_preview(self, file_path):
-        """Show text preview of the PDF file."""
-        try:
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            
-            # Extract text from PDF
-            text = ""
-            with open(file_path, 'rb') as f:
-                pdf_reader = PyPDF2.PdfReader(f)
-                num_pages = len(pdf_reader.pages)
-                
-                # Show basic file info
-                text += f"File: {os.path.basename(file_path)}\n"
-                text += f"Pages: {num_pages}\n"
-                text += f"Size: {os.path.getsize(file_path) / 1024:.1f} KB\n\n"
-                
-                # Extract text from first few pages
-                for page_num in range(min(5, num_pages)):
-                    page = pdf_reader.pages[page_num]
-                    page_text = page.extract_text()
-                    if page_text.strip():
-                        text += f"--- Page {page_num + 1} ---\n{page_text}\n\n"
-                
-                if num_pages > 5:
-                    text += "\n[Content truncated - showing first 5 pages only]"
-                    
-            if not text.strip() or len(text.strip()) < 20:  # If very little text was extracted
-                text += "\nNo text content could be extracted from this PDF.\n"
-                text += "Try using the image preview instead."
-                
-            self.preview_text.insert(tk.END, text)
-            self.preview_text.see(tk.END)
-            
-        except Exception as e:
-            self.preview_text.insert(tk.END, f"Error loading preview: {str(e)}")
-        finally:
-            self.preview_text.config(state=tk.DISABLED)
-
     def preview_selected(self):
         """Preview the selected file(s)."""
         selected_items = self.tree.selection()
         if not selected_items:
-            self.show_status("Nessun file selezionato per l'anteprima", "warning")
-            return
-        
-        # Get the first selected file path
-        item = self.tree.item(selected_items[0])
-        file_path = item['values'][0]  # First column contains the file path
-        
-        if not os.path.exists(file_path):
-            self.show_status(f"File non trovato: {file_path}", "error")
+            self.show_status("No files selected for preview", "warning")
             return
             
-        # Show the preview panel if not visible
-        if not hasattr(self, 'preview_visible') or not self.preview_visible:
-            self.toggle_preview_visibility()
-        
-        try:
-            # Determine preview type based on file extension and settings
-            if hasattr(self, 'preview_type') and self.preview_type.get() == "image":
-                self.show_image_preview(file_path)
-            else:
-                self.show_text_preview(file_path)
-            
-            # Update status
-            self.show_status(f"Preview: {os.path.basename(file_path)}", "info")
-            
-            # Switch to the preview tab if not already there
-            if hasattr(self, 'preview_notebook'):
-                self.preview_notebook.select(0)  # Select first tab (preview)
-                
-        except Exception as e:
-            error_msg = f"Error loading preview: {str(e)}"
-            self.show_status(error_msg, "error")
-            logger.error(error_msg, exc_info=True)
+        # For now, just preview the first selected file
+        self.update_preview()
 
-    def delete_selected(self):
-        """Delete the selected files after confirmation."""
-        selected_items = self.tree.selection()
-        if not selected_items:
-            self.show_status("No files selected for deletion", "warning")
-            return
-            
-        # Ask for confirmation
-        if not messagebox.askyesno(
-            "Confirm Deletion",
-            f"Are you sure you want to delete {len(selected_items)} file(s)?\n\n"
-            "This action cannot be undone.",
-            icon='warning'
-        ):
-            self.show_status("Deletion cancelled", "info")
-            return
-
-        deleted_files = []
-        failed_deletions = []
-        
-        for item in selected_items:
-            # Ottieni tutti i valori della riga dal treeview
-            values = self.tree.item(item)['values']
-            
-            # Il percorso completo del file dovrebbe essere il primo valore
-            if not values or len(values) < 1:
-                error_msg = "Dati del file non validi"
-                print(f"DEBUG - {error_msg}")
-                failed_deletions.append(("", error_msg))
-                continue
-                
-            file_path = str(values[0])
-            
-            # Se il percorso non è assoluto, prova a usare la directory di origine della scansione
-            if not os.path.isabs(file_path):
-                if hasattr(self, 'folder_path') and self.folder_path.get():
-                    source_dir = self.folder_path.get()
-                    file_path = os.path.join(source_dir, file_path)
-                else:
-                    error_msg = f"Impossibile determinare il percorso assoluto per: {file_path}"
-                    print(f"DEBUG - {error_msg}")
-                    failed_deletions.append((file_path, error_msg))
-                    continue
-            
-            # Normalizza il percorso (converte / in \ su Windows)
-            file_path = os.path.normpath(file_path)
-            
-            # Debug: stampa il percorso che stiamo cercando di eliminare
-            print(f"DEBUG - Tentativo di eliminare: {file_path}")
-            print(f"DEBUG - File esiste: {os.path.exists(file_path)}")
-            
-            # Verifica se il file esiste
-            if not os.path.exists(file_path):
-                error_msg = f"File non trovato: {file_path}"
-                print(f"DEBUG - {error_msg}")
-                failed_deletions.append((file_path, error_msg))
-                continue
-                
-            # Verifica se il file esiste
-            if not os.path.exists(file_path):
-                error_msg = f"File non trovato: {file_path}"
-                print(f"DEBUG - {error_msg}")
-                print(f"DEBUG - Working directory: {os.getcwd()}")
-                failed_deletions.append((file_path, error_msg))
-                continue
-            
-            # Verifica se il file esiste
-            if not os.path.exists(file_path):
-                error_msg = f"File non trovato: {file_path}"
-                print(f"DEBUG - {error_msg}")
-                print(f"DEBUG - Working directory: {os.getcwd()}")
-                failed_deletions.append((file_path, error_msg))
-                continue
-                
-            # Add to undo stack before deleting
-            if not hasattr(self, 'undo_stack'):
-                self.undo_stack = []
-            
-            # Store file info for potential undo
-            file_info = {
-                'path': file_path,
-                'values': self.tree.item(item)['values']
-            }
-            
-            # Move to trash if available, otherwise delete permanently
-            try:
-                print(f"Tentativo di eliminare: {file_path}")
-                if send_to_trash is not None:
-                    # Usa direttamente send2trash che gestisce già correttamente i percorsi
-                    send_to_trash(file_path)
-                else:
-                    # Usa os.remove con il percorso assoluto
-                    os.remove(file_path)
-                
-                # Only remove from tree and mark as deleted if deletion was successful
-                self.tree.delete(item)
-                deleted_files.append(file_info)
-                
-                # Remove from duplicates list if it exists there
-                if hasattr(self, 'duplicates'):
-                    self.duplicates = [d for d in self.duplicates if d[0] != file_path]
-                    
-            except Exception as e:
-                error_msg = f"Error deleting {file_path}: {str(e)}"
-                print(error_msg)
-                failed_deletions.append((file_path, error_msg))
-                continue
-        
-        # Add to undo stack if any files were deleted
-        if deleted_files:
-            self.undo_stack.append({
-                'type': 'delete',
-                'files': deleted_files,
-                'timestamp': time.time()
-            })
-            
-            # Limit undo stack size
-            if len(self.undo_stack) > self.max_undo_steps:
-                self.undo_stack.pop(0)
-            
-            # Enable undo menu item
-            if hasattr(self, 'menu_manager') and hasattr(self.menu_manager, 'update_undo_menu_item'):
-                self.menu_manager.update_undo_menu_item(tk.NORMAL)
-        
-        # Show status message
-        if deleted_files and not failed_deletions:
-            self.show_status(f"Deleted {len(deleted_files)} file(s)", "success")
-        elif deleted_files and failed_deletions:
-            self.show_status(
-                f"Deleted {len(deleted_files)} file(s), "
-                f"failed to delete {len(failed_deletions)}",
-                "warning"
-            )
-        else:
-            self.show_status("Failed to delete selected files", "error")
-            
-        # Clear the preview after deletion
-        if hasattr(self, 'clear_preview'):
-            self.clear_preview()
-            
-        # Log any failures
-        for file_path, error in failed_deletions:
-            print(f"Error deleting {file_path}: {error}")
-    
     def undo_last_delete(self):
         """Restore the most recently deleted files."""
         if not self.undo_stack:
@@ -2643,87 +2188,48 @@ class PDFDuplicateApp:
                 "warning"
             )
     
-    def update_recent_folders_menu(self):
-        """Update the recent folders menu with current list."""
-        if not hasattr(self, 'menu_manager') or not hasattr(self.menu_manager, 'recent_menu'):
-            return
-            
-        # Clear current items
-        self.menu_manager.recent_menu.delete(0, 'end')
-        
-        if not self.recent_folders:
-            self.menu_manager.recent_menu.add_command(
-                label=t('no_recent_folders', self.lang),
-                state=tk.DISABLED
-            )
-            return
-            
-        for i, folder in enumerate(self.recent_folders, 1):
-            # Show only the last 2 parts of the path for brevity
-            display_path = os.path.join(*Path(folder).parts[-2:]) if len(Path(folder).parts) > 1 else folder
-            
-            self.menu_manager.recent_menu.add_command(
-                label=f"{i}. {display_path}",
-                command=lambda f=folder: self.load_recent_folder(f),
-                accelerator=f"Ctrl+{i}" if i <= 9 else ""
-            )
-            
-            # Add keyboard shortcuts (Ctrl+1 to Ctrl+9)
-            if i <= 9:
-                self.root.bind(f'<Control-Key-{i}>', 
-                    lambda e, f=folder: self.load_recent_folder(f))
-        
-        # Add separator and clear option
-        self.menu_manager.recent_menu.add_separator()
-        self.menu_manager.recent_menu.add_command(
-            label=t('clear_recent_folders', self.lang),
-            command=self.clear_recent_folders
-        )
-    
-    def load_recent_folder(self, folder_path):
-        """Load a folder from the recent folders list."""
-        if not os.path.isdir(folder_path):
-            self.show_status(f"Folder not found: {folder_path}", "error")
-            # Remove non-existent folder from recent list
-            self.recent_folders = [f for f in self.recent_folders if f != folder_path]
-            self.update_recent_folders_menu()
-            return
-            
-        self.folder_path.set(folder_path)
-        self.find_duplicates()
-    
-    def clear_recent_folders(self):
-        """Clear the recent folders list."""
-        if self.recent_folders:
-            if messagebox.askyesno(
-                "Clear Recent Folders",
-                "Are you sure you want to clear the recent folders list?"
-            ):
-                self.recent_folders = []
-                self.update_recent_folders_menu()
-                self.show_status("Recent folders cleared", "info")
+    # Recent folders menu is now handled by the RecentFolders class
     
     def add_to_recent_folders(self, folder_path):
-        """Add a folder to the recent folders list."""
-        if not folder_path:
+        """
+        Add a folder to the recent folders list.
+        
+        Args:
+            folder_path: Path to the folder to add
+        """
+        if hasattr(self, 'recents') and self.recents and folder_path:
+            self.recents.add_folder(folder_path)
+    
+    def clear_recent_folders(self):
+        """
+        Clear the recent folders list.
+        
+        Returns:
+            bool: True if folders were cleared, False otherwise
+        """
+        if hasattr(self, 'recents') and self.recents:
+            return self.recents.clear()
+        return False
+    
+    def load_recent_folder(self, folder_path):
+        """
+        Load a folder from the recent folders list.
+        
+        Args:
+            folder_path: Path to the folder to load
+        """
+        if not os.path.isdir(folder_path):
+            self.show_status(f"Folder not found: {folder_path}", "error")
+            # Let the RecentFolders class handle removing invalid paths
+            self.recents.remove_invalid_paths()
             return
             
-        # Remove if already in list
-        self.recent_folders = [f for f in self.recent_folders if f != folder_path]
+        # Update the folder path and trigger duplicate search
+        self.folder_path.set(folder_path)
+        self.find_duplicates()
         
-        # Add to beginning of list
-        self.recent_folders.insert(0, folder_path)
-        
-        # Trim to max length
-        if len(self.recent_folders) > self.max_recent_folders:
-            self.recent_folders = self.recent_folders[:self.max_recent_folders]
-        
-        # Update settings
-        self.settings['recent_folders'] = self.recent_folders
-        self.save_settings()
-        
-        # Update menu
-        self.update_recent_folders_menu()
+        # Update the recent folders list with the newly loaded folder
+        self.add_to_recent_folders(folder_path)
     
     def _setup_status_bar(self):
         """Set up the status bar and notification system."""
@@ -2752,9 +2258,10 @@ class PDFDuplicateApp:
         )
         self.history_btn.pack(side=tk.RIGHT, padx=(0, 5))
         
-        # Initialize notification history
-        self.notification_history = []
-        self.max_history = 50  # Maximum number of notifications to keep
+        # Initialize recent folders
+        from app_struct.recents import RecentFolders
+        self.recents = RecentFolders(self)
+        self.recents.on_folder_selected = self.load_recent_folder
         
         # Define message type styles
         self.message_styles = {
@@ -2931,22 +2438,67 @@ class PDFDuplicateApp:
         HelpWindow.show_help(self.root, self.lang)
 
     def load_settings(self):
-        """Load application settings from config file."""
+        """
+        Load application settings from config file.
+        
+        Returns:
+            dict: Dictionary containing application settings
+        """
+        default_settings = {
+            'theme': 'light',
+            'lang': 'en',
+            'recent_folders': [],
+            'suppress_warnings': True,
+            'check_updates': True,
+            'tree_visible': True,
+            'preview_visible': True,
+            'quick_compare': False,
+            'filters_visible': True
+        }
+        
         if self.config_file.exists():
             try:
-                with open(self.config_file, 'r') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
-        return {'theme': 'light', 'lang': 'en'}
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    loaded_settings = json.load(f)
+                    # Merge with default settings to ensure all keys exist
+                    for key, value in default_settings.items():
+                        if key not in loaded_settings:
+                            loaded_settings[key] = value
+                    return loaded_settings
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading settings: {e}")
+                # If there's an error, return default settings and try to save them
+                try:
+                    with open(self.config_file, 'w', encoding='utf-8') as f:
+                        json.dump(default_settings, f, indent=4, ensure_ascii=False)
+                except IOError as e:
+                    print(f"Error creating default settings file: {e}")
+        
+        return default_settings
 
     def save_settings(self):
-        """Save current settings to config file."""
+        """
+        Save current settings to config file.
+        
+        Also ensures the settings directory exists before saving.
+        """
         try:
-            with open(self.config_file, 'w') as f:
-                json.dump(self.settings, f, indent=4)
-        except IOError as e:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+            
+            # Save current recent folders to settings before saving
+            if hasattr(self, 'recents') and self.recents:
+                self.settings['recent_folders'] = self.recents.get_recent_folders()
+            
+            # Save to file with pretty printing and unicode support
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(self.settings, f, indent=4, ensure_ascii=False)
+                
+        except (IOError, OSError) as e:
             print(f"Error saving settings: {e}")
+            # Try to show an error message to the user if possible
+            if hasattr(self, 'show_status'):
+                self.show_status(f"Failed to save settings: {e}", "error")
 
     def change_theme(self, theme_name):
         """Change the application theme."""
@@ -2954,31 +2506,25 @@ class PDFDuplicateApp:
         self.settings['theme'] = theme_name
         self.save_settings()
 
-    def change_language(self, lang):
+    def set_language(self, lang):
         """Change the application language."""
-        if lang != self.lang:
-            # Update settings
-            self.lang = lang
-            self.settings['lang'] = lang
-            self.save_settings()
+        self.lang = lang
+        self.settings['language'] = lang
+        self.save_settings()
+        
+        # Update UI elements with new language
+        if hasattr(self, 'menu_bar'):
+            self.menu_bar.destroy()
+            self.menu_bar = self.create_menu()
+            self.root.config(menu=self.menu_bar)
             
-            # Update menu texts if menu manager is already initialized
-            if hasattr(self, 'menu_manager'):
-                self.menu_manager.update_menu_texts()
-                
-            # Store the current window state and folder
-            was_maximized = self.root.state() == 'zoomed'
-            geometry = self.root.geometry()
-            current_folder = self.folder_path.get()
+        # Update drag and drop manager language
+        if hasattr(self, 'drag_drop_manager'):
+            self.drag_drop_manager.set_language(lang)
             
-            # Store the current folder for the new instance
-            if current_folder:
-                with open('temp_folder.txt', 'w') as f:
-                    f.write(current_folder)
-            
-            # Schedule the application to restart after a short delay
-            self.root.after(100, self._restart_application)
-    
+        # Update any other UI elements that need language refresh
+        self.refresh_language()
+
     def _restart_application(self):
         """Internal method to restart the application."""
         # Read the stored folder if it exists
@@ -3011,425 +2557,65 @@ class PDFDuplicateApp:
     def _setup_drag_drop(self):
         """Set up drag and drop functionality."""
         try:
-            # Remove any existing drop target handlers
-            if hasattr(self, '_drop_target_registered'):
-                self.root.drop_target_unregister()
-            
-            # Enable drag and drop for files and folders
-            self.root.drop_target_register(DND_FILES)
-            
-            # Bind drag and drop events
-            self.root.dnd_bind('<<DropEnter>>', self._on_drop_enter)
-            self.root.dnd_bind('<<DropLeave>>', self._on_drop_leave)
-            self.root.dnd_bind('<<Drop>>', self._on_drop)
-            
-            # Set flag to indicate drop target is registered
-            self._drop_target_registered = True
-            
-            # Create drop highlight if it doesn't exist
-            if not hasattr(self, 'drop_highlight'):
-                self.drop_highlight = ttk.Label(
-                    self.root, 
-                    text=t('drop_folder_here', self.lang),
-                    background='#e6f3ff',
-                    foreground='#0066cc',
-                    font=('Arial', 12, 'bold'),
-                    relief='solid',
-                    borderwidth=2,
-                    padding=20
-                )
-            
+            # Initialize drag and drop manager
+            self.drag_drop_manager = DragDropManager(
+                root=self.root,
+                on_drop_callback=self._handle_dropped_folder,
+                lang=self.lang if hasattr(self, 'lang') else 'en'
+            )
             print("Drag and drop initialized successfully")
             
         except Exception as e:
             print(f"Warning: Could not set up drag and drop: {e}")
-            if hasattr(self, 'drop_highlight'):
-                self.drop_highlight.place_forget()
-    
-    def _on_drop_enter(self, event):
-        """Handle drag enter event."""
+
+    def _handle_dropped_folder(self, folder_path):
+        """Handle a dropped folder."""
         try:
-            if hasattr(self, 'drop_highlight'):
-                # Position the highlight over the main container
-                self.drop_highlight.lift()
-                self.drop_highlight.place(relx=0.5, rely=0.5, anchor='center', 
-                                        relwidth=0.8, relheight=0.8)
-                self.root.update_idletasks()
-            return 'copy'  # Show copy cursor
+            self.folder_path.set(folder_path)
+            self.show_status(
+                self.drag_drop_manager._get_translation('scanning_folder').format(folder_path), 
+                "info"
+            )
+            self.add_to_recent_folders(folder_path)
+            self.find_duplicates()
         except Exception as e:
-            print(f"Error in drop enter: {e}")
-            return 'refuse'
-    
-    def _on_drop_leave(self, event):
-        """Handle drag leave event."""
-        try:
-            if hasattr(self, 'drop_highlight'):
-                self.drop_highlight.place_forget()
-        except Exception as e:
-            print(f"Error in drop leave: {e}")
-    
-    def _on_drop(self, event):
-        """Handle drop event."""
-        try:
-            # Hide the drop highlight
-            if hasattr(self, 'drop_highlight'):
-                self.drop_highlight.place_forget()
-            
-            if not event.data:
-                return
-            
-            # Process the dropped items (can be multiple files/folders)
-            import re
-            # Split by spaces not preceded by a backslash
-            items = re.split(r'(?<!\\)\s+', event.data.strip('{}'))
-            
-            # Clean up paths (remove quotes and escape characters)
-            cleaned_paths = []
-            for item in items:
-                # Remove surrounding quotes if present
-                item = item.strip('"\'')
-                # Replace escaped spaces with regular spaces
-                item = item.replace('\\ ', ' ')
-                if os.path.exists(item):
-                    cleaned_paths.append(item)
-            
-            if not cleaned_paths:
-                self.show_status("No valid files or folders were dropped", "error")
-                return
-            
-            # Find the first valid folder or get parent directory of first file
-            target_folder = None
-            for path in cleaned_paths:
-                if os.path.isdir(path):
-                    target_folder = path
-                    break
-                elif os.path.isfile(path) and path.lower().endswith('.pdf'):
-                    target_folder = os.path.dirname(path)
-                    break
-            
-            if target_folder:
-                self.folder_path.set(target_folder)
-                self.show_status(f"Scanning folder: {target_folder}", "info")
-                self.find_duplicates()
-            else:
-                self.show_status("No valid PDF files or folders were dropped", "error")
-                
-        except Exception as e:
-            error_msg = f"Error processing dropped items: {str(e)}"
+            error_msg = f"Error processing dropped folder: {str(e)}"
             print(error_msg)
             self.show_status(error_msg, "error")
     
     def refresh_language(self):
         """Refresh the UI with the new language."""
-        pass
+    def update_preview(self):
+        """Update the preview based on the selected item."""
+        self.clear_preview()
         
-    def show_text_preview(self, file_path):
-        """Show text preview of the PDF file."""
-        try:
-            # Clear previous content
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            
-            # Extract text from PDF
-            text_content = []
-            with open(file_path, 'rb') as file:
-                reader = PyPDF2.PdfReader(file)
-                # Limit to first 5 pages for performance
-                max_pages = min(5, len(reader.pages))
-                for i in range(max_pages):
-                    page = reader.pages[i]
-                    text = page.extract_text()
-                    if text:
-                        text_content.append(f"--- Page {i+1} ---\n{text}\n")
-            
-            if text_content:
-                self.preview_text.insert(tk.END, ''.join(text_content))
-                if len(reader.pages) > 5:
-                    self.preview_text.insert(tk.END, "\n[Preview limited to first 5 pages]")
-            else:
-                self.preview_text.insert(tk.END, "No text content found in PDF")
-                
-            self.preview_text.config(state=tk.DISABLED)
-            
-        except Exception as e:
-            error_msg = f"Error extracting text from PDF: {str(e)}"
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, f"Error: {error_msg}")
-            self.preview_text.config(state=tk.DISABLED)
-            logger.error(error_msg, exc_info=True)
-    
-    def show_image_preview(self, file_path):
-        """Show image preview of the first page of the PDF file."""
-        try:
-            # Clear previous content
-            if hasattr(self, 'preview_canvas'):
-                self.preview_canvas.delete("all")
-            
-            # Convert first page of PDF to image
-            images = convert_from_path(file_path, first_page=1, last_page=1)
-            if not images:
-                raise ValueError("Could not convert PDF to image")
-                
-            # Get the first page image
-            img = images[0]
-            
-            # Calculate aspect ratio
-            img_width, img_height = img.size
-            canvas_width = self.preview_canvas.winfo_width()
-            canvas_height = self.preview_canvas.winfo_height()
-            
-            # Calculate new dimensions maintaining aspect ratio
-            ratio = min(canvas_width / img_width, canvas_height / img_height)
-            new_width = int(img_width * ratio)
-            new_height = int(img_height * ratio)
-            
-            # Resize image
-            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Convert to PhotoImage
-            self.preview_photo = ImageTk.PhotoImage(img)
-            
-            # Display image on canvas
-            self.preview_canvas.create_image(
-                canvas_width // 2, 
-                canvas_height // 2, 
-                image=self.preview_photo,
-                anchor=tk.CENTER
-            )
-            
-            # Bind canvas resize event
-            self.preview_canvas.bind("<Configure>", lambda e: self._resize_preview_image(e, file_path))
-            
-        except Exception as e:
-            error_msg = f"Error showing PDF preview: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, f"Error: {error_msg}")
-            self.preview_text.config(state=tk.DISABLED)
-    
-    def _resize_preview_image(self, event, file_path):
-        """Handle canvas resize event to update the image preview."""
-        if not hasattr(self, 'preview_photo') or not hasattr(self, 'preview_canvas'):
+        selection = self.tree.selection()
+        if not selection:
             return
             
-        # Only resize if the canvas has been resized significantly
-        if (hasattr(self, '_last_canvas_size') and 
-            abs(event.width - self._last_canvas_size[0]) < 10 and 
-            abs(event.height - self._last_canvas_size[1]) < 10):
-            return
-            
-        self._last_canvas_size = (event.width, event.height)
-        self.show_image_preview(file_path)
-    
-    def clear_preview(self):
-        """Clear the preview panel."""
-        if hasattr(self, 'preview_text') and self.preview_text:
+        item = self.tree.item(selection[0])
+        file_path = item['values'][0]  # First column contains the file path
+        
+        if not os.path.exists(file_path):
             self.preview_text.config(state=tk.NORMAL)
             self.preview_text.delete(1.0, tk.END)
+            self.preview_text.insert(tk.END, "File not found")
             self.preview_text.config(state=tk.DISABLED)
+            return
             
-        if hasattr(self, 'preview_canvas'):
-            self.preview_canvas.delete("all")
-    
-    def _update_file_info(self, file_path):
-        """Update the file information tab with metadata."""
-        try:
-            self.info_text.config(state=tk.NORMAL)
-            self.info_text.delete(1.0, tk.END)
-            
-            # Basic file info
-            file_stat = os.stat(file_path)
-            size_kb = file_stat.st_size / 1024
-            mod_time = datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-            
-            info = f"File: {os.path.basename(file_path)}\n"
-            info += f"Path: {file_path}\n"
-            info += f"Size: {size_kb:.2f} KB\n"
-            info += f"Modified: {mod_time}\n"
-            
-            # PDF specific info
-            try:
-                with open(file_path, 'rb') as f:
-                    pdf_reader = PyPDF2.PdfReader(f)
-                    num_pages = len(pdf_reader.pages)
-                    info += f"\nPDF Pages: {num_pages}\n"
-                    
-                    # Extract metadata if available
-                    if pdf_reader.metadata:
-                        info += "\n--- Metadata ---\n"
-                        for key, value in pdf_reader.metadata.items():
-                            info += f"{key}: {value}\n"
-            except Exception as e:
-                info += f"\nError reading PDF info: {str(e)}\n"
-            
-            self.info_text.insert(tk.END, info)
-            self.info_text.see(tk.END)
-            
-        except Exception as e:
-            self.info_text.insert(tk.END, f"Error getting file info: {str(e)}")
-        finally:
-            self.info_text.config(state=tk.DISABLED)
+        if self.preview_type.get() == "image":
+            self.show_image_preview(file_path)
+        else:
+            self.show_text_preview(file_path)
 
     def clear_preview(self):
-        """Clear the preview panel."""
-        if hasattr(self, 'preview_text') and self.preview_text:
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            self.preview_text.config(state=tk.DISABLED)
-            
-        if hasattr(self, 'preview_canvas'):
-            self.preview_canvas.delete("all")
-            
+        """Clear the preview area."""
         if hasattr(self, 'current_preview_image'):
             self.current_preview_image = None
-    
-    def update_preview(self, event=None):
-        """Update the preview based on the current selection and preview type."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        selected_items = self.tree.selection()
-        if not selected_items:
-            self.clear_preview()
-            return
-            
-        item = selected_items[0]
-        file_path = self.tree.item(item, 'values')[0]
-        
-        if not file_path or not os.path.exists(file_path):
-            self.clear_preview()
-            return
-            
-        try:
-            if hasattr(self, 'preview_type') and self.preview_type.get() == "image":
-                self.show_image_preview(file_path)
-            else:
-                self.show_text_preview(file_path)
-        except Exception as e:
-            logger.error(f"Error updating preview: {str(e)}", exc_info=True)
-            self.show_status(f"Error updating preview: {str(e)}", "error")
-    
-    def show_text_preview(self, file_path):
-        """Show text preview of the PDF file."""
-        if not hasattr(self, 'preview_text') or not hasattr(self, 'preview_canvas'):
-            return
-            
-        try:
-            # Hide canvas and show text widget
-            self.preview_canvas.pack_forget()
-            self.preview_text.pack(fill=tk.BOTH, expand=True)
-            
-            # Clear previous content
-            self.preview_text.config(state=tk.NORMAL)
-            self.preview_text.delete(1.0, tk.END)
-            
-            # Extract text from PDF (first 5 pages max)
-            text = ""
-            with open(file_path, 'rb') as f:
-                pdf_reader = PyPDF2.PdfReader(f)
-                num_pages = len(pdf_reader.pages)
-                
-                # Add file info
-                text += f"File: {os.path.basename(file_path)}\n"
-                text += f"Pagine: {num_pages}\n"
-                text += f"Dimensione: {os.path.getsize(file_path) / 1024:.1f} KB\n\n"
-                
-                # Extract text from first few pages
-                for page_num in range(min(5, num_pages)):
-                    try:
-                        page = pdf_reader.pages[page_num]
-                        page_text = page.extract_text()
-                        if page_text.strip():
-                            text += f"--- Pagina {page_num + 1} ---\n{page_text}\n\n"
-                    except Exception as e:
-                        text += f"Errore nell'estrazione della pagina {page_num + 1}: {str(e)}\n\n"
-                
-                if num_pages > 5:
-                    text += "\n[Contenuto troncato - visualizzate solo le prime 5 pagine]"
-            
-            if not text.strip() or len(text.strip()) < 20:
-                text += "\nImpossibile estrarre il testo dal PDF.\n"
-                text += "Prova a utilizzare l'anteprima immagine invece."
-            
-            self.preview_text.insert(tk.END, text)
-            self.preview_text.see(tk.END)
-            
-        except Exception as e:
-            error_msg = f"Errore nell'apertura del file: {str(e)}"
-            self.preview_text.insert(tk.END, error_msg)
-            logger.error(f"Error showing text preview for {file_path}: {str(e)}", exc_info=True)
-        finally:
-            self.preview_text.config(state=tk.DISABLED)
-    
-    def show_image_preview(self, file_path):
-        """Show image preview of the first page of the PDF file."""
-        if not hasattr(self, 'preview_text') or not hasattr(self, 'preview_canvas'):
-            return
-            
-        try:
-            # Show canvas and hide text widget
-            self.preview_text.pack_forget()
-            self.preview_canvas.pack(fill=tk.BOTH, expand=True)
             self.preview_canvas.delete("all")
-            
-            # Convert first page to image
-            with tempfile.TemporaryDirectory() as path:
-                images = convert_from_path(
-                    file_path,
-                    first_page=1,
-                    last_page=1,
-                    output_folder=path,
-                    fmt='png',
-                    size=(800, 1000)  # Reasonable size for preview
-                )
-                
-                if not images:
-                    raise ValueError("Impossibile convertire la prima pagina in immagine")
-                
-                # Convert to PhotoImage
-                image = images[0]
-                
-                # Get canvas dimensions
-                canvas_width = self.preview_canvas.winfo_width()
-                canvas_height = self.preview_canvas.winfo_height()
-                
-                # If canvas is too small, use default size
-                if canvas_width < 100 or canvas_height < 100:
-                    canvas_width = 400
-                    canvas_height = 600
-                
-                # Calculate aspect ratio
-                img_ratio = image.width / image.height
-                canvas_ratio = canvas_width / canvas_height
-                
-                if canvas_ratio > img_ratio:
-                    # Canvas is wider than image (relative to height)
-                    new_height = canvas_height
-                    new_width = int(canvas_height * img_ratio)
-                else:
-                    # Canvas is taller than image (relative to width)
-                    new_width = canvas_width
-                    new_height = int(canvas_width / img_ratio)
-                
-                # Resize image
-                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                
-                # Convert to PhotoImage
-                self.current_preview_image = ImageTk.PhotoImage(image)
-                
-                # Display image centered on canvas
-                x = (canvas_width - new_width) // 2
-                y = (canvas_height - new_height) // 2
-                self.preview_canvas.create_image(x, y, anchor=tk.NW, image=self.current_preview_image)
-                
-        except Exception as e:
-            # Fall back to text preview on error
-            error_msg = f"Errore nel caricamento dell'anteprima immagine: {str(e)}"
-            logger.error(f"Error showing image preview for {file_path}: {str(e)}", exc_info=True)
-            self.show_text_preview(file_path)
-            self.show_status(error_msg, "error")
+        self.preview_text.config(state=tk.NORMAL)
+        self.preview_text.delete(1.0, tk.END)
+        self.preview_text.config(state=tk.DISABLED)
 
     def show_image_preview(self, file_path):
         """Show an image preview of the PDF."""
@@ -3437,45 +2623,21 @@ class PDFDuplicateApp:
             # Convert first page of PDF to image
             images = convert_from_path(file_path, first_page=1, last_page=1)
             if images:
-                # Get canvas dimensions or use default if not yet rendered
-                canvas_width = self.preview_canvas.winfo_width() or 400
-                canvas_height = self.preview_canvas.winfo_height() or 500
-                
-                # Calculate aspect ratio of the original image
-                img = images[0]
-                img_ratio = img.width / img.height
-                canvas_ratio = canvas_width / canvas_height
-                
-                # Calculate new dimensions maintaining aspect ratio
-                if img_ratio > canvas_ratio:
-                    new_width = canvas_width
-                    new_height = int(canvas_width / img_ratio)
-                else:
-                    new_height = canvas_height
-                    new_width = int(canvas_height * img_ratio)
-                
-                # Resize the image
-                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                
-                # Create the photo image and store reference
-                self.current_preview_image = ImageTk.PhotoImage(img)
-                
-                # Clear previous image and display new one
-                self.preview_canvas.delete("all")
-                self.preview_canvas.config(width=new_width, height=new_height)
-                self.preview_canvas.create_image(
-                    (canvas_width - new_width) // 2,  # Center horizontally
-                    (canvas_height - new_height) // 2,  # Center vertically
-                    anchor=tk.NW, 
-                    image=self.current_preview_image
-                )
+                # Resize image to fit preview area
+                width, height = self.preview_canvas.winfo_width(), self.preview_canvas.winfo_height()
+                if width <= 1 or height <= 1:  # If canvas not yet sized
+                    width, height = 400, 500  # Default size
+                    
+                image = images[0].resize((width, height), Image.Resampling.LANCZOS)
+                self.current_preview_image = ImageTk.PhotoImage(image)
+                self.preview_canvas.create_image(0, 0, anchor=tk.NW, image=self.current_preview_image)
         except Exception as e:
             print(f"Error generating preview: {e}")
             self.preview_text.config(state=tk.NORMAL)
             self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, f"Error loading preview: {str(e)}")
+            self.preview_text.insert(tk.END, f"Error generating preview: {str(e)}")
             self.preview_text.config(state=tk.DISABLED)
-
+            
     def show_text_preview(self, file_path):
         """Show a text preview of the PDF."""
         try:
@@ -3494,7 +2656,7 @@ class PDFDuplicateApp:
             print(f"Error reading PDF: {e}")
             self.preview_text.config(state=tk.NORMAL)
             self.preview_text.delete(1.0, tk.END)
-            self.preview_text.insert(tk.END, f"Error: {str(e)}")
+            self.preview_text.insert(tk.END, f"Error reading PDF: {str(e)}")
             self.preview_text.config(state=tk.DISABLED)
 
     def check_updates(self, force=False):
@@ -3771,12 +2933,6 @@ class PDFDuplicateApp:
             self.tree.tag_configure('original', background='#e6f7e6')  # Light green for original
             self.tree.tag_configure('duplicate', background='#f9f9f9')  # Light gray for duplicates
             self.tree.tag_configure('separator', background='#cccccc')  # Gray for separators
-            
-            # Update selection colors
-            style = ttk.Style()
-            style.map('Treeview',
-                     background=[('selected', '#0078d7')],  # Blue background for selected items
-                     foreground=[('selected', 'white')])    # White text for selected items
         
         # Update status
         dup_count = len(self.duplicates) if hasattr(self, 'duplicates') else 0
@@ -3790,193 +2946,64 @@ class PDFDuplicateApp:
             self.save_btn.config(state=tk.NORMAL if dup_count > 0 else tk.DISABLED)
     
     def save_scan_results(self):
-        """Wrapper per gestire le eccezioni durante il salvataggio dei risultati."""
-        print("\n" + "="*50)
-        print("DEBUG: Starting save_scan_results")
-        print("="*50 + "\n")
-        
+        """Save scan results to a CSV file using ScanManager."""
         try:
-            print("DEBUG: Calling _save_scan_results_impl")
-            result = self._save_scan_results_impl()
-            print(f"DEBUG: _save_scan_results_impl returned: {result}")
-            return result
-        except Exception as e:
-            error_msg = f"Error in save_scan_results: {str(e)}\n\nType: {type(e).__name__}\n"
-            error_msg += f"\nTraceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
-            print("\n" + "="*50)
-            print("ERROR IN save_scan_results:")
-            print(error_msg)
-            print("="*50 + "\n", file=sys.stderr)
-            messagebox.showerror("Save Error", f"Failed to save scan results: {str(e)}")
-            return False
-    
-    def _save_scan_results_impl(self):
-        """Implementation of save_scan_results using asksaveasfile."""
-        print("\n" + "="*50)
-        print("DEBUG: Starting save_scan_results (asksaveasfile version)")
-        print(f"DEBUG: Current working directory: {os.getcwd()}")
-        print("="*50)
-        
-        # Check if there are duplicates to save
-        if not hasattr(self, 'duplicates') or not self.duplicates:
-            print("DEBUG: No duplicates to save")
-            messagebox.showinfo("No Results", "No scan results to save.")
-            return False
-            
-        print(f"DEBUG: Found {len(self.duplicates)} duplicate groups to save")
-        
-        # Prepare data to save first
-        print("DEBUG: Preparing scan data")
-        print(f"DEBUG: duplicates type: {type(self.duplicates)}")
-        print(f"DEBUG: first group type: {type(self.duplicates[0]) if self.duplicates else 'empty'}")
-        if self.duplicates and len(self.duplicates) > 0 and isinstance(self.duplicates[0], list):
-            print(f"DEBUG: first file in first group type: {type(self.duplicates[0][0]) if self.duplicates[0] else 'empty'}")
-            
-        scan_data = {
-            'scan_timestamp': datetime.now().isoformat(),
-            'folder_scanned': self.folder_path.get(),
-            'duplicate_groups': self.duplicates,
-            'file_info': {}
-        }
-        
-        # Add file info for all files in duplicates
-        file_info = {}
-        for group_idx, group in enumerate(self.duplicates):
-            if not isinstance(group, (list, tuple)):
-                print(f"WARNING: Group {group_idx} is not a list/tuple: {type(group)}")
-                continue
+            # Passa esplicitamente i duplicati al gestore di scansione
+            if not hasattr(self, 'duplicates') or not self.duplicates:
+                self.show_status("No scan results to save", "warning")
+                return False
                 
-            for file_idx, file_path in enumerate(group):
-                if not isinstance(file_path, str):
-                    print(f"WARNING: File path at group {group_idx}, index {file_idx} is not a string: {type(file_path)}")
-                    continue
-                if file_path not in file_info:
-                    try:
-                        file_size = os.path.getsize(file_path)
-                        file_mtime = os.path.getmtime(file_path)
-                        file_info[file_path] = {
-                            'size_bytes': file_size,
-                            'size_mb': file_size / (1024 * 1024),
-                            'modified_timestamp': file_mtime,
-                            'modified_date': datetime.fromtimestamp(file_mtime).isoformat()
-                        }
-                    except Exception as e:
-                        print(f"WARNING: Could not get info for {file_path}: {e}")
-                        file_info[file_path] = {
-                            'error': str(e),
-                            'size_bytes': 0,
-                            'size_mb': 0,
-                            'modified_timestamp': 0,
-                            'modified_date': 'unknown'
-                        }
-        
-        scan_data['file_info'] = file_info
-        
-        # Convert data to JSON string
-        json_data = json.dumps(scan_data, indent=2, ensure_ascii=False)
-        
-        # Try to use asksaveasfile first
-        file_path = None
-        try:
-            file_path = filedialog.asksaveasfilename(
-                defaultextension=".json",
-                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-                title="Save Scan Results"
-            )
+            # Assicurati che il gestore di scansione abbia i duplicati correnti
+            self.scan_manager.duplicates = self.duplicates
             
-            if not file_path:  # User cancelled
-                print("DEBUG: User cancelled save dialog")
-                return False
+            # Salva i risultati
+            result = self.scan_manager.save_scan_results()
             
-            # Ensure .json extension
-            if not file_path.lower().endswith('.json'):
-                file_path += '.json'
-            
-            # Test if we can write to the file
-            try:
-                with open(file_path, 'w', encoding='utf-8') as test_file:
-                    test_file.write('')
-                os.remove(file_path)  # Remove test file if successful
-            except Exception as e:
-                error_msg = f"Cannot write to file {file_path}: {e}"
-                print(f"ERROR: {error_msg}")
-                messagebox.showerror("Save Error", error_msg)
-                return False
-            
-            # Save the actual data
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(json_data)
-            
-            print("DEBUG: Save completed successfully")
-            self.show_status(f"Scan results saved to {os.path.basename(file_path)}", "success")
-            messagebox.showinfo("Success", f"Scan results saved to:\n{file_path}")
-            return True
+            if result:
+                self.show_status("Scan results saved successfully", "success")
+            return result
             
         except Exception as e:
             error_msg = f"Error saving scan results: {str(e)}"
             print(f"ERROR: {error_msg}")
             print("Traceback:", traceback.format_exc())
+            if hasattr(self, 'show_status'):
+                self.show_status(error_msg, "error")
             messagebox.showerror("Save Error", error_msg)
             return False
-    
+            
     def load_scan_results(self):
-        """Load scan results from a previously saved JSON file."""
-        file_path = filedialog.askopenfilename(
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Load Scan Results"
-        )
-        
-        if not file_path:  # User cancelled
-            return
-            
+        """Load scan results from a previously saved CSV file using ScanManager."""
         try:
-            # First check if file exists and is not empty
-            if not os.path.exists(file_path):
-                raise FileNotFoundError(f"File not found: {file_path}")
-                
-            if os.path.getsize(file_path) == 0:
-                raise ValueError("The selected file is empty")
+            # Delegate to ScanManager to handle loading
+            result = self.scan_manager.load_scan_results()
             
-            # Read and validate JSON
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read().strip()
-                if not content:
-                    raise ValueError("The selected file is empty")
+            if result is not None:
+                duplicates, all_pdf_files, problematic_files = result
                 
-                try:
-                    scan_data = json.loads(content)
-                except json.JSONDecodeError as e:
-                    # Try to read as UTF-8 with BOM
-                    if content.startswith('\ufeff'):
-                        scan_data = json.loads(content[1:])
-                    else:
-                        raise
+                # Update application state
+                self.duplicates = duplicates
+                self.all_pdf_files = all_pdf_files
+                self.problematic_files = problematic_files
                 
-            # Validate required fields
-            if 'duplicate_groups' not in scan_data:
-                raise ValueError("Invalid scan results file: missing 'duplicate_groups' field")
+                # Update UI
+                if hasattr(self, 'tree'):
+                    self.tree.delete(*self.tree.get_children())
+                self._update_results_ui()
                 
-            # Reset current state
-            self.duplicates = scan_data.get('duplicate_groups', [])
-            self.folder_path.set(scan_data.get('folder_scanned', ''))
-            
-            # Clear any existing problem files
-            if hasattr(self, 'problematic_files'):
-                self.problematic_files = []
-            
-            # Update UI
-            if hasattr(self, 'tree'):
-                self.tree.delete(*self.tree.get_children())
+                # Show success message
+                self.show_status(f"Loaded {len(duplicates)} duplicate groups from file", "success")
+                return True
+            return False
                 
-            self._update_results_ui()
-            
-            self.show_status("Scan results loaded successfully", "success")
-            
         except Exception as e:
-            error_msg = f"Failed to load scan results: {str(e)}"
+            error_msg = f"Error loading scan results: {str(e)}"
             print(f"ERROR: {error_msg}")
             print("Traceback:", traceback.format_exc())
+            if hasattr(self, 'show_status'):
+                self.show_status(error_msg, "error")
             messagebox.showerror("Load Error", error_msg)
+            return False
     
     def show_problematic_files(self):
         """Show a dialog with files that had issues during processing."""
@@ -3994,10 +3021,10 @@ class PDFDuplicateApp:
         text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Insert the list of problematic files
-        text.insert(tk.END, "The following files had issues during processing:\\n\\n")
+        text.insert(tk.END, "The following files had issues during processing:\n\n")
         for file_path, error in self.problematic_files:
-            text.insert(tk.END, f"• {file_path}\\n")
-            text.insert(tk.END, f"  Error: {error}\\n\\n")
+            text.insert(tk.END, f"• {file_path}\n")
+            text.insert(tk.END, f"  Error: {error}\n\n")
         
         # Disable text widget
         text.config(state=tk.DISABLED)
@@ -4046,18 +3073,7 @@ def main():
         except Exception as e:
             print(f"Error loading stored folder: {e}")
     
-    # Set up drag and drop
-    def handle_drop(event):
-        # Get the dropped file/folder path
-        file_path = event.data.strip('{}')
-        if os.path.isdir(file_path):
-            app.folder_path.set(file_path)
-        elif os.path.isfile(file_path) and file_path.lower().endswith('.pdf'):
-            app.folder_path.set(os.path.dirname(file_path))
-    
-    # Register drop target
-    root.drop_target_register(DND_FILES)
-    root.dnd_bind('<<Drop>>', handle_drop)
+    # Drag and drop is now handled by DragDropManager
     
     # Handle window close event
     def on_closing():
@@ -4081,86 +3097,51 @@ def main():
 
 def test_filters():
     """Test the filter functionality with sample data."""
-    try:
-        # Create a test app instance
-        root = tk.Tk()
-        app = PDFDuplicateApp(root)
-        
-        # Test data
-        test_files = [
-            {'path': 'test1.pdf', 'size': 1024, 'mtime': 1625000000, 'pages': 10},  # 1KB
-            {'path': 'test2.pdf', 'size': 2048, 'mtime': 1625086400, 'pages': 5},   # 2KB
-            {'path': 'test3.pdf', 'size': 5120, 'mtime': 1625172800, 'pages': 20}   # 5KB
-        ]
-        
-        # Enable filters if the attribute exists
-        if hasattr(app, 'filters_active'):
-            app.filters_active.set(True)
-        
-        # Test 1: Size filter
-        print("\n=== Testing Size Filter ===")
-        if hasattr(app, 'filter_size_min') and hasattr(app, 'filter_size_max'):
-            app.filter_size_min.set('1.5')
-            app.filter_size_max.set('3')
-            for file in test_files:
-                result = app.apply_filters(file)
-                print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Passes: {result}")
-        else:
-            print("Size filter variables not found in app instance")
-        
-        # Test 2: Date filter
-        print("\n=== Testing Date Filter ===")
-        if hasattr(app, 'filter_date_from') and hasattr(app, 'filter_date_to'):
-            app.filter_date_from.set('2021-06-29')
-            app.filter_date_to.set('2021-06-30')
-            for file in test_files:
-                result = app.apply_filters(file)
-                mtime_str = datetime.datetime.fromtimestamp(file['mtime']).strftime('%Y-%m-%d')
-                print(f"File: {file['path']} - Date: {mtime_str} - Passes: {result}")
-        else:
-            print("Date filter variables not found in app instance")
-        
-        # Test 3: Page count filter
-        print("\n=== Testing Page Count Filter ===")
-        if hasattr(app, 'filter_pages_min') and hasattr(app, 'filter_pages_max'):
-            app.filter_pages_min.set('1')
-            app.filter_pages_max.set('15')
-            for file in test_files:
-                result = app.apply_filters(file)
-                print(f"File: {file['path']} - Pages: {file['pages']} - Passes: {result}")
-        else:
-            print("Page count filter variables not found in app instance")
-                
-        # Test 4: Combined filters
-        print("\n=== Testing Combined Filters ===")
-        if (hasattr(app, 'filter_size_min') and hasattr(app, 'filter_size_max') and
-            hasattr(app, 'filter_pages_min') and hasattr(app, 'filter_pages_max')):
-            app.filter_size_min.set('1.5')
-            app.filter_size_max.set('3')
-            app.filter_pages_min.set('1')
-            app.filter_pages_max.set('15')
-            for file in test_files:
-                result = app.apply_filters(file)
-                print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Pages: {file['pages']} - Passes: {result}")
-        else:
-            print("One or more filter variables not found in app instance")
-            
-    except Exception as e:
-        print(f"Error in test_filters: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        # Clean up the Tkinter root window
-        if 'root' in locals() and root:
-            root.destroy()
+    # Create a test app instance
+    root = tk.Tk()
+    app = PDFDuplicateApp(root)
+    
+    # Test data
+    test_files = [
+        {'path': 'test1.pdf', 'size': 1024, 'mtime': 1625000000, 'pages': 10},  # 1KB
+        {'path': 'test2.pdf', 'size': 2048, 'mtime': 1625086400, 'pages': 5},   # 2KB
+        {'path': 'test3.pdf', 'size': 5120, 'mtime': 1625172800, 'pages': 20}   # 5KB
+    ]
+    
+    # Enable filters
+    app.filters_active.set(True)
+    
+    # Test 1: Size filter
+    print("\n=== Testing Size Filter ===")
+    app.size_min_var.set('1.5')
+    app.size_max_var.set('3')
+    for file in test_files:
+        result = app.apply_filters(file)
+        print(f"File: {file['path']} - Size: {file['size']/1024:.1f}KB - Passes: {result}")
+    
+    # Test 2: Date filter
+    print("\n=== Testing Date Filter ===")
+    app.date_from_var.set('2021-06-29')
+    app.date_to_var.set('2021-06-30')
+    for file in test_files:
+        result = app.apply_filters(file)
+        mtime_str = datetime.datetime.fromtimestamp(file['mtime']).strftime('%Y-%m-%d')
+        print(f"File: {file['path']} - Date: {mtime_str} - Passes: {result}")
+    
+    # Test 3: Page count filter
+    print("\n=== Testing Page Count Filter ===")
+    app.pages_min_var.set('5')
+    app.pages_max_var.set('15')
+    for file in test_files:
+        result = app.apply_filters(file)
+        print(f"File: {file['path']} - Pages: {file['pages']} - Passes: {result}")
+    
+    root.destroy()
 
 if __name__ == "__main__":
     import sys
     
-    # Only run test code if explicitly requested
     if '--test-filters' in sys.argv:
-        print("Running filter tests...")
         test_filters()
     else:
-        # Run the main application
         main()

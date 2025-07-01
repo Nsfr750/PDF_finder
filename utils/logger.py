@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 
 # Ottieni il percorso della directory principale dell'applicazione
 APP_ROOT = Path(__file__).parent.parent
-LOG_FILE = os.path.join(APP_ROOT, 'application.log')
+LOG_FILE = os.path.join(APP_ROOT, 'logs/application.log')
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 

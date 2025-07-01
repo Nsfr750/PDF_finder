@@ -13,7 +13,7 @@ import platform
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 APP_ROOT = Path(__file__).parent.parent
-LOG_FILE = os.path.join(APP_ROOT, 'application.log')
+LOG_FILE = os.path.join(APP_ROOT, 'logs/application.log')
 LOG_LEVELS = ["ALL", "DEBUG", "INFO", "WARNING", "ERROR"]
 LOG_COLORS = {
     "DEBUG": "#666666",

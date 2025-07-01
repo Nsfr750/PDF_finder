@@ -8,10 +8,10 @@ for the PDF Finder project.
 # Version information follows Semantic Versioning 2.0.0 (https://semver.org/)
 VERSION_MAJOR = 2
 VERSION_MINOR = 6  # Added improved update system and documentation
-VERSION_PATCH = 2  # Minor bug fixes and improvements
+VERSION_PATCH = 3  # Minor bug fixes and improvements
 
 # Additional version qualifiers
-VERSION_QUALIFIER = 'beta'  # Could be 'alpha', 'beta', 'rc', or ''
+VERSION_QUALIFIER = ''  # Could be 'alpha', 'beta', 'rc', or ''
 
 def get_version():
     """

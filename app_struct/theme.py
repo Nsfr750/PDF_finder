@@ -79,10 +79,12 @@ class ThemeManager:
         style.configure('Treeview', 
                        background=theme['tree_bg'],
                        foreground=theme['tree_fg'],
-                       fieldbackground=theme['tree_bg'])
+                       fieldbackground=theme['tree_bg'],
+                       selectbackground='#0078d7',  # Blue background for selected items
+                       selectforeground='#ffffff')   # White text for selected items
         style.map('Treeview', 
-                 background=[('selected', theme['tree_selected'])],
-                 foreground=[('selected', theme['fg'])])
+                 background=[('selected', '#0078d7')],  # Blue background for selected items
+                 foreground=[('selected', '#ffffff')])  # White text for selected items
         
         # Scrollbars
         style.configure('Vertical.TScrollbar', 

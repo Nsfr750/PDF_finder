@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import logger
 
 APP_ROOT = Path(__file__).parent.parent
-LOG_FILE = os.path.join(APP_ROOT, 'application.log')
+LOG_FILE = os.path.join(APP_ROOT, 'logs/application.log')
 
 def clean_log():
     """Clean up log file and reset logger configuration."""

@@ -23,7 +23,7 @@ from tkinter import (
 
 # Constants
 APP_ROOT = Path(__file__).parent.parent
-LOG_FILE = os.path.join(APP_ROOT, 'traceback.log')
+LOG_FILE = os.path.join(APP_ROOT, 'logs/traceback.log')
 MAX_LOG_SIZE = 5 * 1024 * 1024  # 5MB
 BACKUP_COUNT = 3
 

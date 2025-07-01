@@ -64,10 +64,14 @@ class MenuManager:
         """Create and return the File menu."""
         file_menu = tk.Menu(self.menu_bar, tearoff=0)
         
-        # Recent folders submenu
-        self.recent_menu = tk.Menu(file_menu, tearoff=0, postcommand=self.app.update_recent_folders_menu)
-        file_menu.add_cascade(label=t('recent_folders', self.app.lang), menu=self.recent_menu)
-        file_menu.add_separator()
+        # Create recent folders submenu using the RecentFolders class
+        if hasattr(self.app, 'recents') and self.app.recents:
+            recent_menu = self.app.recents.create_menu(file_menu)
+            file_menu.add_cascade(
+                label=t('recent_folders', self.app.lang), 
+                menu=recent_menu
+            )
+            file_menu.add_separator()
         
         # Add Save and Load Results commands
         file_menu.add_command(

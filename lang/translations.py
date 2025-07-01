@@ -81,6 +81,17 @@ TRANSLATIONS = {
         "join_the_patreon": "Join Patreon",
         "close": "Close",
 
+        # treeview
+        'full_path': 'Full Path',
+        'date_diff': 'Date Diff',
+        'size_diff': 'Size Diff',
+        'page_count_diff': 'Page Count Diff',
+        'hash_diff': 'Hash Diff',
+        'original_file': 'Original File',
+        'duplicate_file': 'Duplicate File',
+        'size_kb': 'Size (KB)',
+        'modified': 'Modified',
+
         # UI Elements
         'recent_folders': 'Recent Folders',
         'exit': 'Exit',
@@ -202,6 +213,7 @@ TRANSLATIONS = {
 
         # UI Elements
         'recent_folders': 'Cartelle Recenti',
+        'full_path': 'Pecorso Completo',
         'exit': 'Esci',
         'undo_delete': 'Annulla Eliminazione',
         'drop_folder_here': 'Trascina qui una cartella da scansionare',
@@ -322,6 +334,7 @@ TRANSLATIONS = {
 
         # UI Elements
         'recent_folders': 'Carpetas Recientes',
+        'full_path': 'Ruta Completa',
         'exit': 'Salir',
         'undo_delete': 'Deshacer Eliminación',
         'drop_folder_here': 'Arrastre una carpeta aquí para escanear',
@@ -443,6 +456,7 @@ TRANSLATIONS = {
 
         # UI Elements
         'recent_folders': 'Pastas Recentes',
+        'full_path': 'Caminho Completo',
         'exit': 'Sair',
         'undo_delete': 'Desfazer Exclusão',
         'drop_folder_here': 'Arraste uma pasta aqui para verificar',
@@ -565,6 +579,7 @@ TRANSLATIONS = {
 
         # UI Elements
         'recent_folders': 'Недавние папки',
+        'full_path': 'Полный путь',
         'exit': 'Выход',
         'undo_delete': 'Отменить удаление',
         'drop_folder_here': 'Перетащите папку сюда для сканирования',
@@ -689,6 +704,7 @@ TRANSLATIONS = {
 
         # UI Elements
         'recent_folders': 'المجلدات الحديثة',
+        'full_path': 'المسار الكامل',
         'exit': 'خروج',
         'undo_delete': 'تراجع عن الحذف',
         'drop_folder_here': 'اسحب مجلدًا إلى هنا للمسح',
