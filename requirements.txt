@@ -1,14 +1,19 @@
+# Core dependencies
 PyPDF2>=3.0.0
 pdf2image>=1.16.3
 Pillow>=10.0.0
 imagehash>=4.3.1
 requests>=2.31.0
-tkinterdnd2>=0.3.0
+PyMuPDF>=1.26.1
+
+# GUI
+PySide6>=6.5.0
 ttkthemes>=3.2.2
+
+# Utilities
 send2trash>=1.8.0
 python-dotenv>=1.0.0
 pywin32>=306; sys_platform == 'win32'
-pymupdf>=1.26.1
 
 # For development
 pytest>=7.0.0
@@ -16,3 +21,6 @@ black>=23.0.0
 flake8>=6.0.0
 mypy>=1.0.0
 pytest-cov>=4.0.0
+pylupdate6>=6.5.0
+lrelease6>=6.5.0
+pre-commit>=3.0.0
