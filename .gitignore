@@ -116,5 +116,4 @@ $RECYCLE.BIN/
 *.bat
 *.exe
 /venv_new
-logs/pdf_finder.log
-/logs
+

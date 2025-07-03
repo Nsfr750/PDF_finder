@@ -1,293 +1,276 @@
-2025-07-03 19:27:34,068 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:27:34,068 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:27:34,068 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:27:34,069 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:27:34,098 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:34,098 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:34,099 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:34,099 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:34,110 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:27:34,110 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:27:34,178 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:27:34,178 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:27:42,186 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:42,186 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:27:42,187 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:43:16,150 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:43:16,151 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:43:16,151 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-03 19:43:16,151 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:43:16,151 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:43:16,152 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:43:16,152 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:43:16,152 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:43:16,152 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:43:16,182 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:43:16,182 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:43:16,183 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:43:16,183 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:43:16,196 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:43:16,196 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:43:16,257 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:43:16,257 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:47:37,083 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-03 19:47:37,083 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-03 19:47:37,084 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:47:37,084 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:47:37,085 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-03 19:47:37,085 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-03 19:52:39,319 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:52:39,319 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:52:39,319 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:52:39,320 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:52:39,350 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:52:39,350 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:52:39,350 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:52:39,350 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:52:39,363 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:52:39,363 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:52:39,363 - PDFDuplicateFinder - CRITICAL - Fatal error: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:14:50,338 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:14:50,368 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:14:50,368 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:14:50,368 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:14:50,368 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:14:50,381 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_files_dropped'
 Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2054, in main
+  File "x:\GitHub\PDF_finder\main.py", line 2544, in main
     window = PDFDuplicateFinder()
              ^^^^^^^^^^^^^^^^^^^^
-  File "x:\GitHub\PDF_finder\main.py", line 510, in __init__
-    self.load_recent_files()
-  File "x:\GitHub\PDF_finder\main.py", line 1737, in load_recent_files
-    self.recent_menu.clear()
-RuntimeError: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-03 19:52:39,363 - PDFDuplicateFinder - CRITICAL - Fatal error: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+  File "x:\GitHub\PDF_finder\main.py", line 552, in __init__
+    self.init_ui()
+  File "x:\GitHub\PDF_finder\main.py", line 785, in init_ui
+    self._file_drop_handler.set_file_drop_callback(self.on_files_dropped)
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_files_dropped'
+2025-07-03 21:14:50,381 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_files_dropped'
 Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2054, in main
+  File "x:\GitHub\PDF_finder\main.py", line 2544, in main
     window = PDFDuplicateFinder()
              ^^^^^^^^^^^^^^^^^^^^
-  File "x:\GitHub\PDF_finder\main.py", line 510, in __init__
+  File "x:\GitHub\PDF_finder\main.py", line 552, in __init__
+    self.init_ui()
+  File "x:\GitHub\PDF_finder\main.py", line 785, in init_ui
+    self._file_drop_handler.set_file_drop_callback(self.on_files_dropped)
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_files_dropped'
+2025-07-03 21:15:56,634 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:15:56,634 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:15:56,634 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:15:56,634 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:15:56,634 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:15:56,635 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:15:56,635 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:15:56,635 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:15:56,635 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:15:56,665 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:15:56,665 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:15:56,665 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:15:56,665 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:15:56,680 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'load_settings'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2595, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 555, in __init__
+    self.load_settings()
+    ^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'load_settings'. Did you mean: 'on_settings'?
+2025-07-03 21:15:56,680 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'load_settings'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2595, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 555, in __init__
+    self.load_settings()
+    ^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'load_settings'. Did you mean: 'on_settings'?
+2025-07-03 21:17:06,441 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:17:06,442 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:17:06,443 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:17:06,443 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:17:06,472 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:17:06,472 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:17:06,473 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:17:06,473 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:17:06,486 - PDFDuplicateFinder - ERROR - Error loading settings: 'RecentFilesManager' object has no attribute 'load'
+2025-07-03 21:17:06,486 - PDFDuplicateFinder - ERROR - Error loading settings: 'RecentFilesManager' object has no attribute 'load'
+2025-07-03 21:17:06,487 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'apply_theme'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2649, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 558, in __init__
+    self.apply_theme()
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'apply_theme'
+2025-07-03 21:17:06,487 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'apply_theme'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2649, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 558, in __init__
+    self.apply_theme()
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'apply_theme'
+2025-07-03 21:18:38,795 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:18:38,795 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:18:38,795 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:18:38,796 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:18:38,827 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,827 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,827 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,827 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,843 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,843 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,844 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,844 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:18:38,844 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:18:38,844 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:18:38,849 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'load_recent_files'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2720, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 561, in __init__
     self.load_recent_files()
-  File "x:\GitHub\PDF_finder\main.py", line 1737, in load_recent_files
-    self.recent_menu.clear()
-RuntimeError: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-03 19:54:06,929 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:54:06,930 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:54:06,930 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-03 19:54:06,930 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:54:06,930 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-03 19:54:06,931 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:54:06,931 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-03 19:54:06,931 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:54:06,931 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-03 19:54:06,962 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:06,962 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:06,963 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:06,963 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:06,974 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:54:06,974 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-03 19:54:07,036 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:54:07,036 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:54:19,460 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:54:19,461 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:54:19,461 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-03 19:55:41,700 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:55:41,700 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:55:41,711 - PDFDuplicateFinder - INFO - Found 35 PDF files to process
-2025-07-03 19:55:41,711 - PDFDuplicateFinder - INFO - Found 35 PDF files to process
-2025-07-03 19:55:41,714 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_yn8zdfkm
-2025-07-03 19:55:41,714 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_yn8zdfkm
-2025-07-03 19:55:41,767 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC.PDF
-2025-07-03 19:55:41,767 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC.PDF
-2025-07-03 19:55:41,792 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC.PDF
-2025-07-03 19:55:41,792 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC.PDF
-2025-07-03 19:55:41,792 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC001.PDF
-2025-07-03 19:55:41,792 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC001.PDF
-2025-07-03 19:55:41,850 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC001.PDF
-2025-07-03 19:55:41,850 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC001.PDF
-2025-07-03 19:55:41,851 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC002.PDF
-2025-07-03 19:55:41,851 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC002.PDF
-2025-07-03 19:55:41,915 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC002.PDF
-2025-07-03 19:55:41,915 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC002.PDF
-2025-07-03 19:55:41,916 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC003.PDF
-2025-07-03 19:55:41,916 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC003.PDF
-2025-07-03 19:55:41,968 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC003.PDF
-2025-07-03 19:55:41,968 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC003.PDF
-2025-07-03 19:55:41,969 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC004.PDF
-2025-07-03 19:55:41,969 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC004.PDF
-2025-07-03 19:55:42,114 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC004.PDF
-2025-07-03 19:55:42,114 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0943_DOC004.PDF
-2025-07-03 19:55:42,116 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC.PDF
-2025-07-03 19:55:42,116 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC.PDF
-2025-07-03 19:55:42,183 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC.PDF
-2025-07-03 19:55:42,183 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC.PDF
-2025-07-03 19:55:42,184 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC001.PDF
-2025-07-03 19:55:42,184 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC001.PDF
-2025-07-03 19:55:42,249 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC001.PDF
-2025-07-03 19:55:42,249 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC001.PDF
-2025-07-03 19:55:42,250 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC002.PDF
-2025-07-03 19:55:42,250 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC002.PDF
-2025-07-03 19:55:42,304 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC002.PDF
-2025-07-03 19:55:42,304 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC002.PDF
-2025-07-03 19:55:42,306 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC003.PDF
-2025-07-03 19:55:42,306 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC003.PDF
-2025-07-03 19:55:42,369 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC003.PDF
-2025-07-03 19:55:42,369 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC003.PDF
-2025-07-03 19:55:42,370 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC004.PDF
-2025-07-03 19:55:42,370 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC004.PDF
-2025-07-03 19:55:42,526 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC004.PDF
-2025-07-03 19:55:42,526 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC004.PDF
-2025-07-03 19:55:42,527 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC005.PDF
-2025-07-03 19:55:42,527 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC005.PDF
-2025-07-03 19:55:42,591 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC005.PDF
-2025-07-03 19:55:42,591 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\2007-0946_DOC005.PDF
-2025-07-03 19:55:42,592 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Google earth 2018.pdf
-2025-07-03 19:55:42,592 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Google earth 2018.pdf
-2025-07-03 19:55:42,709 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Google earth 2018.pdf
-2025-07-03 19:55:42,709 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Google earth 2018.pdf
-2025-07-03 19:55:42,710 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-03 19:55:42,710 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-03 19:55:42,799 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-03 19:55:42,799 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-03 19:55:42,800 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.pdf
-2025-07-03 19:55:42,800 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.pdf
-2025-07-03 19:55:42,888 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.pdf
-2025-07-03 19:55:42,888 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0008.pdf
-2025-07-03 19:55:42,888 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-03 19:55:42,888 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-03 19:55:42,947 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-03 19:55:42,947 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-03 19:55:42,949 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.pdf
-2025-07-03 19:55:42,949 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.pdf
-2025-07-03 19:55:43,008 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.pdf
-2025-07-03 19:55:43,008 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\IMG-20230831-WA0009.pdf
-2025-07-03 19:55:43,009 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-03 19:55:43,009 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-03 19:55:43,256 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-03 19:55:43,256 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-03 19:55:43,257 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.pdf
-2025-07-03 19:55:43,257 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.pdf
-2025-07-03 19:55:43,500 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.pdf
-2025-07-03 19:55:43,500 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_2022.06.28.pdf
-2025-07-03 19:55:43,501 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-03 19:55:43,501 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-03 19:55:43,598 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-03 19:55:43,598 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-03 19:55:43,598 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-03 19:55:43,598 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-03 19:55:43,720 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-03 19:55:43,720 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-03 19:55:43,721 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-03 19:55:43,721 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-03 19:55:43,866 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-03 19:55:43,866 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-03 19:55:43,867 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-03 19:55:43,867 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-03 19:55:43,987 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-03 19:55:43,987 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-03 19:55:43,988 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-03 19:55:43,988 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-03 19:55:44,073 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-03 19:55:44,073 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-03 19:55:44,074 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-03 19:55:44,074 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-03 19:55:44,233 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-03 19:55:44,233 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-03 19:55:44,234 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Roma.pdf
-2025-07-03 19:55:44,234 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Roma.pdf
-2025-07-03 19:55:44,355 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Roma.pdf
-2025-07-03 19:55:44,355 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Roma.pdf
-2025-07-03 19:55:44,355 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Sardegna.pdf
-2025-07-03 19:55:44,355 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Sardegna.pdf
-2025-07-03 19:55:44,473 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Sardegna.pdf
-2025-07-03 19:55:44,473 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\PILI olio Sardegna.pdf
-2025-07-03 19:55:44,475 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.1.pdf
-2025-07-03 19:55:44,475 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.1.pdf
-2025-07-03 19:55:44,518 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.1.pdf
-2025-07-03 19:55:44,518 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.1.pdf
-2025-07-03 19:55:44,519 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.pdf
-2025-07-03 19:55:44,519 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.pdf
-2025-07-03 19:55:44,560 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.pdf
-2025-07-03 19:55:44,560 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.1.pdf
-2025-07-03 19:55:44,561 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-03 19:55:44,561 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-03 19:55:44,617 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-03 19:55:44,617 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-03 19:55:44,618 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-03 19:55:44,618 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-03 19:55:44,671 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-03 19:55:44,671 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-03 19:55:44,672 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.1.pdf
-2025-07-03 19:55:44,672 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.1.pdf
-2025-07-03 19:55:44,714 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.1.pdf
-2025-07-03 19:55:44,714 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.1.pdf
-2025-07-03 19:55:44,715 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.pdf
-2025-07-03 19:55:44,715 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.pdf
-2025-07-03 19:55:44,757 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.pdf
-2025-07-03 19:55:44,757 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SCOTTO.3.pdf
-2025-07-03 19:55:44,758 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-03 19:55:44,758 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-03 19:55:44,959 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-03 19:55:44,959 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-03 19:55:44,960 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-03 19:55:44,960 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-03 19:55:45,161 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-03 19:55:45,161 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-03 19:55:45,167 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-03 19:55:45,167 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-03 19:55:45,371 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-03 19:55:45,371 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\PDF\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-03 19:55:45,371 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-03 19:55:45,371 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-03 19:55:45,371 - PDFUtils - INFO - Processing 35 pre-processed files
-2025-07-03 19:55:45,372 - PDFUtils - INFO - Found 7 groups of files with the same size
-2025-07-03 19:55:46,978 - PDFUtils - INFO - Found 7 groups of duplicate PDFs
-2025-07-03 19:55:46,980 - PDFDuplicateFinder - INFO - Found 7 groups of duplicates
-2025-07-03 19:55:46,980 - PDFDuplicateFinder - INFO - Found 7 groups of duplicates
-2025-07-03 19:55:46,981 - PDFDuplicateFinder - INFO - Scan completed. Found 7 duplicate groups.
-2025-07-03 19:55:46,981 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_yn8zdfkm
-2025-07-03 19:55:46,981 - PDFDuplicateFinder - INFO - Scan completed. Found 7 duplicate groups.
-2025-07-03 19:55:46,981 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_yn8zdfkm
-2025-07-03 19:56:01,654 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:56:01,654 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:56:01,655 - PDFDuplicateFinder - CRITICAL - Uncaught exception
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'load_recent_files'
+2025-07-03 21:18:38,849 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'load_recent_files'
 Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 951, in on_scan_folder
-    self.start_scan()
-  File "x:\GitHub\PDF_finder\main.py", line 1500, in start_scan
-    self.update_ui_state()
-  File "x:\GitHub\PDF_finder\main.py", line 1356, in update_ui_state
-    next_file_enabled = has_selection and self.current_file_index < len(self.duplicate_groups[self.current_group_index]) - 1
-                                                                        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
-IndexError: list index out of range
-2025-07-03 19:56:01,655 - PDFDuplicateFinder - CRITICAL - Uncaught exception
+  File "x:\GitHub\PDF_finder\main.py", line 2720, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 561, in __init__
+    self.load_recent_files()
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'load_recent_files'
+2025-07-03 21:21:23,622 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:21:23,622 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:21:23,622 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:21:23,623 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:21:23,654 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,654 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,654 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,654 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,669 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,669 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,670 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,670 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:21:23,670 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:21:23,670 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:21:23,674 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:21:23,674 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:21:23,674 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_scan_completed'
 Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 951, in on_scan_folder
-    self.start_scan()
-  File "x:\GitHub\PDF_finder\main.py", line 1500, in start_scan
-    self.update_ui_state()
-  File "x:\GitHub\PDF_finder\main.py", line 1356, in update_ui_state
-    next_file_enabled = has_selection and self.current_file_index < len(self.duplicate_groups[self.current_group_index]) - 1
-                                                                        ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
-IndexError: list index out of range
-2025-07-03 19:56:09,049 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-03 19:56:09,049 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-03 19:56:09,053 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:56:09,053 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-03 19:56:09,053 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-03 19:56:09,053 - PDFDuplicateFinder - INFO - Application shutdown completed
+  File "x:\GitHub\PDF_finder\main.py", line 2827, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 564, in __init__
+    self.scan_manager.scan_completed.connect(self.on_scan_completed)
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_scan_completed'
+2025-07-03 21:21:23,674 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_scan_completed'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2827, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 564, in __init__
+    self.scan_manager.scan_completed.connect(self.on_scan_completed)
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_scan_completed'
+2025-07-03 21:22:30,107 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:22:30,108 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:22:30,108 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:22:30,109 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:22:30,139 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,139 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,140 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,140 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:22:30,156 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:22:30,159 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:22:30,159 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:22:30,159 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'update_progress'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2878, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 565, in __init__
+    self.scan_manager.progress.connect(self.update_progress)
+                                       ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'update_progress'
+2025-07-03 21:22:30,159 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'update_progress'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2878, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 565, in __init__
+    self.scan_manager.progress.connect(self.update_progress)
+                                       ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'update_progress'
+2025-07-03 21:24:12,938 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:24:12,939 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:24:12,939 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:24:12,940 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:24:12,971 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,971 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,972 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,972 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:24:12,988 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:24:12,992 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:24:12,992 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:24:12,993 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_file_processed'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2908, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 566, in __init__
+    self.scan_manager.file_processed.connect(self.on_file_processed)
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_file_processed'. Did you mean: 'on_files_dropped'?
+2025-07-03 21:24:12,993 - PDFDuplicateFinder - CRITICAL - Fatal error: 'PDFDuplicateFinder' object has no attribute 'on_file_processed'
+Traceback (most recent call last):
+  File "x:\GitHub\PDF_finder\main.py", line 2908, in main
+    window = PDFDuplicateFinder()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "x:\GitHub\PDF_finder\main.py", line 566, in __init__
+    self.scan_manager.file_processed.connect(self.on_file_processed)
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFDuplicateFinder' object has no attribute 'on_file_processed'. Did you mean: 'on_files_dropped'?
+2025-07-03 21:25:50,501 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:25:50,501 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:25:50,501 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:25:50,501 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:25:50,501 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:25:50,502 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:25:50,502 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:25:50,502 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:25:50,502 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:25:50,532 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,532 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,532 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,532 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:25:50,547 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:25:50,551 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:25:50,551 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:25:50,614 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-03 21:25:50,614 - PDFDuplicateFinder - INFO - Application started successfully

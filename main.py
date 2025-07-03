@@ -149,7 +149,7 @@ logger = setup_logging()
 
 # Constants
 APP_NAME = "PDF Duplicate Finder"
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.7.0"
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -172,7 +172,7 @@ class AboutDialog(QDialog):
         description.setWordWrap(True)
         
         # Copyright
-        copyright = QLabel(" 2025 PDF Duplicate Finder")
+        copyright = QLabel(" 2025 Nsfr750")
         copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # OK button
@@ -302,6 +302,52 @@ class SettingsDialog(QDialog):
 
 class PDFDuplicateFinder(MainWindow):
     """Main application window for PDF Duplicate Finder."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
+        self.app_settings = {}  # Will be populated in load_settings()
+        
+        # Initialize variables
+        self.duplicate_groups = []
+        self.current_group_index = -1
+        self.current_file_index = -1
+        self.scan_directories = []
+        self.scan_thread = None
+        self.is_scanning = False
+        
+        # Initialize managers
+        self.recent_manager = RecentFilesManager()
+        self.recent_folders_manager = RecentFoldersManager()
+        self.scan_manager = ScanManager()
+        
+        # Initialize UI
+        self.init_ui()
+        
+        # Load settings
+        self.load_settings()
+        
+        # Apply theme
+        self.apply_theme()
+        
+        # Load recent files after UI is fully initialized
+        self.load_recent_files()
+        
+        # Connect signals
+        self.scan_manager.scan_completed.connect(self.on_scan_completed)
+        self.scan_manager.progress.connect(self.update_progress)
+        self.scan_manager.file_processed.connect(self.on_file_processed)
+    
+    def stop_scan(self):
+        """Stop the current scan operation."""
+        if hasattr(self, 'scan_manager'):
+            self.scan_manager.cancel_scan()
+            self.is_scanning = False
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.hide()
+            if hasattr(self, 'status_label'):
+                self.status_label.setText(self.tr("Scan stopped by user."))
+            self.update_ui_state()
     
     def retranslate_ui(self):
         """Retranslate all UI elements."""
@@ -519,6 +565,578 @@ class PDFDuplicateFinder(MainWindow):
         self.scan_manager.progress.connect(self.update_progress)
         self.scan_manager.file_processed.connect(self.on_file_processed)
     
+    def save_scan_results(self):
+        """Save the current scan results to a CSV file."""
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+            QMessageBox.information(self, "No Results", "No scan results to save.")
+            return
+            
+        # Get the default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
+        
+        # Open file dialog to select save location
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Scan Results",
+            os.path.join(os.path.expanduser("~"), default_filename),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow([
+                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
+                    'Creation Date', 'Modification Date', 'MD5 Hash'
+                ])
+                
+                # Write data for each duplicate group
+                for i, group in enumerate(self.duplicate_groups, 1):
+                    for file_info in group:
+                        writer.writerow([
+                            i,  # Group number
+                            file_info.get('path', ''),
+                            file_info.get('size', ''),
+                            file_info.get('pages', ''),
+                            file_info.get('creation_date', ''),
+                            file_info.get('modification_date', ''),
+                            file_info.get('md5', '')
+                        ])
+            
+            QMessageBox.information(
+                self, 
+                "Save Successful", 
+                f"Scan results saved to:\n{file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error saving scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Failed to save scan results:\n{str(e)}"
+            )
+    
+    def load_scan_results(self):
+        """Load scan results from a CSV file."""
+        # Open file dialog to select the CSV file
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Scan Results",
+            os.path.expanduser("~"),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                
+                # Reset current state
+                self.duplicate_groups = []
+                current_group = -1
+                
+                # Read data row by row
+                for row in reader:
+                    group_num = int(row.get('Group', '0'))
+                    
+                    # Create a new group if needed
+                    if group_num > current_group:
+                        self.duplicate_groups.append([])
+                        current_group = group_num
+                    
+                    # Add file info to the current group
+                    file_info = {
+                        'path': row.get('File Path', ''),
+                        'size': int(row.get('Size (bytes)', 0)),
+                        'pages': int(row.get('Pages', 0)),
+                        'creation_date': row.get('Creation Date', ''),
+                        'modification_date': row.get('Modification Date', ''),
+                        'md5': row.get('MD5 Hash', '')
+                    }
+                    self.duplicate_groups[-1].append(file_info)
+            
+            # Update the UI with the loaded results
+            if hasattr(self, 'duplicates_view') and self.duplicate_groups:
+                self.current_group_index = 0
+                self.current_file_index = 0
+                self.update_duplicates_view()
+                self.update_ui_state()
+                
+                QMessageBox.information(
+                    self,
+                    "Load Successful",
+                    f"Successfully loaded {len(self.duplicate_groups)} duplicate groups from:\n{file_path}"
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "No Valid Data",
+                    "The selected file does not contain valid scan results."
+                )
+                
+        except Exception as e:
+            logger.error(f"Error loading scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Load Error",
+                f"Failed to load scan results:\n{str(e)}"
+            )
+    
+    def filter_duplicates(self, search_text):
+        """
+        Filter the duplicate files based on the search text.
+        
+        Args:
+            search_text (str): The text to search for in file paths
+        """
+        if not hasattr(self, 'duplicates_view') or not hasattr(self, 'duplicate_groups'):
+            return
+            
+        # If search text is empty, show all duplicates
+        if not search_text.strip():
+            self.update_duplicates_view()
+            return
+            
+        # Convert search text to lowercase for case-insensitive search
+        search_text = search_text.lower()
+        
+        # Filter duplicate groups where at least one file matches the search
+        filtered_groups = []
+        for group in self.duplicate_groups:
+            # Check if any file in the group matches the search
+            matching_files = [
+                file_info for file_info in group 
+                if search_text in file_info.get('path', '').lower()
+            ]
+            if matching_files:
+                filtered_groups.append(matching_files)
+        
+        # Update the view with filtered results
+        if hasattr(self, 'duplicates_view'):
+            self.duplicates_view.clear()
+            
+            if not filtered_groups:
+                item = QListWidgetItem("No matching files found.")
+                item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+                self.duplicates_view.addItem(item)
+                return
+                
+            for i, group in enumerate(filtered_groups, 1):
+                # Add group header
+                group_item = QListWidgetItem(f"Group {i} - {len(group)} duplicate(s)")
+                group_item.setBackground(QColor(64, 64, 64))
+                group_item.setForeground(QColor(255, 255, 255))
+                group_item.setFlags(group_item.flags() & ~Qt.ItemIsSelectable)
+                self.duplicates_view.addItem(group_item)
+                
+                # Add files in the group
+                for file_info in group:
+                    file_path = file_info.get('path', 'Unknown')
+                    file_name = os.path.basename(file_path)
+                    item = QListWidgetItem(f"  {file_name}")
+                    item.setData(Qt.UserRole, file_info)
+                    self.duplicates_view.addItem(item)
+    
+    def on_files_dropped(self, file_paths):
+        """
+        Handle files that are dropped onto the application window.
+        
+        Args:
+            file_paths (list): List of file paths that were dropped
+        """
+        if not file_paths:
+            return
+            
+        # Filter for PDF files only
+        pdf_files = [path for path in file_paths if path.lower().endswith('.pdf')]
+        
+        if not pdf_files:
+            QMessageBox.information(
+                self,
+                "No PDF Files",
+                "No PDF files were found in the dropped items."
+            )
+            return
+            
+        # If we have exactly one PDF, we can either scan its folder or ask the user
+        if len(pdf_files) == 1:
+            reply = QMessageBox.question(
+                self,
+                "Scan Options",
+                f"Do you want to scan the folder containing '{os.path.basename(pdf_files[0])}'?\n\n"
+                "Click 'Yes' to scan the parent folder, or 'No' to scan just this file.",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Yes
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Scan the parent folder
+                folder_path = os.path.dirname(pdf_files[0])
+                self.scan_directories = [folder_path]
+                self.start_scan()
+                return
+            elif reply == QMessageBox.No:
+                # Scan just this file
+                self.scan_directories = pdf_files
+                self.start_scan()
+                return
+            else:
+                # User cancelled
+                return
+        
+        # For multiple PDFs, scan all of them
+        self.scan_directories = pdf_files
+        self.start_scan()
+    
+    def load_settings(self):
+        """Load application settings from QSettings."""
+        try:
+            # Load window geometry
+            self.restoreGeometry(self.settings.value("geometry", QByteArray()))
+            
+            # Load window state (toolbars, dock widgets, etc.)
+            self.restoreState(self.settings.value("windowState", QByteArray()))
+            
+            # Load recent files and folders
+            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'load'):
+                self.recent_manager.load()
+            if hasattr(self, 'recent_folders_manager') and hasattr(self.recent_folders_manager, 'load'):
+                self.recent_folders_manager.load()
+            
+            # Load application settings
+            self.app_settings = {
+                'theme': self.settings.value('theme', 'dark'),
+                'language': self.settings.value('language', 'en'),
+                'last_directory': self.settings.value('last_directory', os.path.expanduser('~')),
+                'check_updates': self.settings.value('check_updates', True, type=bool),
+                'show_hidden': self.settings.value('show_hidden', False, type=bool),
+                'min_file_size': self.settings.value('min_file_size', 1024, type=int),  # 1KB
+                'max_file_size': self.settings.value('max_file_size', 1024 * 1024 * 1024, type=int),  # 1GB
+                'compare_method': self.settings.value('compare_method', 'content'),  # 'content' or 'metadata'
+                'thread_count': self.settings.value('thread_count', 4, type=int),
+                'auto_save_results': self.settings.value('auto_save_results', True, type=bool),
+                'auto_load_last': self.settings.value('auto_load_last', False, type=bool)
+            }
+            
+            # Apply theme
+            self.apply_theme()
+            
+            # Apply language if available
+            if 'language' in self.app_settings and hasattr(self, 'translator'):
+                self.translator.load_language(self.app_settings['language'])
+            
+            logger.info("Settings loaded successfully")
+            
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}")
+            # Reset to default settings on error
+            self.app_settings = {
+                'theme': 'dark',
+                'language': 'en',
+                'last_directory': os.path.expanduser('~'),
+                'check_updates': True,
+                'show_hidden': False,
+                'min_file_size': 1024,  # 1KB
+                'max_file_size': 1024 * 1024 * 1024,  # 1GB
+                'compare_method': 'content',
+                'thread_count': 4,
+                'auto_save_results': True,
+                'auto_load_last': True
+            }
+    
+    def apply_theme(self, theme=None):
+        """
+        Apply the selected theme to the application.
+        
+        Args:
+            theme (str, optional): Theme name to apply. If None, uses the theme from app_settings.
+        """
+        if theme is None:
+            theme = self.app_settings.get('theme', 'dark')
+            
+        # Save the theme to settings
+        self.app_settings['theme'] = theme
+        self.settings.setValue('theme', theme)
+        
+        # Define color palettes for different themes
+        if theme == 'dark':
+            # Dark theme colors
+            palette = QPalette()
+            palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            palette.setColor(QPalette.WindowText, Qt.white)
+            palette.setColor(QPalette.Base, QColor(25, 25, 25))
+            palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+            palette.setColor(QPalette.ToolTipBase, Qt.white)
+            palette.setColor(QPalette.ToolTipText, Qt.white)
+            palette.setColor(QPalette.Text, Qt.white)
+            palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            palette.setColor(QPalette.ButtonText, Qt.white)
+            palette.setColor(QPalette.BrightText, Qt.red)
+            palette.setColor(QPalette.Link, QColor(42, 130, 218))
+            palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+            palette.setColor(QPalette.HighlightedText, Qt.black)
+            
+            # Apply the palette
+            QApplication.setPalette(palette)
+            
+            # Additional style tweaks for dark theme
+            self.setStyleSheet("""
+                QToolTip { 
+                    color: #ffffff; 
+                    background-color: #2a82da; 
+                    border: 1px solid white; 
+                }
+                QMenu::item:selected { 
+                    background-color: #2a82da; 
+                }
+                QStatusBar { 
+                    background-color: #353535; 
+                    color: white; 
+                }
+            """)
+            
+        elif theme == 'light':
+            # Light theme (system default)
+            QApplication.setPalette(QApplication.style().standardPalette())
+            self.setStyleSheet("""
+                QToolTip { 
+                    border: 1px solid #76797C; 
+                    background-color: #f0f0f0; 
+                    color: #000000; 
+                }
+                QMenu::item:selected { 
+                    background-color: #2a82da; 
+                    color: white;
+                }
+            """)
+            
+        # Force a style refresh
+        self.update()
+    
+    def load_recent_files(self):
+        """Load the list of recently accessed files and update the UI."""
+        try:
+            # Clear the recent files menu
+            if hasattr(self, 'recent_menu'):
+                self.recent_menu.clear()
+            else:
+                # If the menu doesn't exist yet, create it
+                menubar = self.menuBar()
+                file_menu = menubar.findChild(QMenu, "file_menu")
+                if file_menu:
+                    self.recent_menu = file_menu.addMenu(self.tr("Recent Files"))
+                else:
+                    logger.warning("Could not find File menu to add Recent Files submenu")
+                    return
+            
+            # Get recent files from the manager
+            recent_files = []
+            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'get_recent_files'):
+                recent_files = self.recent_manager.get_recent_files()
+            
+            # Add recent files to the menu
+            if not recent_files:
+                no_files_action = QAction(self.tr("No recent files"), self)
+                no_files_action.setEnabled(False)
+                self.recent_menu.addAction(no_files_action)
+                return
+            
+            # Add each recent file to the menu
+            for i, file_path in enumerate(recent_files, 1):
+                # Show a maximum of 10 recent files
+                if i > 10:
+                    break
+                    
+                # Create a user-friendly display name
+                display_name = f"&{i} {os.path.basename(file_path)}"
+                action = QAction(display_name, self)
+                action.setData(file_path)
+                action.triggered.connect(lambda checked, path=file_path: self.open_recent_file(path))
+                self.recent_menu.addAction(action)
+            
+            # Add a separator and clear action if we have recent files
+            if recent_files:
+                self.recent_menu.addSeparator()
+                clear_action = QAction(self.tr("Clear Recent Files"), self)
+                clear_action.triggered.connect(self.clear_recent_files)
+                self.recent_menu.addAction(clear_action)
+        
+        except Exception as e:
+            logger.error(f"Error loading recent files: {e}")
+    
+    def open_recent_file(self, file_path):
+        """
+        Open a recently accessed file.
+        
+        Args:
+            file_path (str): Path to the file to open
+        """
+        try:
+            if not os.path.exists(file_path):
+                QMessageBox.warning(
+                    self,
+                    "File Not Found",
+                    f"The file '{os.path.basename(file_path)}' could not be found."
+                )
+                # Remove the file from recent files if it doesn't exist
+                if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'remove_recent_file'):
+                    self.recent_manager.remove_recent_file(file_path)
+                    self.load_recent_files()  # Refresh the recent files menu
+                return
+            
+            # Check if the file is a directory or a file
+            if os.path.isdir(file_path):
+                self.scan_directories = [file_path]
+            else:
+                self.scan_directories = [os.path.dirname(file_path)]
+                
+            # Start the scan
+            self.start_scan()
+            
+            # Update the recent files list
+            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'add_recent_file'):
+                self.recent_manager.add_recent_file(file_path)
+                self.load_recent_files()  # Refresh the recent files menu
+                
+        except Exception as e:
+            logger.error(f"Error opening recent file '{file_path}': {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Could not open file '{os.path.basename(file_path)}': {str(e)}"
+            )
+    
+    def clear_recent_files(self):
+        """Clear the list of recently accessed files."""
+        try:
+            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'clear_recent_files'):
+                self.recent_manager.clear_recent_files()
+                self.load_recent_files()  # Refresh the recent files menu
+        except Exception as e:
+            logger.error(f"Error clearing recent files: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Could not clear recent files: {str(e)}"
+            )
+    
+    def on_scan_completed(self, results):
+        """
+        Handle the completion of a scan operation.
+        
+        Args:
+            results: The results of the scan operation
+        """
+        try:
+            # Enable UI elements
+            self.scan_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            
+            # Update status
+            self.status_bar.showMessage("Scan completed")
+            
+            # Process results if any
+            if results and hasattr(results, 'duplicate_groups'):
+                self.duplicate_groups = results.duplicate_groups
+                self.current_group_index = 0
+                self.current_file_index = 0
+                
+                # Update the UI with the first group of duplicates
+                if self.duplicate_groups:
+                    self.update_duplicates_view()
+                    
+                    # Show summary
+                    total_duplicates = sum(len(group) for group in self.duplicate_groups)
+                    total_groups = len(self.duplicate_groups)
+                    self.status_bar.showMessage(
+                        f"Found {total_duplicates} duplicate files in {total_groups} groups"
+                    )
+                    
+                    # Auto-save results if enabled
+                    if self.app_settings.get('auto_save_results', False):
+                        self.save_scan_results()
+                else:
+                    self.status_bar.showMessage("No duplicate files found")
+                    QMessageBox.information(self, "No Duplicates", "No duplicate PDF files were found.")
+            
+            # Re-enable UI elements
+            self.update_ui_state()
+            
+        except Exception as e:
+            logger.error(f"Error processing scan completion: {e}")
+            self.status_bar.showMessage("Error processing scan results")
+            QMessageBox.critical(
+                self,
+                "Scan Error",
+                f"An error occurred while processing the scan results: {str(e)}"
+            )
+    
+    def update_progress(self, current, total, message):
+        """
+        Update the progress bar and status message during a scan.
+        
+        Args:
+            current (int): Current progress value
+            total (int): Total value for completion
+            message (str): Status message to display
+        """
+        try:
+            # Update progress bar if it exists
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setMaximum(total)
+                self.progress_bar.setValue(current)
+                
+                # Calculate percentage
+                if total > 0:
+                    percent = int((current / total) * 100)
+                    self.progress_bar.setFormat(f"%p% - {message}")
+            
+            # Update status bar message
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(message)
+                
+            # Process events to update the UI
+            QApplication.processEvents()
+            
+        except Exception as e:
+            logger.error(f"Error updating progress: {e}")
+    
+    def on_file_processed(self, file_path, result):
+        """
+        Handle the signal when a file has been processed during a scan.
+        
+        Args:
+            file_path (str): Path to the processed file
+            result (dict): Result of the file processing
+        """
+        try:
+            # Update the log with the processed file
+            logger.debug(f"Processed file: {file_path}")
+            
+            # Update the status bar with the current file being processed
+            if hasattr(self, 'status_bar'):
+                file_name = os.path.basename(file_path)
+                self.status_bar.showMessage(f"Processing: {file_name}")
+            
+            # Update the file list or log if needed
+            if hasattr(self, 'log_view') and self.log_view:
+                self.log_view.append(f"Processed: {file_path}")
+            
+            # Process events to keep the UI responsive
+            QApplication.processEvents()
+            
+        except Exception as e:
+            logger.error(f"Error handling processed file {file_path}: {e}")
+    
     def init_ui(self):
         self.setWindowTitle(APP_NAME)
         self.setGeometry(100, 100, 1400, 900)
@@ -549,7 +1167,7 @@ class PDFDuplicateFinder(MainWindow):
         self.progress_bar.setFixedWidth(200)
         self.progress_bar.hide()
         
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel(self.tr("Ready"))
         self.status_bar.addWidget(self.status_label, 1)
         self.status_bar.addPermanentWidget(self.progress_bar)
         self.setStatusBar(self.status_bar)
@@ -587,25 +1205,25 @@ class PDFDuplicateFinder(MainWindow):
         
         # Add Recent Folders submenu
         file_menu.addSeparator()
-        self.recent_menu = file_menu.addMenu("Recent Folders")
+        self.recent_menu = file_menu.addMenu(self.tr("Recent Folders"))
         file_menu.addSeparator()
         
-        self.exit_action = QAction("Exit", self)
+        self.exit_action = QAction(self.tr("Exit"))
         self.exit_action.triggered.connect(self.close)
         file_menu.addAction(self.exit_action)
         
         # Edit menu
-        edit_menu = menubar.addMenu("Edit")
+        edit_menu = menubar.addMenu(self.tr("Edit"))
         
         self.settings_action = QAction("Settings...", self)
         self.settings_action.triggered.connect(self.on_settings)
         edit_menu.addAction(self.settings_action)
         
         # Tools menu (moved from MainWindow)
-        self.tools_menu = menubar.addMenu("Tools")
+        self.tools_menu = menubar.addMenu(self.tr("Tools"))
         
         # Add Language submenu to Tools
-        self.language_menu = self.tools_menu.addMenu("Language")
+        self.language_menu = self.tools_menu.addMenu(self.tr("Language"))
         
         # Add language actions
         self.language_group = QActionGroup(self)
@@ -1414,19 +2032,38 @@ class PDFDuplicateFinder(MainWindow):
                     
                     # Update the current file index
                     item = model.data(first_index, Qt.ItemDataRole.UserRole)
-                    if hasattr(item, 'file_index'):
-                        self.current_file_index = item.file_index
     
-    def show_current_file(self):
-        """Update the view to show the current file within the current group."""
-        if not hasattr(self, 'duplicates_view') or not hasattr(self, 'duplicate_groups'):
-            return
+def show_current_group(self):
+    """Update the view to show the current group of duplicates."""
+    if not hasattr(self, 'duplicates_view') or not hasattr(self, 'duplicate_groups'):
+        return
             
-        if (0 <= self.current_group_index < len(self.duplicate_groups) and 
-            0 <= self.current_file_index < len(self.duplicate_groups[self.current_group_index])):
+    if 0 <= self.current_group_index < len(self.duplicate_groups):
+        # The DuplicateFilesView handles the display of groups and files
+        # Just ensure the correct group is selected in the view
+        model = self.duplicates_view.model()
+        if model and hasattr(model, 'setCurrentGroup'):
+            model.setCurrentGroup(self.current_group_index)
             
-            # Get the current file info
-            file_info = self.duplicate_groups[self.current_group_index][self.current_file_index]
+            # Select the first file in the group
+            if model.rowCount() > 0:
+                first_index = model.index(0, 0)
+                self.duplicates_view.setCurrentIndex(first_index)
+                
+                # Update the current file index
+                item = model.data(first_index, Qt.ItemDataRole.UserRole)
+                if hasattr(item, 'file_index'):
+                    self.current_file_index = item.file_index
+    
+def show_current_file(self):
+    """Update the view to show the current file within the current group."""
+    if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+        return
+            
+    if 0 <= self.current_group_index < len(self.duplicate_groups):
+        group = self.duplicate_groups[self.current_group_index]
+        if 0 <= self.current_file_index < len(group):
+            file_info = group[self.current_file_index]
             
             # Update the preview if available
             if hasattr(self, 'preview_widget'):
@@ -1436,17 +2073,23 @@ class PDFDuplicateFinder(MainWindow):
                     logger.error(f"Error loading PDF preview: {e}")
                     self.preview_widget.clear()
             
-            # Update file details if available
-            if hasattr(self, 'file_details'):
-                self.file_details.set_file(file_info.file_path)
+            # Update file details if available and has set_file method
+            if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
+                try:
+                    if hasattr(file_info, 'file_path'):
+                        self.file_details.set_file(file_info.file_path)
+                    elif isinstance(file_info, dict) and 'file_path' in file_info:
+                        self.file_details.set_file(file_info['file_path'])
+                except Exception as e:
+                    logger.error(f"Error updating file details: {e}")
             
             # Update the UI state
             self.update_ui_state()
     
-    def on_files_dropped(self, file_paths):
-        """Handle files or folders dropped onto the application."""
-        if not file_paths:
-            return
+def on_files_dropped(self, file_paths):
+    """Handle files or folders dropped onto the application."""
+    if not file_paths:
+        return
             
         # Check if we should scan the dropped items
         reply = QMessageBox.question(
@@ -1516,9 +2159,11 @@ class PDFDuplicateFinder(MainWindow):
     
     def stop_scan(self):
         """Stop the current scan operation."""
-        if self.scan_manager.is_scanning():
-            self.scan_manager.stop_scan()
+        if hasattr(self, 'scan_manager'):
+            self.scan_manager.cancel_scan()
             self.is_scanning = False
+            self.progress_bar.hide()
+            self.status_label.setText(self.tr("Scan stopped by user."))
             self.update_ui_state()
     
     def save_scan_results(self):
@@ -1880,6 +2525,64 @@ class PDFDuplicateFinder(MainWindow):
             logger.error(f"Error saving settings: {str(e)}")
             logger.debug(traceback.format_exc())
     
+    def save_scan_results(self):
+        """Save the current scan results to a CSV file."""
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+            QMessageBox.information(self, "No Results", "No scan results to save.")
+            return
+            
+        # Get the default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
+        
+        # Open file dialog to select save location
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Scan Results",
+            os.path.join(os.path.expanduser("~"), default_filename),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow([
+                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
+                    'Creation Date', 'Modification Date', 'MD5 Hash'
+                ])
+                
+                # Write data for each duplicate group
+                for i, group in enumerate(self.duplicate_groups, 1):
+                    for file_info in group:
+                        writer.writerow([
+                            i,  # Group number
+                            file_info.get('path', ''),
+                            file_info.get('size', ''),
+                            file_info.get('pages', ''),
+                            file_info.get('creation_date', ''),
+                            file_info.get('modification_date', ''),
+                            file_info.get('md5', '')
+                        ])
+            
+            QMessageBox.information(
+                self, 
+                "Save Successful", 
+                f"Scan results saved to:\n{file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error saving scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Failed to save scan results:\n{str(e)}"
+            )
+    
     def apply_theme(self):
         # Apply the selected theme
         theme = self.app_settings.get('theme', 'system')
@@ -2038,6 +2741,132 @@ class PDFDuplicateFinder(MainWindow):
             """)
         else:  # system
             self.setStyleSheet("")  # Reset to system theme
+    
+    def load_scan_results(self):
+        """Load scan results from a CSV file."""
+        # Open file dialog to select the CSV file
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Scan Results",
+            os.path.expanduser("~"),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                
+                # Reset current state
+                self.duplicate_groups = []
+                current_group = -1
+                
+                # Read data row by row
+                for row in reader:
+                    group_num = int(row.get('Group', '0'))
+                    
+                    # Create a new group if needed
+                    if group_num > current_group:
+                        self.duplicate_groups.append([])
+                        current_group = group_num
+                    
+                    # Add file info to the current group
+                    file_info = {
+                        'path': row.get('File Path', ''),
+                        'size': int(row.get('Size (bytes)', 0)),
+                        'pages': int(row.get('Pages', 0)),
+                        'creation_date': row.get('Creation Date', ''),
+                        'modification_date': row.get('Modification Date', ''),
+                        'md5': row.get('MD5 Hash', '')
+                    }
+                    self.duplicate_groups[-1].append(file_info)
+            
+            # Update the UI with the loaded results
+            if hasattr(self, 'duplicates_view') and self.duplicate_groups:
+                self.current_group_index = 0
+                self.current_file_index = 0
+                self.update_duplicates_view()
+                self.update_ui_state()
+                
+                QMessageBox.information(
+                    self,
+                    "Load Successful",
+                    f"Successfully loaded {len(self.duplicate_groups)} duplicate groups from:\n{file_path}"
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "No Valid Data",
+                    "The selected file does not contain valid scan results."
+                )
+                
+        except Exception as e:
+            logger.error(f"Error loading scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Load Error",
+                f"Failed to load scan results:\n{str(e)}"
+            )
+    
+    def save_scan_results(self):
+        """Save the current scan results to a CSV file."""
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+            QMessageBox.information(self, "No Results", "No scan results to save.")
+            return
+            
+        # Get the default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
+        
+        # Open file dialog to select save location
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Scan Results",
+            os.path.join(os.path.expanduser("~"), default_filename),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow([
+                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
+                    'Creation Date', 'Modification Date', 'MD5 Hash'
+                ])
+                
+                # Write data for each duplicate group
+                for i, group in enumerate(self.duplicate_groups, 1):
+                    for file_info in group:
+                        writer.writerow([
+                            i,  # Group number
+                            file_info.get('path', ''),
+                            file_info.get('size', ''),
+                            file_info.get('pages', ''),
+                            file_info.get('creation_date', ''),
+                            file_info.get('modification_date', ''),
+                            file_info.get('md5', '')
+                        ])
+            
+            QMessageBox.information(
+                self, 
+                "Save Successful", 
+                f"Scan results saved to:\n{file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error saving scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Failed to save scan results:\n{str(e)}"
+            )
     
     def closeEvent(self, event):
         """Handle the window close event."""
