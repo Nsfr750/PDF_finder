@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
                              QHBoxLayout, QTextBrowser, QApplication)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QUrl
 from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
+from .version import get_version
 import sys
 import platform
 from pathlib import Path
@@ -43,7 +44,7 @@ class AboutDialog(QDialog):
         title = QLabel("PDF Duplicate Finder")
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         
-        version = QLabel("Version 1.0.0")
+        version = QLabel(f"Version {get_version()}")
         version.setStyleSheet("color: #666;")
         
         app_info.addWidget(title)
@@ -87,7 +88,7 @@ class AboutDialog(QDialog):
         # GitHub button
         github_btn = QPushButton("GitHub")
         github_btn.clicked.connect(lambda: QDesktopServices.openUrl(
-            QUrl("https://github.com/Nsfr750/PDF_finder")))
+            QUrl("https://github.com/Nsfr750/PDF_Finder")))
         
         # Close button
         close_btn = QPushButton("Close")
@@ -106,6 +107,19 @@ class AboutDialog(QDialog):
             pyside_version = PySide6.__version__
         except ImportError:
             pyside_version = "Not available"
+        
+        # Get system information
+        try:
+            import psutil
+            # Get total RAM in GB
+            ram_gb = psutil.virtual_memory().total / (1024 ** 3)
+            ram_info = f"{ram_gb:.1f} GB"
+            # Get number of CPU cores
+            cpu_cores = psutil.cpu_count(logical=True)
+            cpu_info = f"{cpu_cores} cores"
+        except (ImportError, Exception) as e:
+            ram_info = "Not available"
+            cpu_info = "Not available"
             
         return f"""
         <table>
@@ -113,5 +127,7 @@ class AboutDialog(QDialog):
             <tr><td><b>Python:</b></td><td>{platform.python_version()}</td></tr>
             <tr><td><b>PySide6:</b></td><td>{pyside_version}</td></tr>
             <tr><td><b>Processor:</b></td><td>{platform.processor() or 'Unknown'}</td></tr>
+            <tr><td><b>CPU Cores:</b></td><td>{cpu_info}</td></tr>
+            <tr><td><b>Total RAM:</b></td><td>{ram_info}</td></tr>
         </table>
         """
