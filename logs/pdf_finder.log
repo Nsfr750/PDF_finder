@@ -1,1 +1,50 @@
-
+2025-07-03 21:36:15,255 - PDFDuplicateFinder - INFO - Opened log viewer
+2025-07-03 21:36:15,255 - PDFDuplicateFinder - INFO - Opened log viewer
+2025-07-03 21:39:13,776 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:39:13,777 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:39:13,777 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:39:13,777 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:39:13,777 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:39:13,778 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:39:13,778 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:39:13,778 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:39:13,778 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:39:13,808 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,808 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,808 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,808 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:39:13,824 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:39:13,828 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:39:13,828 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:39:13,886 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-03 21:39:13,886 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-03 21:39:21,639 - PDFDuplicateFinder - INFO - Opened log viewer
+2025-07-03 21:39:21,639 - PDFDuplicateFinder - INFO - Opened log viewer
+2025-07-03 21:52:53,515 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:52:53,516 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:52:53,516 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-03 21:52:53,516 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:52:53,516 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-03 21:52:53,517 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:52:53,517 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-03 21:52:53,517 - PDFDuplicateFinder - INFO - Log file: X:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:52:53,517 - PDFDuplicateFinder - INFO - Log file: X:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-03 21:52:53,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,547 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,548 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,548 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:52:53,563 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-03 21:52:53,567 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:52:53,567 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
+2025-07-03 21:52:53,631 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-03 21:52:53,631 - PDFDuplicateFinder - INFO - Application started successfully

@@ -9,6 +9,9 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 from logging.handlers import RotatingFileHandler
 
+# Import log viewer
+from app_qt.view_log import show_log_viewer
+
 # Qt imports
 from PySide6.QtCore import (
     Qt, QSize, QThread, Signal, Slot, QObject, QTimer, QSettings, 
@@ -43,11 +46,11 @@ from app_qt.delete import DeleteConfirmationDialog, delete_files
 from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
 
 # Import utility functions
-from pdf_utils import (
+from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from preview_widget import PDFPreviewWidget
+from app_qt.preview_widget import PDFPreviewWidget
 
 # Set up logging before importing Qt
 log_dir = Path("logs")
@@ -72,9 +75,8 @@ logger.info('=' * 80)
 logger.info('PDF Duplicate Finder started')
 logger.info(f'Log file: {log_dir / "pdf_finder.log"}')
 
-
-
 # Import application modules
+
 # Import app_qt modules
 from app_qt.i18n import Translator
 from app_qt.main_window import MainWindow
@@ -85,18 +87,11 @@ from app_qt.delete import DeleteConfirmationDialog, delete_files
 from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
 
 # Import utility functions
-from pdf_utils import (
+from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from preview_widget import PDFPreviewWidget
-
-# Import app_qt modules
-from app_qt.drag_drop import FileDropHandler
-from app_qt.gest_scan import ScanManager
-from app_qt.recents import RecentFilesManager
-from app_qt.delete import DeleteConfirmationDialog, delete_files
-from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
+from app_qt.preview_widget import PDFPreviewWidget
 
 def setup_logging():
     """Configure the logging system for the application."""
@@ -1859,36 +1854,21 @@ class PDFDuplicateFinder(MainWindow):
             self.apply_theme()
     
     def on_view_log(self):
-        """Open the application log file in the default text editor."""
+        """Open the application log file in the log viewer dialog."""
         try:
             log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
             log_file = os.path.join(log_dir, 'pdf_finder.log')
             
-            if not os.path.exists(log_file):
-                QMessageBox.information(
-                    self,
-                    "Log File Not Found",
-                    f"Log file not found at:\n{log_file}",
-                    QMessageBox.StandardButton.Ok
-                )
-                return
-                
-            # Open the log file with the default application
-            if sys.platform == 'win32':
-                os.startfile(log_file)
-            elif sys.platform == 'darwin':  # macOS
-                os.system(f'open "{log_file}"')
-            else:  # Linux and other Unix-like
-                os.system(f'xdg-open "{log_file}"')
-                
-            logger.info("Opened log file for viewing")
+            # Show the log viewer dialog
+            show_log_viewer(log_file, self)
+            logger.info("Opened log viewer")
             
         except Exception as e:
-            logger.error(f"Error opening log file: {str(e)}")
+            logger.error(f"Error opening log viewer: {str(e)}")
             QMessageBox.critical(
                 self,
                 "Error",
-                f"Failed to open log file:\n{str(e)}",
+                f"Failed to open log viewer:\n{str(e)}",
                 QMessageBox.StandardButton.Ok
             )
     

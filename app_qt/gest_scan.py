@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from PySide6.QtCore import QObject, Signal, QThreadPool, QRunnable, Slot, Qt
 from PySide6.QtWidgets import QProgressDialog, QMessageBox, QApplication
 
-from pdf_utils import (
+from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )

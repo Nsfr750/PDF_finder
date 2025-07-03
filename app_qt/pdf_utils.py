@@ -1,185 +1,296 @@
-"""PDF utility functions for PDF Duplicate Finder."""
 import os
 import hashlib
 import tempfile
-import shutil
-from pathlib import Path
-from typing import List, Dict, Optional, Set, Tuple, Any
-import logging
-from PyPDF2 import PdfReader, PdfWriter
-from PyPDF2.errors import PdfReadError
-from pdf2image import convert_from_path
+import fitz  # PyMuPDF
 from PIL import Image
 import imagehash
+from typing import List, Dict, Any
+import logging
 
-logger = logging.getLogger('PDFDuplicateFinder')
+logger = logging.getLogger('PDFUtils')
 
-class PDFUtils:
-    """Utility class for PDF operations."""
+def get_pdf_info(file_path: str) -> Dict[str, Any]:
+    """
+    Get information about a PDF file.
     
-    @staticmethod
-    def get_pdf_metadata(file_path: str) -> dict:
-        """Extract metadata from a PDF file."""
+    Args:
+        file_path: Path to the PDF file
+        
+    Returns:
+        Dictionary containing file information
+    """
+    try:
+        file_stat = os.stat(file_path)
+        
+        # Get basic file info
+        info = {
+            'path': file_path,
+            'size': file_stat.st_size,
+            'modified': file_stat.st_mtime,
+            'pages': 0,
+            'title': '',
+            'author': '',
+            'subject': '',
+            'keywords': '',
+            'creator': '',
+            'producer': ''
+        }
+        
+        # Try to extract PDF metadata
         try:
-            with open(file_path, 'rb') as f:
-                reader = PdfReader(f)
-                metadata = reader.metadata
-                return {
-                    'title': metadata.title or '',
-                    'author': metadata.author or '',
-                    'creator': metadata.creator or '',
-                    'producer': metadata.producer or '',
-                    'subject': metadata.subject or '',
-                    'creation_date': str(metadata.creation_date) if hasattr(metadata, 'creation_date') else '',
-                    'modification_date': str(metadata.modification_date) if hasattr(metadata, 'modification_date') else '',
-                    'pages': len(reader.pages)
-                }
-        except Exception as e:
-            logger.error(f"Error reading PDF metadata for {file_path}: {e}")
-            return {}
-    
-    @staticmethod
-    def generate_thumbnail(pdf_path: str, page_number: int = 0, size: tuple = (200, 200)) -> Optional[Image.Image]:
-        """Generate a thumbnail for a PDF page."""
-        try:
-            # Convert the PDF page to an image
-            images = convert_from_path(pdf_path, first_page=page_number + 1, last_page=page_number + 1)
-            if not images:
-                return None
+            with fitz.open(file_path) as doc:
+                info['pages'] = len(doc)
                 
-            # Resize the image
-            img = images[0]
-            img.thumbnail(size, Image.Resampling.LANCZOS)
-            return img
+                # Get document metadata
+                meta = doc.metadata
+                if meta:
+                    info.update({
+                        'title': meta.get('title', ''),
+                        'author': meta.get('author', ''),
+                        'subject': meta.get('subject', ''),
+                        'keywords': meta.get('keywords', ''),
+                        'creator': meta.get('creator', ''),
+                        'producer': meta.get('producer', '')
+                    })
         except Exception as e:
-            logger.error(f"Error generating thumbnail for {pdf_path}: {e}")
-            return None
+            logger.warning(f"Could not extract metadata from {file_path}: {e}")
+        
+        return info
+    except Exception as e:
+        logger.error(f"Error getting info for {file_path}: {e}")
+        return None
+
+def calculate_file_hash(file_path: str, block_size: int = 65536) -> str:
+    """
+    Calculate the MD5 hash of a file.
     
-    @staticmethod
-    def calculate_file_hash(file_path: str, chunk_size: int = 8192) -> str:
-        """Calculate SHA-256 hash of a file."""
-        sha256 = hashlib.sha256()
-        try:
-            with open(file_path, 'rb') as f:
-                while chunk := f.read(chunk_size):
-                    sha256.update(chunk)
-            return sha256.hexdigest()
-        except Exception as e:
-            logger.error(f"Error calculating hash for {file_path}: {e}")
-            return ""
+    Args:
+        file_path: Path to the file
+        block_size: Size of blocks to read at a time
+        
+    Returns:
+        MD5 hash of the file
+    """
+    hasher = hashlib.md5()
+    try:
+        with open(file_path, 'rb') as f:
+            buf = f.read(block_size)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = f.read(block_size)
+        return hasher.hexdigest()
+    except Exception as e:
+        logger.error(f"Error calculating hash for {file_path}: {e}")
+        return None
+
+def calculate_image_hash(image_path: str, hash_size: int = 8) -> str:
+    """
+    Calculate the perceptual hash of an image.
     
-    @staticmethod
-    def calculate_content_hash(file_path: str) -> str:
-        """Calculate a hash based on PDF content (text and structure)."""
-        try:
-            with open(file_path, 'rb') as f:
-                reader = PdfReader(f)
-                content = []
-                
-                # Extract text from each page
-                for page in reader.pages:
+    Args:
+        image_path: Path to the image file
+        hash_size: Size of the hash (higher = more accurate but slower)
+        
+    Returns:
+        Perceptual hash of the image
+    """
+    try:
+        with Image.open(image_path) as img:
+            # Convert to grayscale and resize for consistency
+            img = img.convert('L').resize((hash_size, hash_size), Image.Resampling.LANCZOS)
+            # Calculate the average pixel value
+            avg = sum(img.getdata()) / (hash_size * hash_size)
+            # Create a binary hash based on whether pixels are above or below average
+            bits = ''.join(['1' if pixel > avg else '0' for pixel in img.getdata()])
+            return bits
+    except Exception as e:
+        logger.error(f"Error calculating image hash for {image_path}: {e}")
+        return None
+
+def extract_first_page_image(pdf_path: str, output_path: str, dpi: int = 100) -> bool:
+    """
+    Extract the first page of a PDF as an image.
+    
+    Args:
+        pdf_path: Path to the PDF file
+        output_path: Path to save the output image
+        dpi: DPI for the output image
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Open the PDF
+        doc = fitz.open(pdf_path)
+        if len(doc) == 0:
+            return False
+        
+        # Get the first page
+        page = doc[0]
+        
+        # Calculate the zoom factor based on DPI
+        zoom = dpi / 72  # 72 DPI is the default for PDFs
+        mat = fitz.Matrix(zoom, zoom)
+        
+        # Render the page to an image
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        
+        # Save the image
+        pix.save(output_path)
+        return True
+    except Exception as e:
+        logger.error(f"Error extracting first page from {pdf_path}: {e}")
+        return False
+
+def find_duplicates(directory: str = '', recursive: bool = True, 
+                   min_file_size: int = 0, max_file_size: int = 100 * 1024 * 1024,
+                   hash_size: int = 8, threshold: float = 0.9,
+                   processed_files: List[Dict[str, Any]] = None) -> List[List[Dict[str, Any]]]:
+    """
+    Find duplicate PDF files in a directory based on content similarity.
+    
+    Args:
+        directory: Directory to search for PDFs (ignored if processed_files is provided)
+        recursive: Whether to search subdirectories (ignored if processed_files is provided)
+        min_file_size: Minimum file size in bytes (ignored if processed_files is provided)
+        max_file_size: Maximum file size in bytes (ignored if processed_files is provided)
+        hash_size: Size of the perceptual hash (higher = more accurate but slower)
+        threshold: Similarity threshold (0-1) for considering files as duplicates
+        processed_files: Optional list of pre-processed file info dicts
+        
+    Returns:
+        List of duplicate file groups, where each group is a list of file info dicts
+    """
+    if processed_files is not None:
+        # Use pre-processed files
+        logger.info(f"Processing {len(processed_files)} pre-processed files")
+        file_infos = processed_files
+    else:
+        # Find all PDF files
+        logger.info(f"Searching for duplicate PDFs in {directory}")
+        pdf_files = []
+        if recursive:
+            for root, _, files in os.walk(directory):
+                for file in files:
+                    if file.lower().endswith('.pdf'):
+                        file_path = os.path.join(root, file)
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            if min_file_size <= file_size <= max_file_size:
+                                pdf_files.append((file_path, file_size))
+                        except Exception as e:
+                            logger.warning(f"Could not get size for {file_path}: {e}")
+        else:
+            for file in os.listdir(directory):
+                if file.lower().endswith('.pdf'):
+                    file_path = os.path.join(directory, file)
                     try:
-                        content.append(page.extract_text() or "")
+                        file_size = os.path.getsize(file_path)
+                        if min_file_size <= file_size <= max_file_size:
+                            pdf_files.append((file_path, file_size))
                     except Exception as e:
-                        logger.warning(f"Error extracting text from page in {file_path}: {e}")
-                
-                # Add metadata to content
-                if hasattr(reader, 'metadata') and reader.metadata:
-                    content.append(str(reader.metadata))
-                
-                # Calculate hash of the combined content
-                return hashlib.sha256("".join(content).encode('utf-8')).hexdigest()
-        except Exception as e:
-            logger.error(f"Error calculating content hash for {file_path}: {e}")
-            return ""
+                        logger.warning(f"Could not get size for {file_path}: {e}")
+        
+        logger.info(f"Found {len(pdf_files)} PDF files to process")
+        
+        # Get file info for each PDF
+        file_infos = []
+        for file_path, _ in pdf_files:
+            try:
+                info = get_pdf_info(file_path)
+                if info:
+                    file_infos.append(info)
+            except Exception as e:
+                logger.warning(f"Could not get info for {file_path}: {e}")
     
-    @staticmethod
-    def calculate_image_hash(file_path: str, page_number: int = 0) -> str:
-        """Calculate a perceptual hash of a PDF page's image."""
-        try:
-            # Convert PDF page to image
-            images = convert_from_path(file_path, first_page=page_number + 1, last_page=page_number + 1)
-            if not images:
-                return ""
-                
-            # Calculate perceptual hash
-            img_hash = imagehash.average_hash(images[0])
-            return str(img_hash)
-        except Exception as e:
-            logger.error(f"Error calculating image hash for {file_path}: {e}")
-            return ""
+    # Group files by size first (files with different sizes can't be duplicates)
+    size_groups = {}
+    for file_info in file_infos:
+        file_size = file_info.get('size', 0)
+        if file_size not in size_groups:
+            size_groups[file_size] = []
+        size_groups[file_size].append(file_info)
     
-    @staticmethod
-    def are_similar_pdfs(file1: str, file2: str, similarity_threshold: float = 0.95) -> bool:
-        """Check if two PDFs are similar based on content and structure."""
+    # Only keep groups with more than one file
+    size_groups = {k: v for k, v in size_groups.items() if len(v) > 1}
+    logger.info(f"Found {len(size_groups)} groups of files with the same size")
+    
+    # Process each size group to find duplicates
+    duplicate_groups = []
+    
+    for size, files in size_groups.items():
+        if len(files) < 2:
+            continue
+        
+        # Extract first page as image and calculate hashes
+        file_hashes = {}
+        temp_dir = tempfile.mkdtemp()
+        
         try:
-            # First, compare file hashes (exact match)
-            if PDFUtils.calculate_file_hash(file1) == PDFUtils.calculate_file_hash(file2):
-                return True
+            for file_info in files:
+                file_path = file_info['path']
+                # Extract first page as image
+                image_path = os.path.join(temp_dir, f"{os.path.basename(file_path)}.png")
+                if extract_first_page_image(file_path, image_path):
+                    # Calculate perceptual hash
+                    phash = calculate_image_hash(image_path, hash_size)
+                    if phash:
+                        file_hashes[file_path] = (phash, file_info)
                 
-            # If not exact match, compare content hashes
-            hash1 = PDFUtils.calculate_content_hash(file1)
-            hash2 = PDFUtils.calculate_content_hash(file2)
+                # Clean up the temporary image file
+                try:
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+                except Exception as e:
+                    logger.warning(f"Could not delete temporary file {image_path}: {e}")
             
-            if not hash1 or not hash2:
-                return False
-                
-            # Calculate similarity between hashes
-            similarity = sum(1 for a, b in zip(hash1, hash2) if a == b) / max(len(hash1), len(hash2))
-            return similarity >= similarity_threshold
-            
-        except Exception as e:
-            logger.error(f"Error comparing PDFs {file1} and {file2}: {e}")
-            return False
-    
-    @staticmethod
-    def get_pdf_size(file_path: str) -> int:
-        """Get the size of a PDF file in bytes."""
-        try:
-            return os.path.getsize(file_path)
-        except Exception as e:
-            logger.error(f"Error getting size of {file_path}: {e}")
-            return 0
-    
-    @staticmethod
-    def is_pdf(file_path: str) -> bool:
-        """Check if a file is a valid PDF."""
-        try:
-            with open(file_path, 'rb') as f:
-                # Check PDF header
-                header = f.read(4)
-                if header != b'%PDF':
-                    return False
+            # Compare hashes to find duplicates
+            processed = set()
+            for file1, (hash1, file_info1) in file_hashes.items():
+                if file1 in processed:
+                    continue
                     
-                # Try to read the PDF to verify it's not corrupted
-                f.seek(0)
-                PdfReader(f)
-                return True
-        except:
-            return False
+                duplicates = [file_info1]
+                
+                for file2, (hash2, file_info2) in file_hashes.items():
+                    if file1 == file2 or file2 in processed:
+                        continue
+                    
+                    # Calculate hamming distance between hashes
+                    distance = sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
+                    similarity = 1 - (distance / len(hash1))
+                    
+                    if similarity >= threshold:
+                        duplicates.append(file_info2)
+                        processed.add(file2)
+                
+                if len(duplicates) > 1:
+                    duplicate_groups.append(duplicates)
+        
+        finally:
+            # Clean up temporary directory
+            try:
+                import shutil
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            except Exception as e:
+                logger.warning(f"Could not delete temporary directory {temp_dir}: {e}")
+    
+    logger.info(f"Found {len(duplicate_groups)} groups of duplicate PDFs")
+    return duplicate_groups
 
-class PDFDocument:
-    """Class representing a PDF document with its metadata and hashes."""
+# Example usage
+if __name__ == "__main__":
+    import sys
     
-    def __init__(self, file_path: str):
-        self.file_path = file_path
-        self.file_name = os.path.basename(file_path)
-        self.file_size = os.path.getsize(file_path)
-        self.metadata = {}
-        self.content_hash = ""
-        self.image_hash = ""
-        self.thumbnail = None
-        self.page_count = 0
-        self.last_modified = os.path.getmtime(file_path)
-        self._load()
+    if len(sys.argv) < 2:
+        print("Usage: python pdf_utils.py <directory>")
+        sys.exit(1)
     
-    def _load(self):
-        """Load PDF metadata and calculate hashes."""
-        self.metadata = PDFUtils.get_pdf_metadata(self.file_path)
-        self.content_hash = PDFUtils.calculate_content_hash(self.file_path)
-        self.image_hash = PDFUtils.calculate_image_hash(self.file_path)
-        self.thumbnail = PDFUtils.generate_thumbnail(self.file_path)
-        self.page_count = self.metadata.get('pages', 0) if self.metadata else 0
+    directory = sys.argv[1]
+    duplicates = find_duplicates(directory)
     
-    def __str__(self):
-        return f"PDFDocument({self.file_name}, pages={self.page_count}, size={self.file_size} bytes)"
+    print(f"\nFound {len(duplicates)} groups of duplicate PDFs:")
+    for i, group in enumerate(duplicates, 1):
+        print(f"\nGroup {i}:")
+        for file_info in group:
+            print(f"  - {file_info['path']} ({file_info['size'] / 1024:.1f} KB)")
