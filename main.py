@@ -38,6 +38,7 @@ from app_qt.i18n import Translator
 from app_qt.drag_drop import FileDropHandler
 from app_qt.gest_scan import ScanManager
 from app_qt.recents import RecentFilesManager
+from app_qt.gest_recent import RecentFoldersManager
 from app_qt.delete import DeleteConfirmationDialog, delete_files
 from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
 
@@ -498,17 +499,20 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize managers
         self.recent_manager = RecentFilesManager()
+        self.recent_folders_manager = RecentFoldersManager()
         self.scan_manager = ScanManager()
         
         # Initialize UI
         self.init_ui()
         
-        # Load settings and recent files
+        # Load settings
         self.load_settings()
-        self.load_recent_files()
         
         # Apply theme
         self.apply_theme()
+        
+        # Load recent files after UI is fully initialized
+        self.load_recent_files()
         
         # Connect signals
         self.scan_manager.scan_completed.connect(self.on_scan_completed)
@@ -581,6 +585,9 @@ class PDFDuplicateFinder(MainWindow):
         self.load_results_action.setShortcut("Ctrl+O")
         file_menu.addAction(self.load_results_action)
         
+        # Add Recent Folders submenu
+        file_menu.addSeparator()
+        self.recent_menu = file_menu.addMenu("Recent Folders")
         file_menu.addSeparator()
         
         self.exit_action = QAction("Exit", self)
@@ -913,18 +920,33 @@ class PDFDuplicateFinder(MainWindow):
     
     def on_scan_folder(self):
         """Open a dialog to select a folder to scan for duplicate PDFs."""
+        # Get the last used directory from settings or use home directory
+        last_dir = self.app_settings.get('last_scan_directory', os.path.expanduser('~'))
+        
         folder = QFileDialog.getExistingDirectory(
             self, 
-            "Select Folder to Scan",
+            self.tr("Select Folder to Scan"),
+            dir=last_dir,
             options=QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
         )
         
         if folder:
             # Normalize the folder path
             folder = os.path.normpath(folder)
-            # Only add to recent files if the folder exists
+            # Only add to recent folders if the folder exists
             if os.path.isdir(folder):
-                self.recent_manager.add_file(folder)
+                self.recent_folders_manager.add_recent_folder(folder)
+                # Update the recent folders menu
+                try:
+                    self.load_recent_files()
+                except Exception as e:
+                    logger.warning(f"Failed to update recent folders menu: {str(e)}")
+                
+                # Save the last used directory
+                self.app_settings['last_scan_directory'] = os.path.dirname(folder) if os.path.isfile(folder) else folder
+                self.save_settings()
+            
+            # Start the scan with the selected folder
             self.scan_directories = [folder]
             self.start_scan()
     
@@ -1453,11 +1475,20 @@ class PDFDuplicateFinder(MainWindow):
             self.scan_directories = directories
         
         if not self.scan_directories:
-            QMessageBox.warning(self, "No Directories", "No directories to scan.")
+            QMessageBox.warning(self, self.tr("No Directories"), self.tr("No directories to scan."))
             return
         
-        # Reset UI
+        # Add directories to recent folders if they don't exist
+        for directory in self.scan_directories:
+            if os.path.isdir(directory):
+                self.recent_folders_manager.add_recent_folder(directory)
+        
+        # Reset UI state
         self.duplicate_groups = []
+        self.current_group_index = -1
+        self.current_file_index = -1
+        
+        # Clear UI components
         if hasattr(self, 'duplicates_view'):
             self.duplicates_view.setModel(None)
         if hasattr(self, 'file_details'):
@@ -1469,7 +1500,7 @@ class PDFDuplicateFinder(MainWindow):
         self.is_scanning = True
         self.progress_bar.setValue(0)
         self.progress_bar.show()
-        self.status_label.setText("Scanning for PDF files...")
+        self.status_label.setText(self.tr("Scanning for PDF files..."))
         self.update_ui_state()
         
         # Start scan in background
@@ -1643,6 +1674,11 @@ class PDFDuplicateFinder(MainWindow):
         
         # Update the model with results
         self.duplicate_groups = duplicate_groups
+        
+        # Reset current indices to -1 to prevent index errors
+        self.current_group_index = -1
+        self.current_file_index = -1
+        
         if hasattr(self, 'duplicates_view'):
             # Disconnect previous model signals if any
             try:
@@ -1667,19 +1703,38 @@ class PDFDuplicateFinder(MainWindow):
             for i in range(model.columnCount()):
                 self.duplicates_view.resizeColumnToContents(i)
             
-            # Select first group if available
+            # If we have results, select the first group and file
             if duplicate_groups:
                 self.current_group_index = 0
                 self.current_file_index = 0
                 self.show_current_group()
+                self.show_current_file()
+            
+            # Update status
+            total_duplicates = sum(len(group) - 1 for group in duplicate_groups) if duplicate_groups else 0
+            if duplicate_groups:
+                self.status_label.setText(
+                    self.tr("Found {} groups with {} duplicate files").format(
+                        len(duplicate_groups), 
+                        total_duplicates
+                    )
+                )
+            else:
+                self.status_label.setText(self.tr("No duplicate files found."))
         
-        # Update status and UI state
+        # Update UI state to reflect the new scan results
+        self.update_ui_state()
+        
+        # Update status
         if duplicate_groups:
             total_duplicates = sum(len(group) - 1 for group in duplicate_groups)
-            status_text = f"Found {len(duplicate_groups)} groups with {total_duplicates} duplicate files"
+            status_text = self.tr("Found {} groups with {} duplicate files").format(
+                len(duplicate_groups), 
+                total_duplicates
+            )
             self.status_label.setText(status_text)
         else:
-            self.status_label.setText("No duplicate files found.")
+            self.status_label.setText(self.tr("No duplicate files found."))
             
         self.update_ui_state()
         
@@ -1708,76 +1763,81 @@ class PDFDuplicateFinder(MainWindow):
             self.duplicates_view.model().setFilterFixedString(text)
     
     def load_recent_files(self):
-        """Load and display recently scanned folders."""
-        if not hasattr(self, 'recent_menu'):
-            # Create the recent files menu if it doesn't exist
-            self.recent_menu = QMenu("Recent Folders", self)
-            
-            # Add a clear action
-            clear_action = QAction("Clear Recent Folders", self)
-            clear_action.triggered.connect(self.clear_recent_folders)
-            self.recent_menu.addAction(clear_action)
-            self.recent_menu.addSeparator()
-            
-            # Add the menu to the file menu
-            file_menu = self.menuBar().findChild(QMenu, "File")
-            if file_menu:
-                # Remove existing recent menu if it exists
-                for action in file_menu.actions():
-                    if action.text() == "Recent Folders":
-                        file_menu.removeAction(action)
-                        break
+        """Load and display recently scanned folders in the File menu."""
+        try:
+            # Make sure recent_menu exists and is valid
+            if not hasattr(self, 'recent_menu') or not self.recent_menu:
+                # Try to find the recent menu in the file menu
+                file_menu = self.menuBar().findChild(QMenu, "File")
+                if file_menu:
+                    for action in file_menu.actions():
+                        if action.menu() and action.menu().title() == self.tr("Recent Folders"):
+                            self.recent_menu = action.menu()
+                            break
                 
-                # Insert before the exit action
-                for action in file_menu.actions():
-                    if action.text() == "Exit":
-                        file_menu.insertMenu(action, self.recent_menu)
-                        break
-        
-        # Clear existing actions (except the clear action and separator)
-        for action in self.recent_menu.actions()[2:]:  # Skip first two actions (clear and separator)
-            self.recent_menu.removeAction(action)
-        
-        # Add recent folders
-        recent_folders = self.recent_manager.get_recent_files()
-        if not recent_folders:
-            no_recent = QAction("No recent folders", self)
-            no_recent.setEnabled(False)
-            self.recent_menu.addAction(no_recent)
-        else:
-            for folder in recent_folders:
-                action = QAction(folder, self)
-                action.setData(folder)
-                action.triggered.connect(lambda checked, f=folder: self.on_recent_folder_selected(f))
-                self.recent_menu.addAction(action)
+                if not hasattr(self, 'recent_menu') or not self.recent_menu:
+                    return
+            
+            # Clear existing actions
+            self.recent_menu.clear()
+            
+            # Create menu actions using RecentFoldersManager
+            self.recent_folders_manager.create_recent_menu_actions(
+                self.recent_menu,
+                self.on_recent_folder_selected,
+                self.tr("Clear Recent Folders")
+            )
+        except RuntimeError as e:
+            if "deleted" in str(e):
+                # Menu was deleted, we'll try again next time
+                if hasattr(self, 'recent_menu'):
+                    del self.recent_menu
+                return
+            raise
     
     def on_recent_folder_selected(self, folder_path):
-        """Handle selection of a recent folder."""
+        """Handle selection of a recent folder from the menu."""
+        if not folder_path:
+            return
+            
+        # Ensure the path is absolute and normalized
+        folder_path = os.path.normpath(os.path.abspath(folder_path))
+        
         if os.path.isdir(folder_path):
+            # Add to recent folders to update the last accessed time
+            self.recent_folders_manager.add_recent_folder(folder_path)
+            
+            # Start the scan
             self.scan_directories = [folder_path]
             self.start_scan()
         else:
-            QMessageBox.warning(
+            # Show error message
+            reply = QMessageBox.warning(
                 self,
-                "Folder Not Found",
-                f"The folder '{folder_path}' no longer exists."
+                self.tr("Folder Not Found"),
+                self.tr("The folder '{}' no longer exists.\n\nWould you like to remove it from the recent folders list?").format(folder_path),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
             )
-            # Remove the non-existent folder from recent list
-            self.recent_manager.remove_recent(folder_path)
-            self.load_recent_files()
+            
+            # Remove the non-existent folder from recent list if requested
+            if reply == QMessageBox.StandardButton.Yes:
+                self.recent_folders_manager.remove_recent_folder(folder_path)
+                self.load_recent_files()
     
     def clear_recent_folders(self):
-        """Clear the list of recently used folders."""
+        """Clear the list of recently used folders after confirmation."""
+        # Ask for confirmation before clearing
         reply = QMessageBox.question(
             self,
-            "Clear Recent Folders",
-            "Are you sure you want to clear the list of recent folders?",
+            self.tr("Clear Recent Folders"),
+            self.tr("Are you sure you want to clear the list of recent folders?"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            self.recent_manager.clear_recents()
+            self.recent_folders_manager.clear_recent_folders()
             self.load_recent_files()
     
     def load_settings(self):
