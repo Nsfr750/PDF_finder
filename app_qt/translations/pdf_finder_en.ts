@@ -8,8 +8,16 @@
         <translation>About</translation>
     </message>
     <message>
+        <source>Are you sure you want to clear the list of recent folders?</source>
+        <translation>Are you sure you want to clear the list of recent folders?</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Cancel</translation>
+    </message>
+    <message>
+        <source>Clear Recent Folders</source>
+        <translation>Clear Recent Folders</translation>
     </message>
     <message>
         <source>Deselect All</source>
@@ -32,6 +40,10 @@
         <translation>File</translation>
     </message>
     <message>
+        <source>Folder Not Found</source>
+        <translation>Folder Not Found</translation>
+    </message>
+    <message>
         <source>Help</source>
         <translation>Help</translation>
     </message>
@@ -42,6 +54,14 @@
     <message>
         <source>Language Changed</source>
         <translation>Language Changed</translation>
+    </message>
+    <message>
+        <source>No Directories</source>
+        <translation>No Directories</translation>
+    </message>
+    <message>
+        <source>No directories to scan.</source>
+        <translation>No directories to scan.</translation>
     </message>
     <message>
         <source>Open</source>
@@ -76,8 +96,16 @@
         <translation>Ready</translation>
     </message>
     <message>
+        <source>Recent Folders</source>
+        <translation>Recent Folders</translation>
+    </message>
+    <message>
         <source>Scan</source>
         <translation>Scan</translation>
+    </message>
+    <message>
+        <source>Scanning for PDF files...</source>
+        <translation>Scanning for PDF files...</translation>
     </message>
     <message>
         <source>Search duplicates...</source>
@@ -110,6 +138,10 @@
     <message>
         <source>The application language has been changed successfully.</source>
         <translation>The application language has been changed successfully.</translation>
+    </message>
+    <message>
+        <source>The folder '{}' no longer exists.\n\nWould you like to remove it from the recent folders list?</source>
+        <translation>The folder '{}' no longer exists.\n\nWould you like to remove it from the recent folders list?</translation>
     </message>
     <message>
         <source>Tools</source>

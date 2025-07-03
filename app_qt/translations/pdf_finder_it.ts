@@ -8,8 +8,16 @@
         <translation>Informazioni</translation>
     </message>
     <message>
+        <source>Are you sure you want to clear the list of recent folders?</source>
+        <translation>Sei sicuro di voler svuotare la lista delle cartelle recenti?</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Cancella</translation>
+    </message>
+    <message>
+        <source>Clear Recent Folders</source>
+        <translation>Svuota Cartelle Recenti</translation>
     </message>
     <message>
         <source>Deselect All</source>
@@ -32,6 +40,10 @@
         <translation>File</translation>
     </message>
     <message>
+        <source>Folder Not Found</source>
+        <translation>Cartella Non Trovata</translation>
+    </message>
+    <message>
         <source>Help</source>
         <translation>Aiuto</translation>
     </message>
@@ -42,6 +54,14 @@
     <message>
         <source>Language Changed</source>
         <translation>Lingua Cambiata</translation>
+    </message>
+    <message>
+        <source>No Directories</source>
+        <translation>Nessuna Cartella</translation>
+    </message>
+    <message>
+        <source>No directories to scan.</source>
+        <translation>Nessuna cartella da scansionare.</translation>
     </message>
     <message>
         <source>Open</source>
@@ -76,8 +96,16 @@
         <translation>Pronto</translation>
     </message>
     <message>
+        <source>Recent Folders</source>
+        <translation>Cartelle Recenti</translation>
+    </message>
+    <message>
         <source>Scan</source>
         <translation>Scansiona</translation>
+    </message>
+    <message>
+        <source>Scanning for PDF files...</source>
+        <translation>Scansione files PDF...</translation>
     </message>
     <message>
         <source>Search duplicates...</source>
@@ -110,6 +138,10 @@
     <message>
         <source>The application language has been changed successfully.</source>
         <translation>Lingua dell'applicazione cambiata con successo.</translation>
+    </message>
+    <message>
+        <source>The folder '{}' no longer exists.\n\nWould you like to remove it from the recent folders list?</source>
+        <translation>La cartella '{}' non esiste più.\n\nVuoi rimuovere la cartella dalla lista delle cartelle recenti?</translation>
     </message>
     <message>
         <source>Tools</source>

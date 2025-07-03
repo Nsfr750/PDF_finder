@@ -113,8 +113,8 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Project specific (add your own project specific ignores here)
-go.bat
-PDF.bat
-PDF_Finder.exe
-PDF-Finder.exe
+*.bat
+*.exe
 /venv_new
+logs/pdf_finder.log
+/logs
