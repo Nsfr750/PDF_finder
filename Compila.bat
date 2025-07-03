@@ -1,8 +1,12 @@
 @ECHO OFF
-@REM PDF Finder 
+@REM ****************** 
+@REM *** PDF Finder ***
+@REM ******************
+@ECHO
 @x:
 @cd "x:/GitHub/PDF_Finder"
 @ECHO
+@pause
 @python -m nuitka ^
 --onefile ^
 --output-dir=x:/GitHub/PDF_Finder ^
