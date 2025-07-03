@@ -1845,6 +1845,24 @@ class PDFDuplicateFinder(MainWindow):
                     f"Failed to delete {failed} file(s).\n\n"
                     "Check the log for details."
                 )
+    def save_settings(self):
+        """Save application settings to persistent storage."""
+        try:
+            if hasattr(self, 'app_settings') and hasattr(self, 'settings'):
+                # Save each setting individually
+                for key, value in self.app_settings.items():
+                    self.settings.setValue(key, value)
+                self.settings.sync()
+                logger.info("Settings saved successfully")
+        except Exception as e:
+            logger.error(f"Error saving settings: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to save settings:\n{str(e)}",
+                QMessageBox.StandardButton.Ok
+            )
+    
     def on_settings(self):
         dialog = SettingsDialog(self, self.app_settings)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -1876,7 +1894,11 @@ class PDFDuplicateFinder(MainWindow):
         """Show the help dialog."""
         try:
             from app_qt.help import HelpDialog
-            help_dialog = HelpDialog(self)
+            # Get current language from settings or use 'en' as default
+            current_lang = getattr(self, 'current_language', 'en')
+            help_dialog = HelpDialog(self, current_lang=current_lang)
+            # Connect language change signal
+            help_dialog.language_changed.connect(self.on_help_language_changed)
             help_dialog.exec()
         except ImportError as e:
             logger.error(f"Error showing help: {e}")
@@ -1886,6 +1908,13 @@ class PDFDuplicateFinder(MainWindow):
                 "Could not load help content. Please check the installation.",
                 QMessageBox.StandardButton.Ok
             )
+    
+    def on_help_language_changed(self, language_code):
+        """Handle language change from help dialog."""
+        # Update the current language in the main application
+        self.current_language = language_code
+        # You can add additional logic here to update other parts of the UI
+        # if needed when the language changes from the help dialog
     
     def on_check_updates(self):
         """Check for application updates."""
