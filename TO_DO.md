@@ -25,15 +25,15 @@
 
 ## Completed
 
-- [x] Add application icon
-- [x] Reorganize menu structure
-- [x] Move language selection to Tools menu
-- [x] Improve error handling and logging
-- [x] Add blue buttons for language selection in help dialog
-- [x] Fix settings save/load functionality
-- [x] Resolve Qt object deletion warnings
-- [x] Improve help dialog layout
-- [x] Add dark/light theme support
-- [x] Implement basic PDF comparison
-- [x] Add preview functionality
-- [x] Add support for multiple languages
+- ✅ Add application icon
+- ✅ Reorganize menu structure
+- ✅ Move language selection to Tools menu
+- ✅ Improve error handling and logging
+- ✅ Add blue buttons for language selection in help dialog
+- ✅ Fix settings save/load functionality
+- ✅ Resolve Qt object deletion warnings
+- ✅ Improve help dialog layout
+- ✅ Add dark/light theme support
+- ✅ Implement basic PDF comparison
+- ✅ Add preview functionality
+- ✅ Add support for multiple languages
