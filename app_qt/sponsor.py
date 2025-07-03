@@ -126,7 +126,7 @@ class SponsorDialog(QDialog):
                 background-color: #0062A3;
             }
         """)
-        donate_btn.clicked.connect(self.open_donation_link)
+        donate_btn.clicked.connect(self.open_paypal_link)
         
         # Copy Monero address button
         copy_monero_btn = QPushButton("Copy Monero Address")
@@ -156,6 +156,10 @@ class SponsorDialog(QDialog):
     def open_donation_link(self):
         """Open donation link in default web browser."""
         QDesktopServices.openUrl(QUrl("https://github.com/sponsors/Nsfr750"))
+
+    def open_paypal_link(self):
+        """Open PayPal link in default web browser."""
+        QDesktopServices.openUrl(QUrl("https://paypal.me/3dmega"))
 
     def copy_to_clipboard(self, text):
         """Copy text to clipboard and show a tooltip."""

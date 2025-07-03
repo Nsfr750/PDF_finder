@@ -88,8 +88,9 @@ class ScanWorker(QRunnable):
                         file_hash = calculate_file_hash(file_path)
                         
                         # Create a temporary directory for extracted images if it doesn't exist
-                        if not hasattr(self, 'temp_dir'):
+                        if self.temp_dir is None or not os.path.isdir(self.temp_dir):
                             self.temp_dir = tempfile.mkdtemp(prefix='pdf_finder_')
+                            logger.debug(f"Created temporary directory: {self.temp_dir}")
                         
                         # Create a unique filename for the extracted image
                         base_name = os.path.basename(file_path)

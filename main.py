@@ -3,6 +3,7 @@ import sys
 import logging
 import traceback
 import json
+import csv
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
@@ -189,11 +190,12 @@ class AboutDialog(QDialog):
         self.setLayout(layout)
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, current_settings=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setMinimumSize(500, 400)
         
+        # Initialize with default settings
         self.settings = {
             'scan_recursive': True,
             'min_file_size': 100,  # KB
@@ -203,6 +205,10 @@ class SettingsDialog(QDialog):
             'theme': 'system',
             'language': 'en'
         }
+        
+        # Update with any provided current settings
+        if current_settings:
+            self.settings.update(current_settings)
         
         self.init_ui()
     
@@ -315,9 +321,18 @@ class PDFDuplicateFinder(MainWindow):
                 
             if hasattr(self, 'open_action') and self.open_action:
                 self.open_action.setText(self.tr("Open"))
+                self.open_action.setStatusTip(self.tr("Open a folder to scan for duplicate PDFs"))
                 
             if hasattr(self, 'exit_action') and self.exit_action:
                 self.exit_action.setText(self.tr("Exit"))
+                
+            # Update Edit menu
+            if hasattr(self, 'edit_menu'):
+                self.edit_menu.setTitle(self.tr("Edit"))
+                
+            # Update View menu
+            if hasattr(self, 'view_menu'):
+                self.view_menu.setTitle(self.tr("View"))
                 
             # Update Tools menu and its items
             if hasattr(self, 'tools_menu'):
@@ -332,6 +347,19 @@ class PDFDuplicateFinder(MainWindow):
                             if hasattr(action, 'data') and action.data():
                                 lang_code = action.data()
                                 action.setText(self.tr(self.translator.language_name(lang_code)))
+                                
+            # Update Help menu
+            if hasattr(self, 'help_menu'):
+                self.help_menu.setTitle(self.tr("Help"))
+                
+                if hasattr(self, 'about_action'):
+                    self.about_action.setText(self.tr("About"))
+                    
+                if hasattr(self, 'documentation_action'):
+                    self.documentation_action.setText(self.tr("Documentation"))
+                    
+                if hasattr(self, 'sponsor_action'):
+                    self.sponsor_action.setText(self.tr("Sponsor"))
                 
         except RuntimeError as e:
             # Catch and log any RuntimeError that might occur if Qt objects are deleted
@@ -339,25 +367,97 @@ class PDFDuplicateFinder(MainWindow):
                 logger.debug("Qt object deleted during retranslate_ui")
                 return
             raise
+            
+    def change_language(self, language_code: str):
+        """Change the application language.
         
-        # Update buttons
-        self.scan_button.setText(self.tr("Scan"))
-        self.cancel_button.setText(self.tr("Cancel"))
-        self.settings_button.setText(self.tr("Settings"))
+        Args:
+            language_code: Two-letter language code (e.g., 'en', 'it')
+        """
+        if language_code != self.translator.current_language:
+            # Update the translator
+            self.translator.load_language(language_code)
+            
+            # Update the application settings
+            self.app_settings['language'] = language_code
+            self.save_settings()
+            
+            # Update the checked state of the language actions
+            if hasattr(self, 'language_group'):
+                for action in self.language_group.actions():
+                    if action.data() == language_code:
+                        action.setChecked(True)
+                    # Update action text in case it contains translated text
+                    if hasattr(action, 'data') and action.data():
+                        action.setText(self.tr(self.translator.language_name(action.data())))
+            
+            # Retranslate the UI
+            self.retranslate_ui()
+            
+            # Update all dynamic text in the UI
+            self.update_ui_text()
+            
+            # Emit signal to notify other components
+            self.language_changed.emit()
+            
+            # Show a message to inform the user that the language has been changed
+            QMessageBox.information(
+                self,
+                self.tr("Language Changed"),
+                self.tr("The application language has been changed successfully.")
+            )
+    
+    def update_ui_text(self):
+        """Update all UI text elements that need to be retranslated."""
+        # Update buttons if they exist
+        if hasattr(self, 'scan_button'):
+            self.scan_button.setText(self.tr("Scan"))
         
-        # Update labels
-        self.status_label.setText(self.tr("Ready"))
-        self.progress_label.setText(self.tr("Progress:"))
+        if hasattr(self, 'cancel_button'):
+            self.cancel_button.setText(self.tr("Cancel"))
+            
+        if hasattr(self, 'settings_button'):
+            self.settings_button.setText(self.tr("Settings"))
+            
+        if hasattr(self, 'select_all_action'):
+            self.select_all_action.setText(self.tr("Select All"))
+            
+        if hasattr(self, 'deselect_all_action'):
+            self.deselect_all_action.setText(self.tr("Deselect All"))
         
-        # Update table headers
-        headers = [
-            self.tr("File"),
-            self.tr("Size"),
-            self.tr("Pages"),
-            self.tr("Similarity"),
-            self.tr("Path")
-        ]
-        self.results_table.setHorizontalHeaderLabels(headers)
+        # Update labels if they exist
+        if hasattr(self, 'status_label'):
+            self.status_label.setText(self.tr("Ready"))
+            
+        if hasattr(self, 'progress_label'):
+            self.progress_label.setText(self.tr("Progress:"))
+            
+        if hasattr(self, 'search_box') and hasattr(self.search_box, 'setPlaceholderText'):
+            self.search_box.setPlaceholderText(self.tr("Search duplicates..."))
+        
+        # Update table headers if the table exists
+        if hasattr(self, 'results_table'):
+            headers = [
+                self.tr("File"),
+                self.tr("Size"),
+                self.tr("Pages"),
+                self.tr("Similarity"),
+                self.tr("Path")
+            ]
+            self.results_table.setHorizontalHeaderLabels(headers)
+            
+        # Update menu items
+        if hasattr(self, 'file_menu'):
+            self.file_menu.setTitle(self.tr("File"))
+            
+        if hasattr(self, 'tools_menu'):
+            self.tools_menu.setTitle(self.tr("Tools"))
+            
+        if hasattr(self, 'help_menu'):
+            self.help_menu.setTitle(self.tr("Help"))
+            
+        # Update window title
+        self.setWindowTitle(self.tr("PDF Duplicate Finder"))
     
     def __init__(self):
         # Initialize the translator
@@ -469,6 +569,20 @@ class PDFDuplicateFinder(MainWindow):
         
         file_menu.addSeparator()
         
+        # Save results action
+        self.save_results_action = QAction("Save Results...", self)
+        self.save_results_action.triggered.connect(self.save_scan_results)
+        self.save_results_action.setShortcut("Ctrl+S")
+        file_menu.addAction(self.save_results_action)
+        
+        # Load results action
+        self.load_results_action = QAction("Load Results...", self)
+        self.load_results_action.triggered.connect(self.load_scan_results)
+        self.load_results_action.setShortcut("Ctrl+O")
+        file_menu.addAction(self.load_results_action)
+        
+        file_menu.addSeparator()
+        
         self.exit_action = QAction("Exit", self)
         self.exit_action.triggered.connect(self.close)
         file_menu.addAction(self.exit_action)
@@ -496,14 +610,19 @@ class PDFDuplicateFinder(MainWindow):
             self.language_menu.addAction(action)
             self.language_group.addAction(action)
         
-        # Set current language
-        current_lang = QLocale.system().name()[:2]  # Get 2-letter language code
-        if current_lang not in self.translator.available_languages():
-            current_lang = 'en'  # Default to English
+        # Set current language from settings or system default
+        current_lang = self.app_settings.get('language')
+        if not current_lang or current_lang not in self.translator.available_languages():
+            current_lang = QLocale.system().name()[:2]  # Get 2-letter language code
+            if current_lang not in self.translator.available_languages():
+                current_lang = 'en'  # Default to English
         
+        # Update the checked state and load the language
         for action in self.language_group.actions():
             if action.data() == current_lang:
                 action.setChecked(True)
+                # Ensure the language is loaded
+                self.translator.load_language(current_lang)
                 break
                 
         # Add separator
@@ -563,6 +682,7 @@ class PDFDuplicateFinder(MainWindow):
         
     def create_toolbar(self):
         toolbar = self.addToolBar("Main Toolbar")
+        toolbar.setObjectName("mainToolbar")  # Add this line to set objectName
         toolbar.setMovable(False)
         toolbar.setIconSize(QSize(24, 24))
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
@@ -604,6 +724,23 @@ class PDFDuplicateFinder(MainWindow):
         toolbar.addAction(self.next_group_action)
         
         # Add another separator
+        toolbar.addSeparator()
+        
+        # Select All button
+        self.select_all_action = QAction("Select All", self)
+        self.select_all_action.triggered.connect(self.select_all)
+        self.select_all_action.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogYesButton))
+        self.select_all_action.setShortcut("Ctrl+A")
+        toolbar.addAction(self.select_all_action)
+        
+        # Deselect All button
+        self.deselect_all_action = QAction("Deselect All", self)
+        self.deselect_all_action.triggered.connect(self.deselect_all)
+        self.deselect_all_action.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogNoButton))
+        self.deselect_all_action.setShortcut("Ctrl+D")
+        toolbar.addAction(self.deselect_all_action)
+        
+        # Add separator
         toolbar.addSeparator()
         
         # Delete button
@@ -738,6 +875,24 @@ class PDFDuplicateFinder(MainWindow):
                 index = model.index(self.current_file_index, 0)
                 if index.isValid():
                     self.duplicates_view.setCurrentIndex(index)
+    
+    def select_all(self):
+        """Select all files in the current group."""
+        if hasattr(self, 'duplicates_view') and self.duplicates_view.model():
+            model = self.duplicates_view.model()
+            selection_model = self.duplicates_view.selectionModel()
+            if selection_model and model.rowCount() > 0:
+                # Select all rows
+                selection = QItemSelection()
+                first_idx = model.index(0, 0)
+                last_idx = model.index(model.rowCount() - 1, 0)
+                selection.select(first_idx, last_idx)
+                selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+                
+    def deselect_all(self):
+        """Deselect all files in the current group."""
+        if hasattr(self, 'duplicates_view') and self.duplicates_view.selectionModel():
+            self.duplicates_view.selectionModel().clearSelection()
     
     def on_next_file(self):
         """Navigate to the next file in the current group."""
@@ -950,19 +1105,28 @@ class PDFDuplicateFinder(MainWindow):
         model = self.duplicates_view.model()
         item = model.data(index, Qt.ItemDataRole.UserRole)
         
-        # Update preview if it's a file item
-        if hasattr(item, 'file_path') and hasattr(self, 'preview_widget'):
-            try:
-                self.preview_widget.load_pdf(item.file_path)
-            except Exception as e:
-                logger.error(f"Error loading PDF preview: {e}")
+        # Update preview if it's a file item and preview_widget exists
+        if hasattr(item, 'file_path'):
+            # Update preview widget if available
+            if hasattr(self, 'preview_widget'):
+                try:
+                    self.preview_widget.load_pdf(item.file_path)
+                except Exception as e:
+                    logger.error(f"Error loading PDF preview: {e}")
+                    if hasattr(self.preview_widget, 'clear'):
+                        self.preview_widget.clear()
+            
+            # Update file details if available
+            if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
+                try:
+                    self.file_details.set_file(item.file_path)
+                except Exception as e:
+                    logger.error(f"Error updating file details: {e}")
+        else:
+            # Clear preview and details if no file path
+            if hasattr(self, 'preview_widget') and hasattr(self.preview_widget, 'clear'):
                 self.preview_widget.clear()
-        
-        # Update file details
-        if hasattr(self, 'file_details'):
-            if hasattr(item, 'file_path'):
-                self.file_details.set_file(item.file_path)
-            else:
+            if hasattr(self, 'file_details') and hasattr(self.file_details, 'clear'):
                 self.file_details.clear()
     
     def on_keep_file(self):
@@ -1013,57 +1177,44 @@ class PDFDuplicateFinder(MainWindow):
         
         # Show confirmation dialog
         dialog = DeleteConfirmationDialog(
-            parent=self,
-            files=list(files_to_delete),
-            use_recycle_bin=self.settings.get('use_recycle_bin', True)
+            file_paths=list(files_to_delete),
+            parent=self
         )
         
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Get the selected deletion options
-            use_recycle_bin = dialog.use_recycle_bin
-            
-            # Delete the files
+            # Delete the files using the user's choice (from the dialog's checkbox)
             success, failed = delete_files(
-                list(files_to_delete),
-                use_recycle_bin=use_recycle_bin
+                file_paths=list(files_to_delete),
+                parent=self,
+                use_recycle_bin=not dialog.permanently
             )
             
             # Update the UI based on deletion results
-            if success:
+            if success > 0:
                 # Remove deleted files from the model
                 if model:
-                    model.remove_files(success)
+                    model.remove_files(list(files_to_delete))
                 
                 # Update status
-                self.status_label.setText(f"Deleted {len(success)} file(s)")
+                self.status_label.setText(f"Deleted {success} file(s)")
                 
-                # If all files in a group were deleted, remove the group
-                self.duplicate_groups = [
-                    group for group in self.duplicate_groups 
-                    if any(not os.path.exists(f) for f in group)
-                ]
-                
-                # Update the model
-                if hasattr(self, 'duplicates_view'):
-                    model = DuplicateFilesModel(self.duplicate_groups)
-                    self.duplicates_view.setModel(model)
+                # Refresh the view
+                self.show_current_group()
             
-            if failed:
-                error_msg = "\n".join(f"• {os.path.basename(f)}: {e}" for f, e in failed.items())
+            if failed > 0:
+                # Show error message for failed deletions
                 QMessageBox.warning(
                     self,
-                    "Deletion Failed",
-                    f"Failed to delete {len(failed)} file(s):\n\n{error_msg}"
+                    "Deletion Incomplete",
+                    f"Successfully deleted {success} file(s).\n"
+                    f"Failed to delete {failed} file(s).\n\n"
+                    "Check the log for details."
                 )
-            
-            # Update the UI state
-            self.update_ui_state()
-    
     def on_settings(self):
-        dialog = SettingsDialog(self)
+        dialog = SettingsDialog(self, self.app_settings)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Save settings
-            self.settings = dialog.get_settings()
+            self.app_settings = dialog.get_settings()
             self.save_settings()
             self.apply_theme()
     
@@ -1339,6 +1490,152 @@ class PDFDuplicateFinder(MainWindow):
             self.is_scanning = False
             self.update_ui_state()
     
+    def save_scan_results(self):
+        """Save the current scan results to a CSV file."""
+        if not self.duplicate_groups:
+            QMessageBox.information(self, "No Results", "No scan results to save.")
+            return
+            
+        # Get the default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
+        
+        # Open file dialog to select save location
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Scan Results",
+            os.path.join(os.path.expanduser("~"), default_filename),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow([
+                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
+                    'Creation Date', 'Modification Date', 'MD5 Hash'
+                ])
+                
+                # Write data for each duplicate group
+                for i, group in enumerate(self.duplicate_groups, 1):
+                    for file_info in group:
+                        writer.writerow([
+                            i,  # Group number
+                            file_info.get('path', ''),
+                            file_info.get('size', ''),
+                            file_info.get('pages', ''),
+                            file_info.get('creation_date', ''),
+                            file_info.get('modification_date', ''),
+                            file_info.get('md5', '')
+                        ])
+            
+            QMessageBox.information(
+                self, 
+                "Save Successful", 
+                f"Scan results saved to:\n{file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error saving scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Failed to save scan results:\n{str(e)}"
+            )
+    
+    def load_scan_results(self):
+        """Load scan results from a CSV file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Scan Results",
+            os.path.expanduser("~"),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                
+                # Check if required columns exist
+                required_columns = ['Group', 'File Path', 'Size (bytes)']
+                if not all(col in reader.fieldnames for col in required_columns):
+                    raise ValueError("Invalid CSV format. Required columns not found.")
+                
+                # Group files by group number
+                groups = {}
+                for row in reader:
+                    group_num = int(row['Group'])
+                    if group_num not in groups:
+                        groups[group_num] = []
+                    
+                    # Create file info dictionary
+                    file_info = {
+                        'path': row['File Path'],
+                        'size': int(row.get('Size (bytes)', 0)),
+                        'pages': int(row.get('Pages', 0)) if row.get('Pages') else 0,
+                        'creation_date': row.get('Creation Date', ''),
+                        'modification_date': row.get('Modification Date', ''),
+                        'md5': row.get('MD5 Hash', '')
+                    }
+                    groups[group_num].append(file_info)
+                
+                # Convert to list of groups
+                duplicate_groups = list(groups.values())
+                
+                # Update the UI with loaded results
+                self.duplicate_groups = duplicate_groups
+                if hasattr(self, 'duplicates_view'):
+                    # Disconnect previous model signals if any
+                    try:
+                        self.duplicates_view.selectionModel().selectionChanged.disconnect()
+                    except (TypeError, RuntimeError):
+                        pass
+                    
+                    # Create a new model with the loaded results
+                    model = DuplicateFilesModel(duplicate_groups)
+                    self.duplicates_view.setModel(model)
+                    
+                    # Connect selection change signal
+                    selection_model = self.duplicates_view.selectionModel()
+                    selection_model.selectionChanged.connect(self.on_file_selection_changed)
+                    
+                    # Update the view
+                    self.duplicates_view.resizeColumnsToContents()
+                    
+                    # Select first item if available
+                    if duplicate_groups:
+                        self.current_group_index = 0
+                        self.show_current_group()
+                    
+                    # Update status
+                    total_duplicates = sum(len(group) - 1 for group in duplicate_groups)
+                    status_text = f"Loaded {len(duplicate_groups)} groups with {total_duplicates} duplicate files"
+                    self.status_label.setText(status_text)
+                
+                self.update_ui_state()
+                
+                QMessageBox.information(
+                    self, 
+                    "Load Successful", 
+                    f"Successfully loaded {len(duplicate_groups)} groups from:\n{file_path}"
+                )
+                
+        except Exception as e:
+            logger.error(f"Error loading scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Load Error",
+                f"Failed to load scan results:\n{str(e)}"
+            )
+    
     def on_scan_completed(self, duplicate_groups):
         """Handle completion of the scan operation."""
         self.is_scanning = False
@@ -1529,46 +1826,154 @@ class PDFDuplicateFinder(MainWindow):
         
         if theme == 'dark':
             self.setStyleSheet("""
-                QMainWindow, QDialog {
+                /* Main window and dialogs */
+                QMainWindow, QDialog, QWidget {
                     background-color: #2b2b2b;
                     color: #e0e0e0;
+                    selection-background-color: #3a6ea5;
+                    selection-color: #ffffff;
                 }
-                QTreeWidget, QLabel, QPushButton, QComboBox, QSpinBox, QCheckBox {
+                
+                /* Text and labels */
+                QLabel, QCheckBox {
+                    color: #e0e0e0;
+                }
+                
+                /* Input fields and buttons */
+                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit {
                     background-color: #3c3f41;
                     color: #e0e0e0;
                     border: 1px solid #555;
+                    padding: 3px;
+                    border-radius: 3px;
                 }
+                
+                /* Tree and list widgets */
+                QTreeView, QTreeWidget, QListView, QListWidget, QTableWidget {
+                    background-color: #2b2b2b;
+                    color: #e0e0e0;
+                    border: 1px solid #3f3f3f;
+                    alternate-background-color: #323232;
+                }
+                
+                /* Tree and list items */
+                QTreeView::item, QTreeWidget::item, QListWidget::item {
+                    padding: 5px;
+                    border: 1px solid transparent;
+                }
+                
+                /* Selected items */
+                QTreeView::item:selected, QTreeWidget::item:selected, 
+                QListWidget::item:selected, QTableView::item:selected {
+                    background-color: #3a6ea5;
+                    color: #ffffff;
+                }
+                
+                /* Hover effect */
+                QTreeView::item:hover, QTreeWidget::item:hover, 
+                QListWidget::item:hover, QTableView::item:hover {
+                    background-color: #3a3a3a;
+                }
+                
+                /* Headers */
                 QHeaderView::section {
                     background-color: #3c3f41;
                     color: #e0e0e0;
                     padding: 5px;
                     border: 1px solid #555;
                 }
-                QTreeView::item:selected {
-                    background-color: #4a4a4a;
-                    color: #ffffff;
+                
+                /* Buttons */
+                QPushButton {
+                    background-color: #3c3f41;
+                    color: #e0e0e0;
+                    border: 1px solid #555;
+                    padding: 5px 10px;
+                    border-radius: 3px;
+                }
+                
+                QPushButton:hover {
+                    background-color: #4e5153;
+                }
+                
+                QPushButton:pressed {
+                    background-color: #2d2f30;
                 }
             """)
         elif theme == 'light':
             self.setStyleSheet("""
-                QMainWindow, QDialog {
+                /* Main window and dialogs */
+                QMainWindow, QDialog, QWidget {
                     background-color: #f0f0f0;
-                    color: #000000;
+                    color: #333333;
+                    selection-background-color: #4a90e2;
+                    selection-color: #ffffff;
                 }
-                QTreeWidget, QLabel, QPushButton, QComboBox, QSpinBox, QCheckBox {
+                
+                /* Text and labels */
+                QLabel, QCheckBox {
+                    color: #333333;
+                }
+                
+                /* Input fields and buttons */
+                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit {
                     background-color: #ffffff;
-                    color: #000000;
-                    border: 1px solid #ccc;
+                    color: #333333;
+                    border: 1px solid #cccccc;
+                    padding: 3px;
+                    border-radius: 3px;
                 }
+                
+                /* Tree and list widgets */
+                QTreeView, QTreeWidget, QListView, QListWidget, QTableWidget {
+                    background-color: #ffffff;
+                    color: #333333;
+                    border: 1px solid #cccccc;
+                    alternate-background-color: #f8f8f8;
+                }
+                
+                /* Tree and list items */
+                QTreeView::item, QTreeWidget::item, QListWidget::item {
+                    padding: 5px;
+                    border: 1px solid transparent;
+                }
+                
+                /* Selected items */
+                QTreeView::item:selected, QTreeWidget::item:selected, 
+                QListWidget::item:selected, QTableView::item:selected {
+                    background-color: #4a90e2;
+                    color: #ffffff;
+                }
+                
+                /* Hover effect */
+                QTreeView::item:hover, QTreeWidget::item:hover, 
+                QListWidget::item:hover, QTableView::item:hover {
+                    background-color: #f0f0f0;
+                }
+                
+                /* Headers */
                 QHeaderView::section {
                     background-color: #e0e0e0;
-                    color: #000000;
+                    color: #333333;
                     padding: 5px;
-                    border: 1px solid #ccc;
+                    border: 1px solid #cccccc;
                 }
-                QTreeView::item:selected {
+                
+                /* Buttons */
+                QPushButton {
+                    background-color: #f8f8f8;
+                    color: #333333;
+                    border: 1px solid #cccccc;
+                    padding: 5px 10px;
+                    border-radius: 3px;
+                }
+                
+                QPushButton:hover {
+                    background-color: #e8e8e8;
+                }
+                
+                QPushButton:pressed {
                     background-color: #e0e0e0;
-                    color: #000000;
                 }
             """)
         else:  # system

@@ -4,74 +4,120 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>PDF Duplicate Finder</source>
-        <translation>Cerca Duplicati PDF</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>File</source>
-        <translation>File</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Open Folder</source>
-        <translation>Apri Cartella</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Exit</source>
-        <translation>Esci</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Scan</source>
-        <translation>Scansione</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Start Scan</source>
-        <translation>Avvia Scansione</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Cancel Scan</source>
-        <translation>Annulla Scansione</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>View</source>
-        <translation>Visualizza</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Language</source>
-        <translation>Lingua</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Help</source>
-        <translation>Aiuto</translation>
-    </message>
-    <message>
-        <location filename="main_pyside.py" line="1"/>
         <source>About</source>
         <translation>Informazioni</translation>
     </message>
     <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Scanning for duplicate PDFs...</source>
-        <translation>Ricerca di PDF duplicati in corso...</translation>
+        <source>Cancel</source>
+        <translation>Cancella</translation>
     </message>
     <message>
-        <location filename="main_pyside.py" line="1"/>
+        <source>Deselect All</source>
+        <translation>Deseleziona Tutto</translation>
+    </message>
+    <message>
+        <source>Documentation</source>
+        <translation>Documentazione</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>Modifica</translation>
+    </message>
+    <message>
+        <source>Exit</source>
+        <translation>Esci</translation>
+    </message>
+    <message>
+        <source>File</source>
+        <translation>File</translation>
+    </message>
+    <message>
+        <source>Help</source>
+        <translation>Aiuto</translation>
+    </message>
+    <message>
+        <source>Language</source>
+        <translation>Lingua</translation>
+    </message>
+    <message>
+        <source>Language Changed</source>
+        <translation>Lingua Cambiata</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Apri</translation>
+    </message>
+    <message>
+        <source>Open a folder to scan for duplicate PDFs</source>
+        <translation>Apri una cartella per cercare file PDF duplicati</translation>
+    </message>
+    <message>
+        <source>Open Folder</source>
+        <translation>Apri Cartella</translation>
+    </message>
+    <message>
+        <source>Pages</source>
+        <translation>Pagine</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation>Percorso</translation>
+    </message>
+    <message>
+        <source>PDF Duplicate Finder</source>
+        <translation>PDF Duplicate Finder</translation>
+    </message>
+    <message>
+        <source>Progress:</source>
+        <translation>Progresso:</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>Pronto</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>Scansiona</translation>
+    </message>
+    <message>
+        <source>Search duplicates...</source>
+        <translation>Cerca Duplicati...</translation>
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation>Seleziona Tutto</translation>
+    </message>
+    <message>
         <source>Select Folder to Scan</source>
         <translation>Seleziona Cartella da Scansionare</translation>
     </message>
     <message>
-        <location filename="main_pyside.py" line="1"/>
-        <source>Scan completed. Found %n duplicate group(s).</source>
-        <translation>Scansione completata. Trovati %n gruppi di duplicati.</translation>
+        <source>Settings</source>
+        <translation>Impostazioni</translation>
+    </message>
+    <message>
+        <source>Similarity</source>
+        <translation>Similitudine</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Dimensione</translation>
+    </message>
+    <message>
+        <source>Sponsor</source>
+        <translation>Sponsorizza</translation>
+    </message>
+    <message>
+        <source>The application language has been changed successfully.</source>
+        <translation>Lingua dell'applicazione cambiata con successo.</translation>
+    </message>
+    <message>
+        <source>Tools</source>
+        <translation>Strumenti</translation>
+    </message>
+    <message>
+        <source>View</source>
+        <translation>Visualizza</translation>
     </message>
 </context>
 </TS>

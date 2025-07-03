@@ -5,10 +5,48 @@ Compile translation files (.ts) to binary format (.qm) using PySide6's lrelease.
 import os
 import sys
 import subprocess
+import shutil
 from pathlib import Path
+
+def find_lrelease():
+    """Find the lrelease executable."""
+    # Try to find pyside6-lrelease in the Python scripts directory
+    python_dir = os.path.dirname(sys.executable)
+    
+    # Check for Windows
+    if sys.platform == 'win32':
+        lrelease = os.path.join(python_dir, 'Scripts', 'pyside6-lrelease.exe')
+        if os.path.exists(lrelease):
+            return lrelease
+    
+    # Check for Unix-like systems
+    lrelease = os.path.join(python_dir, 'bin', 'pyside6-lrelease')
+    if os.path.exists(lrelease):
+        return lrelease
+    
+    # Try to find it in the PATH
+    lrelease = shutil.which('pyside6-lrelease')
+    if lrelease:
+        return lrelease
+    
+    # Try the direct path on Windows
+    if sys.platform == 'win32':
+        lrelease = os.path.join(os.path.dirname(python_dir), 'Scripts', 'pyside6-lrelease.exe')
+        if os.path.exists(lrelease):
+            return lrelease
+    
+    return None
 
 def compile_translations():
     """Compile all .ts files in the translations directory."""
+    # Find lrelease
+    lrelease = find_lrelease()
+    if not lrelease:
+        print("Error: Could not find pyside6-lrelease. Make sure PySide6 is installed.")
+        return False
+    
+    print(f"Using lrelease at: {lrelease}")
+    
     # Get the directory of this script
     script_dir = Path(__file__).parent.absolute()
     translations_dir = script_dir / 'app_qt' / 'translations'
@@ -24,50 +62,44 @@ def compile_translations():
         print(f"No .ts files found in {translations_dir}")
         return False
     
-    # Get the path to lrelease
-    try:
-        from PySide6.utilities.lrelease import run_lrelease
-        use_module = True
-    except ImportError:
-        use_module = False
-    
-    # Compile each .ts file to .qm
+    # Compile each .ts file
+    success = True
     for ts_file in ts_files:
         qm_file = ts_file.with_suffix('.qm')
         print(f"Compiling {ts_file} to {qm_file}...")
         
         try:
-            if use_module:
-                # Use the Python module if available
-                args = [str(ts_file), '-qm', str(qm_file)]
-                if not run_lrelease(args):
-                    print(f"Error compiling {ts_file}")
-                    return False
+            # Run pyside6-lrelease
+            result = subprocess.run(
+                [lrelease, str(ts_file)],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            if result.returncode == 0:
+                print(f"Successfully compiled {ts_file}")
             else:
-                # Fall back to subprocess
-                cmd = [
-                    sys.executable, 
-                    '-m', 'PySide6.utilities.lrelease',
-                    str(ts_file),
-                    '-qm', str(qm_file)
-                ]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"Error compiling {ts_file}:")
-                    print(result.stderr)
-                    return False
+                print(f"Error compiling {ts_file}:")
+                print(result.stderr)
+                success = False
                 
-            print(f"Successfully compiled {qm_file}")
-                
+        except subprocess.CalledProcessError as e:
+            print(f"Error compiling {ts_file}:")
+            print(e.stderr)
+            success = False
         except Exception as e:
-            print(f"Error compiling {ts_file}: {e}")
-            return False
+            print(f"Unexpected error compiling {ts_file}:")
+            print(str(e))
+            success = False
     
-    print("All translations compiled successfully.")
-    return True
+    return success
 
 if __name__ == "__main__":
     if compile_translations():
+        print("Translation compilation completed successfully.")
         sys.exit(0)
     else:
+        print("Translation compilation failed.")
         sys.exit(1)
+

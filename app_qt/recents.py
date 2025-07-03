@@ -27,14 +27,14 @@ class RecentFilesManager(QObject):
         self._load()
     
     def add_file(self, file_path: str, metadata: Optional[dict] = None):
-        """Add a file to the recent files list.
+        """Add a file or directory to the recent files list.
         
         Args:
-            file_path: Path to the file to add
-            metadata: Optional metadata to store with the file
+            file_path: Path to the file or directory to add
+            metadata: Optional metadata to store with the path
         """
-        if not file_path or not os.path.isfile(file_path):
-            logger.warning(f"Cannot add non-existent file to recents: {file_path}")
+        if not file_path or not (os.path.exists(file_path) and (os.path.isfile(file_path) or os.path.isdir(file_path))):
+            logger.warning(f"Cannot add non-existent path to recents: {file_path}")
             return
         
         # Remove any existing entry for this file

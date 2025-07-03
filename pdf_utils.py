@@ -1,5 +1,6 @@
 import os
 import hashlib
+import tempfile
 import fitz  # PyMuPDF
 from PIL import Image
 import imagehash
