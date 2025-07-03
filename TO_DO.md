@@ -19,13 +19,20 @@
 
 ## In Progress
 
+- [ ] Implement batch processing for large PDF collections
+- [ ] Improve PDF text extraction accuracy for scanned documents
+- [ ] Add more detailed progress reporting during scans
+
+## Completed
+
 - [x] Add application icon
 - [x] Reorganize menu structure
 - [x] Move language selection to Tools menu
 - [x] Improve error handling and logging
-
-## Completed
-
+- [x] Add blue buttons for language selection in help dialog
+- [x] Fix settings save/load functionality
+- [x] Resolve Qt object deletion warnings
+- [x] Improve help dialog layout
 - [x] Add dark/light theme support
 - [x] Implement basic PDF comparison
 - [x] Add preview functionality

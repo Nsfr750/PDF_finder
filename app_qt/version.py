@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version information
-__version__ = "2.7.0"
+__version__ = "2.7.1"
 __version_info__ = tuple(int(num) if num.isdigit() else num 
                         for num in __version__.replace("-", ".", 1).split("."))
 
@@ -44,6 +44,6 @@ def get_codename():
     """Get the codename for this version."""
     # Add version codenames here if desired
     version_codenames = {
-        "2.7.0": "Butterfly Release"
+        "2.7.1": "Butterfly"
     }
     return version_codenames.get(__version__, "")
