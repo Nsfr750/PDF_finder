@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QMainWindow
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QImage
 import fitz  # PyMuPDF
@@ -116,3 +116,38 @@ class PDFPreviewWidget(QWidget):
     def prev_page(self):
         if self.current_pdf is not None and self.current_page > 0:
             self.show_page(self.current_page - 1)
+
+
+class PreviewWindow(QMainWindow):
+    """A separate window for displaying PDF previews."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("PDF Preview")
+        self.setMinimumSize(800, 600)
+        
+        # Create the preview widget
+        self.preview_widget = PDFPreviewWidget()
+        self.setCentralWidget(self.preview_widget)
+        
+        # Store reference to parent to prevent garbage collection
+        self._parent = parent
+        
+    def load_pdf(self, file_path):
+        """Load a PDF file into the preview widget."""
+        if hasattr(self.preview_widget, 'load_pdf'):
+            self.preview_widget.load_pdf(file_path)
+            self.setWindowTitle(f"PDF Preview - {os.path.basename(file_path)}")
+            
+    def clear(self):
+        """Clear the preview."""
+        if hasattr(self.preview_widget, 'clear'):
+            self.preview_widget.clear()
+            self.setWindowTitle("PDF Preview")
+            
+    def closeEvent(self, event):
+        """Handle window close event."""
+        # Notify parent that we're closing
+        if hasattr(self._parent, 'on_preview_window_closed'):
+            self._parent.on_preview_window_closed()
+        event.accept()

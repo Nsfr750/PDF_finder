@@ -9,6 +9,9 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 from logging.handlers import RotatingFileHandler
 
+# Import Version
+from app_qt.version import get_version
+
 # Import log viewer
 from app_qt.view_log import show_log_viewer
 
@@ -50,7 +53,7 @@ from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from app_qt.preview_widget import PDFPreviewWidget
+from app_qt.preview_widget import PDFPreviewWidget, PreviewWindow
 
 # Set up logging before importing Qt
 log_dir = Path("logs")
@@ -91,7 +94,7 @@ from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from app_qt.preview_widget import PDFPreviewWidget
+from app_qt.preview_widget import PDFPreviewWidget, PreviewWindow
 
 def setup_logging():
     """Configure the logging system for the application."""
@@ -144,7 +147,7 @@ logger = setup_logging()
 
 # Constants
 APP_NAME = "PDF Duplicate Finder"
-APP_VERSION = "2.7.0"
+APP_VERSION = get_version()
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -310,6 +313,7 @@ class PDFDuplicateFinder(MainWindow):
         self.scan_directories = []
         self.scan_thread = None
         self.is_scanning = False
+        self.preview_window = None  # Will hold the preview window instance
         
         # Initialize managers
         self.recent_manager = RecentFilesManager()
@@ -537,6 +541,7 @@ class PDFDuplicateFinder(MainWindow):
         self.scan_directories = []
         self.scan_thread = None
         self.is_scanning = False
+        self.preview_window = None  # Will hold the preview window instance
         
         # Initialize managers
         self.recent_manager = RecentFilesManager()
@@ -1024,56 +1029,108 @@ class PDFDuplicateFinder(MainWindow):
                 f"Could not clear recent files: {str(e)}"
             )
     
-    def on_scan_completed(self, results):
+    def update_duplicates_view(self):
+        """Update the duplicates view with the current duplicate groups."""
+        try:
+            logger.debug("Updating duplicates view...")
+            
+            if not hasattr(self, 'duplicates_view'):
+                logger.error("duplicates_view not found in the UI")
+                return
+                
+            logger.debug(f"Found {len(self.duplicate_groups)} duplicate groups to display")
+            
+            # Log the structure of the first group for debugging
+            if self.duplicate_groups:
+                logger.debug(f"First group sample: {self.duplicate_groups[0][0] if self.duplicate_groups[0] else 'Empty group'}")
+            
+            # Create a model with the current duplicate groups
+            from app_qt.search_dup import DuplicateFilesModel
+            try:
+                model = DuplicateFilesModel(self.duplicate_groups)
+                logger.debug("Created DuplicateFilesModel successfully")
+                
+                # Set the model on the view
+                self.duplicates_view.setModel(model)
+                logger.debug("Set model on duplicates_view")
+                
+                # Expand all items by default
+                self.duplicates_view.expandAll()
+                logger.debug("Expanded all items in the view")
+                
+                # Resize columns to fit content
+                col_count = model.columnCount()
+                logger.debug(f"Model has {col_count} columns")
+                
+                for i in range(col_count):
+                    self.duplicates_view.resizeColumnToContents(i)
+                
+                logger.debug("Finished updating duplicates view")
+                
+            except Exception as e:
+                logger.error(f"Error in model/view setup: {e}", exc_info=True)
+                raise
+                
+        except Exception as e:
+            logger.error(f"Error updating duplicates view: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to update the duplicates view: {str(e)}\n\nCheck the log file for more details."
+            )
+    
+    def on_scan_completed(self, duplicate_groups):
         """
         Handle the completion of a scan operation.
         
         Args:
-            results: The results of the scan operation
+            duplicate_groups: List of duplicate file groups found during the scan
         """
         try:
-            # Enable UI elements
-            self.scan_button.setEnabled(True)
-            self.stop_button.setEnabled(False)
+            # Disconnect the selection changed signal temporarily to prevent multiple updates
+            if hasattr(self, 'duplicates_view') and self.duplicates_view and self.duplicates_view.selectionModel():
+                try:
+                    self.duplicates_view.selectionModel().selectionChanged.disconnect()
+                except (TypeError, RuntimeError):
+                    # Ignore errors if signal wasn't connected
+                    pass
+            
+            # Store the duplicate groups
+            self.duplicate_groups = duplicate_groups
+            
+            # Update the UI
+            self.update_duplicates_view()
             
             # Update status
-            self.status_bar.showMessage("Scan completed")
+            total_duplicates = sum(len(group) for group in duplicate_groups)
+            total_groups = len(duplicate_groups)
+            self.status_label.setText(f"Scan complete: Found {total_duplicates} duplicate files in {total_groups} groups")
             
-            # Process results if any
-            if results and hasattr(results, 'duplicate_groups'):
-                self.duplicate_groups = results.duplicate_groups
-                self.current_group_index = 0
-                self.current_file_index = 0
+            # Reconnect the selection changed signal
+            if hasattr(self, 'duplicates_view') and self.duplicates_view and self.duplicates_view.selectionModel():
+                self.duplicates_view.selectionModel().selectionChanged.connect(self.on_file_selection_changed)
+            
+            # Enable UI elements
+            self.scan_button.setEnabled(True)
+            self.stop_scan_button.setEnabled(False)
+            
+            # Save the scan results
+            self.save_scan_results()
+            
+            # Update recent folders
+            if hasattr(self, 'recent_folders_manager') and self.scan_directories:
+                for directory in self.scan_directories:
+                    self.recent_folders_manager.add_recent(directory)
+                self.load_recent_files()
                 
-                # Update the UI with the first group of duplicates
-                if self.duplicate_groups:
-                    self.update_duplicates_view()
-                    
-                    # Show summary
-                    total_duplicates = sum(len(group) for group in self.duplicate_groups)
-                    total_groups = len(self.duplicate_groups)
-                    self.status_bar.showMessage(
-                        f"Found {total_duplicates} duplicate files in {total_groups} groups"
-                    )
-                    
-                    # Auto-save results if enabled
-                    if self.app_settings.get('auto_save_results', False):
-                        self.save_scan_results()
-                else:
-                    self.status_bar.showMessage("No duplicate files found")
-                    QMessageBox.information(self, "No Duplicates", "No duplicate PDF files were found.")
-            
-            # Re-enable UI elements
-            self.update_ui_state()
-            
         except Exception as e:
-            logger.error(f"Error processing scan completion: {e}")
-            self.status_bar.showMessage("Error processing scan results")
-            QMessageBox.critical(
-                self,
-                "Scan Error",
-                f"An error occurred while processing the scan results: {str(e)}"
-            )
+            logger.error(f"Error in on_scan_completed: {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"An error occurred while processing scan results: {str(e)}")
+        finally:
+            # Always ensure the progress dialog is closed
+            if hasattr(self, 'progress_dialog'):
+                self.progress_dialog.close()
+                del self.progress_dialog
     
     def update_progress(self, current, total, message):
         """
@@ -1402,6 +1459,20 @@ class PDFDuplicateFinder(MainWindow):
         self.settings_button.triggered.connect(self.on_settings)
         self.settings_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
         toolbar.addAction(self.settings_button)
+        
+        # Toggle preview button
+        self.toggle_preview_action = QAction("Show Preview", self)
+        self.toggle_preview_action.setCheckable(True)
+        self.toggle_preview_action.setChecked(False)
+        self.toggle_preview_action.triggered.connect(self.toggle_preview_window)
+        self.toggle_preview_action.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        toolbar.addAction(self.toggle_preview_action)
+        
+        # Add stretch to push remaining items to the right
+        toolbar.addSeparator()
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        toolbar.addWidget(spacer)
     
     def create_main_content(self):
         # Create main splitter
@@ -1561,7 +1632,7 @@ class PDFDuplicateFinder(MainWindow):
             
             # Start the scan with the selected folder
             self.scan_directories = [folder]
-            self.start_scan()
+            self.scan_manager.start_scan(self.scan_directories)
     
     def on_duplicate_double_clicked(self, index):
         """Handle double-clicking on a file in the duplicates view."""
@@ -1742,14 +1813,12 @@ class PDFDuplicateFinder(MainWindow):
         
         # Update preview if it's a file item and preview_widget exists
         if hasattr(item, 'file_path'):
-            # Update preview widget if available
-            if hasattr(self, 'preview_widget'):
+            # Update preview window if available
+            if hasattr(self, 'preview_window') and self.preview_window:
                 try:
-                    self.preview_widget.load_pdf(item.file_path)
+                    self.preview_window.load_pdf(item.file_path)
                 except Exception as e:
-                    logger.error(f"Error loading PDF preview: {e}")
-                    if hasattr(self.preview_widget, 'clear'):
-                        self.preview_widget.clear()
+                    logger.error(f"Error loading PDF in preview window: {e}")
             
             # Update file details if available
             if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
@@ -1759,8 +1828,8 @@ class PDFDuplicateFinder(MainWindow):
                     logger.error(f"Error updating file details: {e}")
         else:
             # Clear preview and details if no file path
-            if hasattr(self, 'preview_widget') and hasattr(self.preview_widget, 'clear'):
-                self.preview_widget.clear()
+            if hasattr(self, 'preview_window') and self.preview_window and hasattr(self.preview_window, 'clear'):
+                self.preview_window.clear()
             if hasattr(self, 'file_details') and hasattr(self.file_details, 'clear'):
                 self.file_details.clear()
     
@@ -2006,15 +2075,8 @@ class PDFDuplicateFinder(MainWindow):
             status_text = "Scanning..."
         elif has_groups:
             total_duplicates = sum(len(group) - 1 for group in self.duplicate_groups)
-            if has_selection:
-                current_group = self.duplicate_groups[self.current_group_index]
-                status_text = (
-                    f"Group {self.current_group_index + 1} of {len(self.duplicate_groups)} | "
-                    f"File {self.current_file_index + 1} of {len(current_group)} | "
-                    f"Total duplicates: {total_duplicates}"
-                )
-            else:
-                status_text = f"Found {len(self.duplicate_groups)} groups with {total_duplicates} duplicate files"
+            total_groups = len(self.duplicate_groups)
+            status_text = f"Found {total_duplicates} duplicate files in {total_groups} groups"
         else:
             status_text = "Ready. Drop PDF files or folders to scan."
         
@@ -2042,84 +2104,72 @@ class PDFDuplicateFinder(MainWindow):
                     # Update the current file index
                     item = model.data(first_index, Qt.ItemDataRole.UserRole)
     
-def show_current_group(self):
-    """Update the view to show the current group of duplicates."""
-    if not hasattr(self, 'duplicates_view') or not hasattr(self, 'duplicate_groups'):
-        return
+    def show_current_file(self):
+        """Update the view to show the current file within the current group."""
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+            return
             
-    if 0 <= self.current_group_index < len(self.duplicate_groups):
-        # The DuplicateFilesView handles the display of groups and files
-        # Just ensure the correct group is selected in the view
-        model = self.duplicates_view.model()
-        if model and hasattr(model, 'setCurrentGroup'):
-            model.setCurrentGroup(self.current_group_index)
-            
-            # Select the first file in the group
-            if model.rowCount() > 0:
-                first_index = model.index(0, 0)
-                self.duplicates_view.setCurrentIndex(first_index)
+        if 0 <= self.current_group_index < len(self.duplicate_groups):
+            group = self.duplicate_groups[self.current_group_index]
+            if 0 <= self.current_file_index < len(group):
+                file_info = group[self.current_file_index]
                 
-                # Update the current file index
-                item = model.data(first_index, Qt.ItemDataRole.UserRole)
-                if hasattr(item, 'file_index'):
-                    self.current_file_index = item.file_index
+                # Update the preview if available
+                if hasattr(self, 'preview_widget'):
+                    try:
+                        self.preview_widget.load_pdf(file_info.file_path)
+                    except Exception as e:
+                        logger.error(f"Error loading PDF preview: {e}")
+                        self.preview_widget.clear()
+                
+                # Update file details if available and has set_file method
+                if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
+                    try:
+                        if hasattr(file_info, 'file_path'):
+                            self.file_details.set_file(file_info.file_path)
+                        elif isinstance(file_info, dict) and 'file_path' in file_info:
+                            self.file_details.set_file(file_info['file_path'])
+                    except Exception as e:
+                        logger.error(f"Error updating file details: {e}")
+                
+                # Update the UI state
+                self.update_ui_state()
     
-def show_current_file(self):
-    """Update the view to show the current file within the current group."""
-    if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
-        return
-            
-    if 0 <= self.current_group_index < len(self.duplicate_groups):
-        group = self.duplicate_groups[self.current_group_index]
-        if 0 <= self.current_file_index < len(group):
-            file_info = group[self.current_file_index]
-            
-            # Update the preview if available
-            if hasattr(self, 'preview_widget'):
-                try:
-                    self.preview_widget.load_pdf(file_info.file_path)
-                except Exception as e:
-                    logger.error(f"Error loading PDF preview: {e}")
-                    self.preview_widget.clear()
-            
-            # Update file details if available and has set_file method
-            if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
-                try:
-                    if hasattr(file_info, 'file_path'):
-                        self.file_details.set_file(file_info.file_path)
-                    elif isinstance(file_info, dict) and 'file_path' in file_info:
-                        self.file_details.set_file(file_info['file_path'])
-                except Exception as e:
-                    logger.error(f"Error updating file details: {e}")
-            
-            # Update the UI state
-            self.update_ui_state()
+    def toggle_preview_window(self):
+        """Toggle the preview window visibility."""
+        if self.toggle_preview_action.isChecked():
+            self.show_preview_window()
+        else:
+            self.hide_preview_window()
     
-def on_files_dropped(self, file_paths):
-    """Handle files or folders dropped onto the application."""
-    if not file_paths:
-        return
-            
-        # Check if we should scan the dropped items
-        reply = QMessageBox.question(
-            self, 
-            "Scan Files", 
-            f"Scan {len(file_paths)} dropped items for duplicates?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes
-        )
+    def show_preview_window(self):
+        """Show the preview window."""
+        if not hasattr(self, 'preview_window') or not self.preview_window:
+            self.preview_window = PreviewWindow(self)
+            # Load current PDF if available
+            selected_indexes = self.duplicates_view.selectedIndexes()
+            if selected_indexes:
+                index = selected_indexes[0]
+                if index.isValid():
+                    model = self.duplicates_view.model()
+                    item = model.data(index, Qt.ItemDataRole.UserRole)
+                    if hasattr(item, 'file_path'):
+                        self.preview_window.load_pdf(item.file_path)
         
-        if reply == QMessageBox.StandardButton.Yes:
-            self.scan_directories = []
-            for path in file_paths:
-                if os.path.isfile(path) and path.lower().endswith('.pdf'):
-                    # Add the parent directory for single files
-                    self.scan_directories.append(os.path.dirname(path))
-                elif os.path.isdir(path):
-                    self.scan_directories.append(path)
-            
-            if self.scan_directories:
-                self.start_scan()
+        self.preview_window.show()
+        self.preview_window.raise_()
+        self.preview_window.activateWindow()
+    
+    def hide_preview_window(self):
+        """Hide the preview window."""
+        if hasattr(self, 'preview_window') and self.preview_window:
+            self.preview_window.hide()
+    
+    def on_preview_window_closed(self):
+        """Handle the preview window being closed."""
+        if hasattr(self, 'toggle_preview_action'):
+            self.toggle_preview_action.setChecked(False)
+        self.preview_window = None
     
     def start_scan(self, directories=None):
         """Start scanning the specified directories for duplicate PDFs."""
@@ -2177,7 +2227,7 @@ def on_files_dropped(self, file_paths):
     
     def save_scan_results(self):
         """Save the current scan results to a CSV file."""
-        if not self.duplicate_groups:
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
             QMessageBox.information(self, "No Results", "No scan results to save.")
             return
             
@@ -2422,14 +2472,10 @@ def on_files_dropped(self, file_paths):
             # Make sure recent_menu exists and is valid
             if not hasattr(self, 'recent_menu') or not self.recent_menu:
                 # Try to find the recent menu in the file menu
-                file_menu = self.menuBar().findChild(QMenu, "File")
+                file_menu = self.menuBar().findChild(QMenu, "file_menu")
                 if file_menu:
-                    for action in file_menu.actions():
-                        if action.menu() and action.menu().title() == self.tr("Recent Folders"):
-                            self.recent_menu = action.menu()
-                            break
-                
-                if not hasattr(self, 'recent_menu') or not self.recent_menu:
+                    self.recent_menu = file_menu.addMenu(self.tr("Recent Folders"))
+                else:
                     return
             
             # Clear existing actions
