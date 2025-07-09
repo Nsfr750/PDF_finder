@@ -10,6 +10,25 @@ __version_info__ = tuple(int(num) if num.isdigit() else num
 # Version history
 VERSION_HISTORY = [
     {
+        "version": "2.7.2",
+        "date": "2025-07-09",
+        "changes": [
+            "Enhanced file deletion with improved error handling",
+            "Added better handling of files in use by other applications",
+            "Improved recycle bin fallback mechanism",
+            "Added more detailed error messages for file operations"
+        ]
+    },
+    {
+        "version": "2.7.1",
+        "date": "2025-07-08",
+        "changes": [
+            "Fixed signal disconnection errors in scan completion",
+            "Improved handling of file previews with invalid PDFs",
+            "Updated deprecated PySide6 method calls"
+        ]
+    },
+    {
         "version": "2.7.0",
         "date": "2025-07-03",
         "changes": [
@@ -33,7 +52,7 @@ def get_version_history():
 def get_latest_changes():
     """Get the changes in the latest version."""
     if VERSION_HISTORY:
-        return VERSION_HISTORY[0]["changes"]
+        return VERSION_HISTORY[0]['changes']
     return []
 
 def is_development():
@@ -42,8 +61,7 @@ def is_development():
 
 def get_codename():
     """Get the codename for this version."""
-    # Add version codenames here if desired
-    version_codenames = {
-        "2.7.1": "Butterfly"
-    }
-    return version_codenames.get(__version__, "")
+    # Simple codename based on version number
+    major, minor, patch = map(int, __version__.split('.')[:3])
+    codenames = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"]
+    return codenames[minor % len(codenames)]
