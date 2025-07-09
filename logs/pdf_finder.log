@@ -1,556 +1,159 @@
-2025-07-05 19:35:58,817 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:35:58,818 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:35:58,818 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:35:58,819 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:35:58,851 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,851 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,851 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,851 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:35:58,866 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:35:58,870 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:35:58,870 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:35:58,914 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:35:58,914 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:38:30,486 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:38:30,486 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:38:30,486 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:38:30,487 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:38:30,515 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,515 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,515 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,515 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:38:30,531 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:38:30,535 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:38:30,535 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:38:30,578 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:38:30,578 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:47:59,886 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:47:59,887 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:47:59,888 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 19:47:59,889 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:47:59,889 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:47:59,889 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:47:59,889 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:47:59,890 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:47:59,890 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:47:59,936 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,936 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,936 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,936 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,961 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,961 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,962 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,962 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:47:59,963 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:47:59,963 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:47:59,982 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:47:59,982 - PDFDuplicateFinder - ERROR - Error loading recent files: Internal C++ object (PySide6.QtWidgets.QMenu) already deleted.
-2025-07-05 19:48:00,113 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:48:00,113 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:55:58,588 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:55:58,589 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:55:58,589 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 19:55:58,590 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:55:58,590 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:55:58,590 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:55:58,590 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:55:58,591 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:55:58,591 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:55:58,633 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:55:58,633 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:55:58,634 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:55:58,634 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:55:58,651 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:55:58,651 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:55:58,730 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:55:58,730 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:56:03,185 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2196, in toggle_preview_window
-    self.show_preview_window()
-  File "x:\GitHub\PDF_finder\main.py", line 2203, in show_preview_window
-    self.preview_window = PreviewWindow(self)
-                          ^^^^^^^^^^^^^
-NameError: name 'PreviewWindow' is not defined
-2025-07-05 19:56:03,185 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2196, in toggle_preview_window
-    self.show_preview_window()
-  File "x:\GitHub\PDF_finder\main.py", line 2203, in show_preview_window
-    self.preview_window = PreviewWindow(self)
-                          ^^^^^^^^^^^^^
-NameError: name 'PreviewWindow' is not defined
-2025-07-05 19:56:06,864 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 19:56:06,864 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 19:56:06,867 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 19:56:06,867 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 19:56:06,868 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-05 19:56:06,868 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-05 19:59:34,383 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:59:34,384 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:59:34,384 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 19:59:34,384 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:59:34,384 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 19:59:34,385 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:59:34,385 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 19:59:34,385 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:59:34,385 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 19:59:34,414 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:59:34,414 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:59:34,414 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:59:34,414 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 19:59:34,426 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:59:34,426 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 19:59:34,475 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:59:34,475 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 19:59:47,523 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 19:59:47,523 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 19:59:47,531 - PDFDuplicateFinder - INFO - Found 43 PDF files to process
-2025-07-05 19:59:47,531 - PDFDuplicateFinder - INFO - Found 43 PDF files to process
-2025-07-05 19:59:47,534 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_xe0onohh
-2025-07-05 19:59:47,534 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_xe0onohh
-2025-07-05 19:59:47,588 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 19:59:47,588 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 19:59:47,615 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 19:59:47,615 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 19:59:47,616 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 19:59:47,616 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 19:59:47,674 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 19:59:47,674 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 19:59:47,675 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 19:59:47,675 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 19:59:47,740 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 19:59:47,740 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 19:59:47,741 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 19:59:47,741 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 19:59:47,794 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 19:59:47,794 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 19:59:47,796 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 19:59:47,796 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 19:59:47,948 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 19:59:47,948 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 19:59:47,949 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 19:59:47,949 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 19:59:48,015 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 19:59:48,015 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 19:59:48,016 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 19:59:48,016 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 19:59:48,084 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 19:59:48,084 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 19:59:48,085 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 19:59:48,085 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 19:59:48,141 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 19:59:48,141 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 19:59:48,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 19:59:48,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 19:59:48,208 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 19:59:48,208 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 19:59:48,209 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 19:59:48,209 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 19:59:48,357 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 19:59:48,357 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 19:59:48,358 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 19:59:48,358 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 19:59:48,504 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 19:59:48,504 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 19:59:48,505 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 19:59:48,505 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 19:59:48,570 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 19:59:48,570 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 19:59:48,571 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 19:59:48,571 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 19:59:48,692 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 19:59:48,692 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 19:59:48,693 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 19:59:48,693 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 19:59:48,782 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 19:59:48,782 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 19:59:48,784 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 19:59:48,784 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 19:59:48,872 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 19:59:48,872 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 19:59:48,873 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 19:59:48,873 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 19:59:48,934 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 19:59:48,934 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 19:59:48,935 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 19:59:48,935 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 19:59:48,995 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 19:59:48,995 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 19:59:48,996 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 19:59:48,996 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 19:59:49,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 19:59:49,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 19:59:49,253 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 19:59:49,253 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 19:59:49,501 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 19:59:49,501 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 19:59:49,502 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 19:59:49,502 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 19:59:49,606 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 19:59:49,606 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 19:59:49,607 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 19:59:49,607 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 19:59:49,706 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 19:59:49,706 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 19:59:49,707 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 19:59:49,707 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 19:59:49,826 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 19:59:49,826 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 19:59:49,827 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 19:59:49,827 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 19:59:49,943 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 19:59:49,943 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 19:59:49,944 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:49,944 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,071 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,071 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,072 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 19:59:50,072 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 19:59:50,202 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 19:59:50,202 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 19:59:50,203 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,203 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,323 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,323 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 19:59:50,324 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 19:59:50,324 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 19:59:50,443 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 19:59:50,443 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 19:59:50,444 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 19:59:50,444 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 19:59:50,530 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 19:59:50,530 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 19:59:50,531 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 19:59:50,531 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 19:59:50,617 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 19:59:50,617 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 19:59:50,618 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 19:59:50,618 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 19:59:50,777 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 19:59:50,777 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 19:59:50,778 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 19:59:50,778 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 19:59:50,937 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 19:59:50,937 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 19:59:50,938 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 19:59:50,938 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 19:59:51,062 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 19:59:51,062 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 19:59:51,063 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 19:59:51,063 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 19:59:51,191 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 19:59:51,191 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 19:59:51,192 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 19:59:51,192 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 19:59:51,237 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 19:59:51,237 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 19:59:51,237 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 19:59:51,237 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 19:59:51,278 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 19:59:51,278 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 19:59:51,279 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 19:59:51,279 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 19:59:51,339 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 19:59:51,339 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 19:59:51,340 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 19:59:51,340 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 19:59:51,396 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 19:59:51,396 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 19:59:51,397 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 19:59:51,397 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 19:59:51,440 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 19:59:51,440 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 19:59:51,441 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 19:59:51,441 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 19:59:51,485 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 19:59:51,485 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 19:59:51,486 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 19:59:51,486 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 19:59:51,689 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 19:59:51,689 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 19:59:51,691 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 19:59:51,691 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 19:59:51,906 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 19:59:51,906 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 19:59:51,907 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 19:59:51,907 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 19:59:52,110 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 19:59:52,110 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 19:59:52,111 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 19:59:52,111 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 19:59:52,323 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 19:59:52,323 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 19:59:52,323 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-05 19:59:52,323 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-05 19:59:52,323 - PDFUtils - INFO - Processing 43 pre-processed files
-2025-07-05 19:59:52,324 - PDFUtils - INFO - Found 14 groups of files with the same size
-2025-07-05 19:59:55,862 - PDFUtils - INFO - Found 14 groups of duplicate PDFs
-2025-07-05 19:59:55,862 - PDFDuplicateFinder - INFO - Found 14 groups of duplicates
-2025-07-05 19:59:55,862 - PDFDuplicateFinder - INFO - Found 14 groups of duplicates
-2025-07-05 19:59:55,863 - PDFDuplicateFinder - INFO - Scan completed. Found 14 duplicate groups.
-2025-07-05 19:59:55,864 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_xe0onohh
-2025-07-05 19:59:55,863 - PDFDuplicateFinder - INFO - Scan completed. Found 14 duplicate groups.
-2025-07-05 19:59:55,864 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_xe0onohh
-2025-07-05 19:59:55,864 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2444, in on_scan_completed
-    self.duplicates_view.selectionModel().selectionChanged.disconnect()
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'selectionChanged'
-2025-07-05 19:59:55,864 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2444, in on_scan_completed
-    self.duplicates_view.selectionModel().selectionChanged.disconnect()
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'selectionChanged'
-2025-07-05 20:00:20,865 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 20:00:20,865 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 20:00:20,867 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:00:20,867 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:00:20,868 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-05 20:00:20,868 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-05 20:02:39,059 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 20:02:39,059 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 20:02:39,059 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
-2025-07-05 20:02:39,059 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 20:02:39,059 - PDFDuplicateFinder - INFO - ================================================================================
-2025-07-05 20:02:39,060 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 20:02:39,060 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
-2025-07-05 20:02:39,060 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 20:02:39,060 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
-2025-07-05 20:02:39,090 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 20:02:39,090 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 20:02:39,090 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 20:02:39,090 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
-2025-07-05 20:02:39,101 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 20:02:39,101 - PDFDuplicateFinder - INFO - Settings loaded successfully
-2025-07-05 20:02:39,150 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 20:02:39,150 - PDFDuplicateFinder - INFO - Application started successfully
-2025-07-05 20:02:54,613 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:02:54,613 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:02:54,620 - PDFDuplicateFinder - INFO - Found 43 PDF files to process
-2025-07-05 20:02:54,620 - PDFDuplicateFinder - INFO - Found 43 PDF files to process
-2025-07-05 20:02:54,623 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_q3h7obv9
-2025-07-05 20:02:54,623 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_q3h7obv9
-2025-07-05 20:02:54,678 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 20:02:54,678 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 20:02:54,703 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 20:02:54,703 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC.PDF
-2025-07-05 20:02:54,704 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 20:02:54,704 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 20:02:54,761 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 20:02:54,761 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC001.PDF
-2025-07-05 20:02:54,762 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 20:02:54,762 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 20:02:54,828 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 20:02:54,828 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC002.PDF
-2025-07-05 20:02:54,829 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 20:02:54,829 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 20:02:54,883 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 20:02:54,883 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC003.PDF
-2025-07-05 20:02:54,884 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 20:02:54,884 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 20:02:55,030 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 20:02:55,030 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0943_DOC004.PDF
-2025-07-05 20:02:55,031 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 20:02:55,031 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 20:02:55,097 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 20:02:55,097 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC.PDF
-2025-07-05 20:02:55,097 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 20:02:55,097 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 20:02:55,164 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 20:02:55,164 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC001.PDF
-2025-07-05 20:02:55,165 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 20:02:55,165 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 20:02:55,221 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 20:02:55,221 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC002.PDF
-2025-07-05 20:02:55,221 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 20:02:55,221 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 20:02:55,286 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 20:02:55,286 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC003.PDF
-2025-07-05 20:02:55,287 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 20:02:55,287 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 20:02:55,438 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 20:02:55,438 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
-2025-07-05 20:02:55,439 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 20:02:55,439 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 20:02:55,586 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 20:02:55,586 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
-2025-07-05 20:02:55,587 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 20:02:55,587 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 20:02:55,650 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 20:02:55,650 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC005.PDF
-2025-07-05 20:02:55,651 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 20:02:55,651 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 20:02:55,772 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 20:02:55,772 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Google earth 2018.pdf
-2025-07-05 20:02:55,773 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 20:02:55,773 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 20:02:55,862 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 20:02:55,862 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.3.pdf
-2025-07-05 20:02:55,863 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 20:02:55,863 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 20:02:55,952 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 20:02:55,952 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0008.pdf
-2025-07-05 20:02:55,953 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 20:02:55,953 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 20:02:56,013 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 20:02:56,013 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.3.pdf
-2025-07-05 20:02:56,014 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 20:02:56,014 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 20:02:56,075 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 20:02:56,075 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\IMG-20230831-WA0009.pdf
-2025-07-05 20:02:56,076 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 20:02:56,076 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 20:02:56,328 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 20:02:56,328 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.1.pdf
-2025-07-05 20:02:56,329 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 20:02:56,329 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 20:02:56,576 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 20:02:56,576 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_2022.06.28.pdf
-2025-07-05 20:02:56,577 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 20:02:56,577 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 20:02:56,675 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 20:02:56,675 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia - Copia.pdf
-2025-07-05 20:02:56,676 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 20:02:56,676 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 20:02:56,775 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 20:02:56,775 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia.pdf
-2025-07-05 20:02:56,776 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 20:02:56,776 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 20:02:56,893 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 20:02:56,893 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
-2025-07-05 20:02:56,894 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 20:02:56,894 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 20:02:57,011 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 20:02:57,011 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Marraccini_Disattivazione caldaia_recapiti.pdf
-2025-07-05 20:02:57,012 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,012 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,143 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 20:02:57,143 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 20:02:57,274 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 20:02:57,274 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Earth evidenziato pulitura podere 2019.pdf
-2025-07-05 20:02:57,274 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,274 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,394 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,394 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
-2025-07-05 20:02:57,395 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 20:02:57,395 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 20:02:57,515 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 20:02:57,515 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\McT_Mappa evidenziata pulitura podere 2019.pdf
-2025-07-05 20:02:57,516 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 20:02:57,516 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 20:02:57,603 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 20:02:57,603 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
-2025-07-05 20:02:57,604 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 20:02:57,604 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 20:02:57,689 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 20:02:57,689 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (bianco e nero).pdf
-2025-07-05 20:02:57,690 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 20:02:57,690 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 20:02:57,849 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 20:02:57,849 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori) - Copia.pdf
-2025-07-05 20:02:57,851 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 20:02:57,851 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 20:02:58,010 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 20:02:58,010 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\Mobilio x la Sardegna (colori).pdf
-2025-07-05 20:02:58,011 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 20:02:58,011 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 20:02:58,141 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 20:02:58,141 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Roma.pdf
-2025-07-05 20:02:58,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 20:02:58,142 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 20:02:58,265 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 20:02:58,265 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\PILI olio Sardegna.pdf
-2025-07-05 20:02:58,266 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 20:02:58,266 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 20:02:58,310 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 20:02:58,310 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.1.pdf
-2025-07-05 20:02:58,311 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 20:02:58,311 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 20:02:58,351 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 20:02:58,351 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.1.pdf
-2025-07-05 20:02:58,352 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 20:02:58,352 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 20:02:58,411 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 20:02:58,411 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.1.pdf
-2025-07-05 20:02:58,412 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 20:02:58,412 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 20:02:58,466 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 20:02:58,466 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.2 bonifico quattropetroli.pdf
-2025-07-05 20:02:58,467 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 20:02:58,467 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 20:02:58,509 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 20:02:58,509 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.1.pdf
-2025-07-05 20:02:58,511 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 20:02:58,511 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 20:02:58,553 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 20:02:58,553 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SCOTTO.3.pdf
-2025-07-05 20:02:58,554 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 20:02:58,554 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 20:02:58,760 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 20:02:58,760 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.1.pdf
-2025-07-05 20:02:58,761 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 20:02:58,761 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 20:02:58,965 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 20:02:58,965 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.1.pdf
-2025-07-05 20:02:58,966 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 20:02:58,966 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 20:02:59,172 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 20:02:59,172 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3 - Copia.pdf
-2025-07-05 20:02:59,173 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 20:02:59,173 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 20:02:59,380 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 20:02:59,380 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\SEDONI_LIB.ID.552.3.pdf
-2025-07-05 20:02:59,380 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-05 20:02:59,380 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
-2025-07-05 20:02:59,380 - PDFUtils - INFO - Processing 43 pre-processed files
-2025-07-05 20:02:59,381 - PDFUtils - INFO - Found 14 groups of files with the same size
-2025-07-05 20:03:02,904 - PDFUtils - INFO - Found 14 groups of duplicate PDFs
-2025-07-05 20:03:02,904 - PDFDuplicateFinder - INFO - Found 14 groups of duplicates
-2025-07-05 20:03:02,904 - PDFDuplicateFinder - INFO - Found 14 groups of duplicates
-2025-07-05 20:03:02,906 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_q3h7obv9
-2025-07-05 20:03:02,906 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_q3h7obv9
-2025-07-05 20:03:02,906 - PDFDuplicateFinder - INFO - Scan completed. Found 14 duplicate groups.
-2025-07-05 20:03:02,906 - PDFDuplicateFinder - INFO - Scan completed. Found 14 duplicate groups.
-2025-07-05 20:03:02,907 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2389, in on_scan_completed
-    self.duplicates_view.selectionModel().selectionChanged.disconnect()
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'selectionChanged'
-2025-07-05 20:03:02,907 - PDFDuplicateFinder - CRITICAL - Uncaught exception
-Traceback (most recent call last):
-  File "x:\GitHub\PDF_finder\main.py", line 2389, in on_scan_completed
-    self.duplicates_view.selectionModel().selectionChanged.disconnect()
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'selectionChanged'
-2025-07-05 20:05:07,384 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 20:05:07,384 - PDFDuplicateFinder - INFO - Application is shutting down
-2025-07-05 20:05:07,388 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:05:07,388 - PDFDuplicateFinder - INFO - Settings saved successfully
-2025-07-05 20:05:07,388 - PDFDuplicateFinder - INFO - Application shutdown completed
-2025-07-05 20:05:07,388 - PDFDuplicateFinder - INFO - Application shutdown completed
+2025-07-09 08:36:26,122 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-09 08:36:26,122 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-09 08:36:26,122 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-09 08:36:26,123 - PDFDuplicateFinder - INFO - Log file: x:\GitHub\PDF_finder\logs\pdf_finder.log
+2025-07-09 08:36:26,152 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,152 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,153 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,153 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,167 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,167 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,168 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,168 - PDFDuplicateFinder - DEBUG - Qt object deleted during retranslate_ui
+2025-07-09 08:36:26,168 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-09 08:36:26,168 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-09 08:36:26,214 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-09 08:36:26,214 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-09 08:36:37,705 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:36:37,705 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:36:37,712 - PDFDuplicateFinder - INFO - Found 2 PDF files to process
+2025-07-09 08:36:37,712 - PDFDuplicateFinder - INFO - Found 2 PDF files to process
+2025-07-09 08:36:37,717 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_jqt68viy
+2025-07-09 08:36:37,717 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_jqt68viy
+2025-07-09 08:36:37,839 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:36:37,839 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:36:37,875 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:36:37,875 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:36:37,880 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
+2025-07-09 08:36:37,880 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
+2025-07-09 08:36:38,037 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
+2025-07-09 08:36:38,037 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\Copia\2007-0946_DOC004.PDF
+2025-07-09 08:36:38,038 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
+2025-07-09 08:36:38,038 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
+2025-07-09 08:36:38,038 - PDFUtils - INFO - Processing 2 pre-processed files
+2025-07-09 08:36:38,038 - PDFUtils - INFO - Found 1 groups of files with the same size
+2025-07-09 08:36:38,320 - PDFUtils - INFO - Found 1 groups of duplicate PDFs
+2025-07-09 08:36:38,321 - PDFDuplicateFinder - INFO - Found 1 groups of duplicates
+2025-07-09 08:36:38,321 - PDFDuplicateFinder - INFO - Found 1 groups of duplicates
+2025-07-09 08:36:38,322 - PDFDuplicateFinder - INFO - Scan completed. Found 1 duplicate groups.
+2025-07-09 08:36:38,322 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_jqt68viy
+2025-07-09 08:36:38,322 - PDFDuplicateFinder - INFO - Scan completed. Found 1 duplicate groups.
+2025-07-09 08:36:38,322 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_jqt68viy
+2025-07-09 08:36:38,355 - PDFDuplicateFinder - ERROR - Error loading PDF preview: 'dict' object has no attribute 'file_path'
+2025-07-09 08:36:38,355 - PDFDuplicateFinder - ERROR - Error loading PDF preview: 'dict' object has no attribute 'file_path'
+2025-07-09 08:38:05,081 - PDFDuplicateFinder - INFO - Deleted: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:38:05,081 - PDFDuplicateFinder - INFO - Deleted: C:\Users\guara\Desktop\Copia\2007-0946_DOC004 - Copia.PDF
+2025-07-09 08:38:19,735 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:38:19,735 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:38:19,744 - PDFDuplicateFinder - INFO - Found 20 PDF files to process
+2025-07-09 08:38:19,744 - PDFDuplicateFinder - INFO - Found 20 PDF files to process
+2025-07-09 08:38:19,746 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_co4kd39w
+2025-07-09 08:38:19,746 - PDFDuplicateFinder - DEBUG - Created temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_co4kd39w
+2025-07-09 08:38:19,981 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28 - Copia.pdf
+2025-07-09 08:38:19,981 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28 - Copia.pdf
+2025-07-09 08:38:19,998 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28 - Copia.pdf
+2025-07-09 08:38:19,998 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28 - Copia.pdf
+2025-07-09 08:38:19,998 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28.pdf
+2025-07-09 08:38:19,998 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28.pdf
+2025-07-09 08:38:20,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28.pdf
+2025-07-09 08:38:20,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_2022.06.28.pdf
+2025-07-09 08:38:20,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia - Copia.pdf
+2025-07-09 08:38:20,252 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia - Copia.pdf
+2025-07-09 08:38:20,348 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia - Copia.pdf
+2025-07-09 08:38:20,348 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia - Copia.pdf
+2025-07-09 08:38:20,349 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia.pdf
+2025-07-09 08:38:20,349 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia.pdf
+2025-07-09 08:38:20,444 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia.pdf
+2025-07-09 08:38:20,444 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia.pdf
+2025-07-09 08:38:20,445 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:20,445 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:20,559 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:20,559 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:20,560 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti.pdf
+2025-07-09 08:38:20,560 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti.pdf
+2025-07-09 08:38:20,672 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti.pdf
+2025-07-09 08:38:20,672 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti.pdf
+2025-07-09 08:38:20,673 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:20,673 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:20,796 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:20,796 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:20,797 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019.pdf
+2025-07-09 08:38:20,797 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019.pdf
+2025-07-09 08:38:20,921 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019.pdf
+2025-07-09 08:38:20,921 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Earth evidenziato pulitura podere 2019.pdf
+2025-07-09 08:38:20,922 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:20,922 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:21,038 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:21,038 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019 - Copia.pdf
+2025-07-09 08:38:21,045 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019.pdf
+2025-07-09 08:38:21,045 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019.pdf
+2025-07-09 08:38:21,174 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019.pdf
+2025-07-09 08:38:21,174 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\McT_Mappa evidenziata pulitura podere 2019.pdf
+2025-07-09 08:38:21,175 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
+2025-07-09 08:38:21,175 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
+2025-07-09 08:38:21,258 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
+2025-07-09 08:38:21,258 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero) - Copia.pdf
+2025-07-09 08:38:21,259 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero).pdf
+2025-07-09 08:38:21,259 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero).pdf
+2025-07-09 08:38:21,348 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero).pdf
+2025-07-09 08:38:21,348 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (bianco e nero).pdf
+2025-07-09 08:38:21,349 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori) - Copia.pdf
+2025-07-09 08:38:21,349 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori) - Copia.pdf
+2025-07-09 08:38:21,516 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori) - Copia.pdf
+2025-07-09 08:38:21,516 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori) - Copia.pdf
+2025-07-09 08:38:21,517 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori).pdf
+2025-07-09 08:38:21,517 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori).pdf
+2025-07-09 08:38:21,679 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori).pdf
+2025-07-09 08:38:21,679 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\Mobilio x la Sardegna (colori).pdf
+2025-07-09 08:38:21,680 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma - Copia.pdf
+2025-07-09 08:38:21,680 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma - Copia.pdf
+2025-07-09 08:38:21,805 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma - Copia.pdf
+2025-07-09 08:38:21,805 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma - Copia.pdf
+2025-07-09 08:38:21,806 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma.pdf
+2025-07-09 08:38:21,806 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma.pdf
+2025-07-09 08:38:21,927 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma.pdf
+2025-07-09 08:38:21,927 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Roma.pdf
+2025-07-09 08:38:21,928 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna - Copia.pdf
+2025-07-09 08:38:21,928 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna - Copia.pdf
+2025-07-09 08:38:22,046 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna - Copia.pdf
+2025-07-09 08:38:22,046 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna - Copia.pdf
+2025-07-09 08:38:22,047 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna.pdf
+2025-07-09 08:38:22,047 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna.pdf
+2025-07-09 08:38:22,164 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna.pdf
+2025-07-09 08:38:22,164 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\PILI olio Sardegna.pdf
+2025-07-09 08:38:22,165 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli - Copia.pdf
+2025-07-09 08:38:22,165 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli - Copia.pdf
+2025-07-09 08:38:22,223 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli - Copia.pdf
+2025-07-09 08:38:22,223 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli - Copia.pdf
+2025-07-09 08:38:22,223 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli.pdf
+2025-07-09 08:38:22,223 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli.pdf
+2025-07-09 08:38:22,280 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli.pdf
+2025-07-09 08:38:22,280 - PDFDuplicateFinder - DEBUG - Processed: C:\Users\guara\Desktop\1\SCOTTO.2 bonifico quattropetroli.pdf
+2025-07-09 08:38:22,280 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
+2025-07-09 08:38:22,280 - PDFDuplicateFinder - INFO - Finding duplicate PDFs...
+2025-07-09 08:38:22,280 - PDFUtils - INFO - Processing 20 pre-processed files
+2025-07-09 08:38:22,280 - PDFUtils - INFO - Found 10 groups of files with the same size
+2025-07-09 08:38:24,686 - PDFUtils - INFO - Found 10 groups of duplicate PDFs
+2025-07-09 08:38:24,686 - PDFDuplicateFinder - INFO - Found 10 groups of duplicates
+2025-07-09 08:38:24,686 - PDFDuplicateFinder - INFO - Found 10 groups of duplicates
+2025-07-09 08:38:24,688 - PDFDuplicateFinder - INFO - Scan completed. Found 10 duplicate groups.
+2025-07-09 08:38:24,688 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_co4kd39w
+2025-07-09 08:38:24,688 - PDFDuplicateFinder - INFO - Scan completed. Found 10 duplicate groups.
+2025-07-09 08:38:24,688 - PDFDuplicateFinder - DEBUG - Cleaned up temporary directory: C:\Users\guara\AppData\Local\Temp\pdf_finder_co4kd39w
+2025-07-09 08:38:24,961 - PDFDuplicateFinder - ERROR - Error loading PDF preview: 'dict' object has no attribute 'file_path'
+2025-07-09 08:38:24,961 - PDFDuplicateFinder - ERROR - Error loading PDF preview: 'dict' object has no attribute 'file_path'
+2025-07-09 08:38:43,557 - PDFDuplicateFinder - WARNING - Recycle bin operation failed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:43,557 - PDFDuplicateFinder - WARNING - Recycle bin operation failed: C:\Users\guara\Desktop\1\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf
+2025-07-09 08:38:43,558 - PDFDuplicateFinder - DEBUG - Recycle bin error: [WinError -2144927705] OLE error 0x80270027: 'C:\\Users\\guara\\Desktop\\1\\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf'
+2025-07-09 08:38:43,558 - PDFDuplicateFinder - DEBUG - Recycle bin error: [WinError -2144927705] OLE error 0x80270027: 'C:\\Users\\guara\\Desktop\\1\\Marraccini_Disattivazione caldaia_recapiti - Copia.pdf'
+2025-07-09 08:38:54,068 - PDFDuplicateFinder - INFO - Application is shutting down
+2025-07-09 08:38:54,068 - PDFDuplicateFinder - INFO - Application is shutting down
+2025-07-09 08:38:54,070 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:38:54,070 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 08:38:54,071 - PDFDuplicateFinder - INFO - Application shutdown completed
+2025-07-09 08:38:54,071 - PDFDuplicateFinder - INFO - Application shutdown completed

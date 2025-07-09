@@ -1087,50 +1087,118 @@ class PDFDuplicateFinder(MainWindow):
             duplicate_groups: List of duplicate file groups found during the scan
         """
         try:
-            # Disconnect the selection changed signal temporarily to prevent multiple updates
-            if hasattr(self, 'duplicates_view') and self.duplicates_view and self.duplicates_view.selectionModel():
-                try:
-                    self.duplicates_view.selectionModel().selectionChanged.disconnect()
-                except (TypeError, RuntimeError):
-                    # Ignore errors if signal wasn't connected
-                    pass
+            # Prevent multiple simultaneous executions
+            if hasattr(self, '_scan_completed_running') and self._scan_completed_running:
+                logger.debug("on_scan_completed already running, ignoring duplicate call")
+                return
+                
+            self._scan_completed_running = True
             
-            # Store the duplicate groups
+            # Store the results
             self.duplicate_groups = duplicate_groups
             
-            # Update the UI
-            self.update_duplicates_view()
+            # Reset indices
+            self.current_group_index = -1
+            self.current_file_index = -1
             
-            # Update status
-            total_duplicates = sum(len(group) for group in duplicate_groups)
-            total_groups = len(duplicate_groups)
-            self.status_label.setText(f"Scan complete: Found {total_duplicates} duplicate files in {total_groups} groups")
+            # Check if view exists and is valid
+            if not hasattr(self, 'duplicates_view') or not self.duplicates_view:
+                logger.warning("duplicates_view not available, cannot update UI")
+                return
             
-            # Reconnect the selection changed signal
-            if hasattr(self, 'duplicates_view') and self.duplicates_view and self.duplicates_view.selectionModel():
-                self.duplicates_view.selectionModel().selectionChanged.connect(self.on_file_selection_changed)
+            # Store reference to the view
+            view = self.duplicates_view
             
-            # Enable UI elements
-            self.scan_button.setEnabled(True)
-            self.stop_scan_button.setEnabled(False)
+            # Block all signals during update
+            was_blocked = view.blockSignals(True)
             
-            # Save the scan results
-            self.save_scan_results()
-            
-            # Update recent folders
-            if hasattr(self, 'recent_folders_manager') and self.scan_directories:
-                for directory in self.scan_directories:
-                    self.recent_folders_manager.add_recent(directory)
-                self.load_recent_files()
+            try:
+                # Safely get current selection model if it exists
+                current_selection_model = view.selectionModel()
+                
+                # Disconnect any existing selection changed signals
+                if current_selection_model:
+                    try:
+                        current_selection_model.selectionChanged.disconnect()
+                    except (TypeError, RuntimeError):
+                        # Not connected, ignore
+                        pass
+                
+                # Disconnect double click signal
+                try:
+                    view.doubleClicked.disconnect()
+                except (TypeError, RuntimeError):
+                    # Not connected, ignore
+                    pass
+                
+                # Create and set the new model
+                model = DuplicateFilesModel(duplicate_groups)
+                view.setModel(model)  # This will delete the old model and its selection model
+                
+                # Set up selection behavior
+                view.setSelectionBehavior(QAbstractItemView.SelectRows)
+                view.setSelectionMode(QAbstractItemView.SingleSelection)
+                
+                # Get the new selection model and connect signals
+                selection_model = view.selectionModel()
+                if selection_model:
+                    selection_model.selectionChanged.connect(self.on_file_selection_changed)
+                
+                # Connect double click signal
+                view.doubleClicked.connect(self.on_duplicate_double_clicked)
+                
+                # Resize columns to fit content
+                for i in range(model.columnCount()):
+                    view.resizeColumnToContents(i)
+                
+                # If we have results, select the first group and file
+                if duplicate_groups:
+                    self.current_group_index = 0
+                    self.current_file_index = 0
+                    self.show_current_group()
+                    self.show_current_file()
+                
+                # Update status
+                total_duplicates = sum(len(group) - 1 for group in duplicate_groups) if duplicate_groups else 0
+                if duplicate_groups:
+                    status_text = self.tr("Found {} groups with {} duplicate files").format(
+                        len(duplicate_groups), 
+                        total_duplicates
+                    )
+                    self.status_label.setText(status_text)
+                else:
+                    self.status_label.setText(self.tr("No duplicate files found."))
+                
+                # Show completion message
+                QMessageBox.information(
+                    self,
+                    "Scan Complete",
+                    f"Found {len(duplicate_groups)} duplicate groups"
+                )
+                
+            except Exception as e:
+                logger.error(f"Error updating UI: {e}", exc_info=True)
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to update UI with scan results: {str(e)}"
+                )
+                
+            finally:
+                # Always restore signal blocking state
+                view.blockSignals(was_blocked)
+                self._scan_completed_running = False
                 
         except Exception as e:
             logger.error(f"Error in on_scan_completed: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"An error occurred while processing scan results: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"An error occurred while processing scan results: {str(e)}"
+            )
         finally:
-            # Always ensure the progress dialog is closed
-            if hasattr(self, 'progress_dialog'):
-                self.progress_dialog.close()
-                del self.progress_dialog
+            # Update UI state to reflect the new scan results
+            self.update_ui_state()
     
     def update_progress(self, current, total, message):
         """
@@ -1695,7 +1763,7 @@ class PDFDuplicateFinder(MainWindow):
             delete_action.triggered.connect(self.on_delete_file)
         
         # Show the context menu
-        menu.exec_(self.duplicates_view.viewport().mapToGlobal(position))
+        menu.exec(self.duplicates_view.viewport().mapToGlobal(position))
     
     def show_in_folder(self, file_path):
         """Open the file's containing folder in the system file manager."""
@@ -1773,7 +1841,6 @@ class PDFDuplicateFinder(MainWindow):
             # Get the list of successfully deleted files
             # Note: The current implementation of delete_files doesn't return which files succeeded/failed
             # So we'll just remove all the files we tried to delete
-            # In a more robust implementation, we would track which specific files were deleted
             
             # Remove deleted files from the model
             if hasattr(model, 'remove_files'):
@@ -2074,9 +2141,8 @@ class PDFDuplicateFinder(MainWindow):
         if self.is_scanning:
             status_text = "Scanning..."
         elif has_groups:
-            total_duplicates = sum(len(group) - 1 for group in self.duplicate_groups)
-            total_groups = len(self.duplicate_groups)
-            status_text = f"Found {total_duplicates} duplicate files in {total_groups} groups"
+            total_duplicates = sum(len(group) - 1 for group in self.duplicate_groups) if self.duplicate_groups else 0
+            status_text = f"Found {total_duplicates} duplicate files in {len(self.duplicate_groups)} groups"
         else:
             status_text = "Ready. Drop PDF files or folders to scan."
         
@@ -2183,7 +2249,7 @@ class PDFDuplicateFinder(MainWindow):
         # Add directories to recent folders if they don't exist
         for directory in self.scan_directories:
             if os.path.isdir(directory):
-                self.recent_folders_manager.add_recent_folder(directory)
+                self.recent_folders_manager.add_recent(directory)
         
         # Reset UI state
         self.duplicate_groups = []
@@ -2371,6 +2437,64 @@ class PDFDuplicateFinder(MainWindow):
                 f"Failed to load scan results:\n{str(e)}"
             )
     
+    def save_scan_results(self):
+        """Save the current scan results to a CSV file."""
+        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
+            QMessageBox.information(self, "No Results", "No scan results to save.")
+            return
+            
+        # Get the default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
+        
+        # Open file dialog to select save location
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Scan Results",
+            os.path.join(os.path.expanduser("~"), default_filename),
+            "CSV Files (*.csv)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+            
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write header
+                writer.writerow([
+                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
+                    'Creation Date', 'Modification Date', 'MD5 Hash'
+                ])
+                
+                # Write data for each duplicate group
+                for i, group in enumerate(self.duplicate_groups, 1):
+                    for file_info in group:
+                        writer.writerow([
+                            i,  # Group number
+                            file_info.get('path', ''),
+                            file_info.get('size', ''),
+                            file_info.get('pages', ''),
+                            file_info.get('creation_date', ''),
+                            file_info.get('modification_date', ''),
+                            file_info.get('md5', '')
+                        ])
+            
+            QMessageBox.information(
+                self, 
+                "Save Successful", 
+                f"Scan results saved to:\n{file_path}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error saving scan results: {e}")
+            QMessageBox.critical(
+                self,
+                "Save Error",
+                f"Failed to save scan results:\n{str(e)}"
+            )
+    
     def on_scan_completed(self, duplicate_groups):
         """Handle completion of the scan operation."""
         self.is_scanning = False
@@ -2384,15 +2508,22 @@ class PDFDuplicateFinder(MainWindow):
         self.current_file_index = -1
         
         if hasattr(self, 'duplicates_view'):
-            # Disconnect previous model signals if any
-            try:
-                self.duplicates_view.selectionModel().selectionChanged.disconnect()
-            except (TypeError, RuntimeError):
-                pass
-                
+            # Disconnect any existing selection model signals
+            current_selection_model = self.duplicates_view.selectionModel()
+            if current_selection_model:
+                try:
+                    current_selection_model.selectionChanged.disconnect()
+                except (TypeError, RuntimeError):
+                    # Ignore if not connected
+                    pass
+            
             # Create and set the new model
             model = DuplicateFilesModel(duplicate_groups)
             self.duplicates_view.setModel(model)
+            
+            # Set up selection behavior
+            self.duplicates_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+            self.duplicates_view.setSelectionMode(QAbstractItemView.SingleSelection)
             
             # Connect selection changed signal
             selection_model = self.duplicates_view.selectionModel()
@@ -2543,21 +2674,41 @@ class PDFDuplicateFinder(MainWindow):
     def load_settings(self):
         """Load application settings from QSettings."""
         try:
-            settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
+            # Load window geometry
+            self.restoreGeometry(self.settings.value("geometry", QByteArray()))
+            
+            # Load window state (toolbars, dock widgets, etc.)
+            self.restoreState(self.settings.value("windowState", QByteArray()))
+            
+            # Load recent files and folders
+            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'load'):
+                self.recent_manager.load()
+            if hasattr(self, 'recent_folders_manager') and hasattr(self.recent_folders_manager, 'load'):
+                self.recent_folders_manager.load()
+            
+            # Load application settings
             self.app_settings = {
-                'scan_recursive': settings.value('scan_recursive', True, type=bool),
-                'min_file_size': settings.value('min_file_size', 100, type=int),
-                'max_file_size': settings.value('max_file_size', 10000, type=int),
-                'hash_size': settings.value('hash_size', 8, type=int),
-                'threshold': settings.value('threshold', 5, type=int),
-                'theme': settings.value('theme', 'system', type=str),
-                'language': settings.value('language', 'en', type=str)
+                'scan_recursive': self.settings.value('scan_recursive', True, type=bool),
+                'min_file_size': self.settings.value('min_file_size', 100, type=int),
+                'max_file_size': self.settings.value('max_file_size', 10000, type=int),
+                'hash_size': self.settings.value('hash_size', 8, type=int),
+                'threshold': self.settings.value('threshold', 5, type=int),
+                'theme': self.settings.value('theme', 'system', type=str),
+                'language': self.settings.value('language', 'en', type=str)
             }
+            
+            # Apply theme
+            self.apply_theme()
+            
+            # Apply language if available
+            if 'language' in self.app_settings and hasattr(self, 'translator'):
+                self.translator.load_language(self.app_settings['language'])
+            
             logger.info("Settings loaded successfully")
+            
         except Exception as e:
-            logger.error(f"Error loading settings: {str(e)}")
-            logger.debug(traceback.format_exc())
-            # Set default settings if loading fails
+            logger.error(f"Error loading settings: {e}")
+            # Reset to default settings on error
             self.app_settings = {
                 'scan_recursive': True,
                 'min_file_size': 100,
@@ -2571,231 +2722,83 @@ class PDFDuplicateFinder(MainWindow):
     def save_settings(self):
         """Save application settings to QSettings."""
         try:
-            settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
-            for key, value in self.app_settings.items():
-                settings.setValue(key, value)
-            settings.sync()
-            logger.info("Settings saved successfully")
+            if hasattr(self, 'app_settings') and hasattr(self, 'settings'):
+                # Save each setting individually
+                for key, value in self.app_settings.items():
+                    self.settings.setValue(key, value)
+                self.settings.sync()
+                logger.info("Settings saved successfully")
         except Exception as e:
-            logger.error(f"Error saving settings: {str(e)}")
+            logger.error(f"Error saving settings: {e}")
             logger.debug(traceback.format_exc())
-    
-    def save_scan_results(self):
-        """Save the current scan results to a CSV file."""
-        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
-            QMessageBox.information(self, "No Results", "No scan results to save.")
-            return
-            
-        # Get the default filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
-        
-        # Open file dialog to select save location
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Scan Results",
-            os.path.join(os.path.expanduser("~"), default_filename),
-            "CSV Files (*.csv)"
-        )
-        
-        if not file_path:
-            return  # User cancelled
-            
-        try:
-            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.writer(csvfile)
-                
-                # Write header
-                writer.writerow([
-                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
-                    'Creation Date', 'Modification Date', 'MD5 Hash'
-                ])
-                
-                # Write data for each duplicate group
-                for i, group in enumerate(self.duplicate_groups, 1):
-                    for file_info in group:
-                        writer.writerow([
-                            i,  # Group number
-                            file_info.get('path', ''),
-                            file_info.get('size', ''),
-                            file_info.get('pages', ''),
-                            file_info.get('creation_date', ''),
-                            file_info.get('modification_date', ''),
-                            file_info.get('md5', '')
-                        ])
-            
-            QMessageBox.information(
-                self, 
-                "Save Successful", 
-                f"Scan results saved to:\n{file_path}"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error saving scan results: {e}")
-            QMessageBox.critical(
-                self,
-                "Save Error",
-                f"Failed to save scan results:\n{str(e)}"
-            )
+            # Set default settings if saving fails
+            self.app_settings = {
+                'scan_recursive': True,
+                'min_file_size': 100,
+                'max_file_size': 10000,
+                'hash_size': 8,
+                'threshold': 5,
+                'theme': 'system',
+                'language': 'en'
+            }
     
     def apply_theme(self):
         # Apply the selected theme
         theme = self.app_settings.get('theme', 'system')
         
         if theme == 'dark':
+            # Dark theme colors
+            palette = QPalette()
+            palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            palette.setColor(QPalette.WindowText, Qt.white)
+            palette.setColor(QPalette.Base, QColor(25, 25, 25))
+            palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+            palette.setColor(QPalette.ToolTipBase, Qt.white)
+            palette.setColor(QPalette.ToolTipText, Qt.white)
+            palette.setColor(QPalette.Text, Qt.white)
+            palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            palette.setColor(QPalette.ButtonText, Qt.white)
+            palette.setColor(QPalette.BrightText, Qt.red)
+            palette.setColor(QPalette.Link, QColor(42, 130, 218))
+            palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+            palette.setColor(QPalette.HighlightedText, Qt.black)
+            
+            # Apply the palette
+            QApplication.setPalette(palette)
+            
+            # Additional style tweaks for dark theme
             self.setStyleSheet("""
-                /* Main window and dialogs */
-                QMainWindow, QDialog, QWidget {
-                    background-color: #2b2b2b;
-                    color: #e0e0e0;
-                    selection-background-color: #3a6ea5;
-                    selection-color: #ffffff;
+                QToolTip { 
+                    color: #ffffff; 
+                    background-color: #2a82da; 
+                    border: 1px solid white; 
                 }
-                
-                /* Text and labels */
-                QLabel, QCheckBox {
-                    color: #e0e0e0;
+                QMenu::item:selected { 
+                    background-color: #2a82da; 
                 }
-                
-                /* Input fields and buttons */
-                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit {
-                    background-color: #3c3f41;
-                    color: #e0e0e0;
-                    border: 1px solid #555;
-                    padding: 3px;
-                    border-radius: 3px;
-                }
-                
-                /* Tree and list widgets */
-                QTreeView, QTreeWidget, QListView, QListWidget, QTableWidget {
-                    background-color: #2b2b2b;
-                    color: #e0e0e0;
-                    border: 1px solid #3f3f3f;
-                    alternate-background-color: #323232;
-                }
-                
-                /* Tree and list items */
-                QTreeView::item, QTreeWidget::item, QListWidget::item {
-                    padding: 5px;
-                    border: 1px solid transparent;
-                }
-                
-                /* Selected items */
-                QTreeView::item:selected, QTreeWidget::item:selected, 
-                QListWidget::item:selected, QTableView::item:selected {
-                    background-color: #3a6ea5;
-                    color: #ffffff;
-                }
-                
-                /* Hover effect */
-                QTreeView::item:hover, QTreeWidget::item:hover, 
-                QListWidget::item:hover, QTableView::item:hover {
-                    background-color: #3a3a3a;
-                }
-                
-                /* Headers */
-                QHeaderView::section {
-                    background-color: #3c3f41;
-                    color: #e0e0e0;
-                    padding: 5px;
-                    border: 1px solid #555;
-                }
-                
-                /* Buttons */
-                QPushButton {
-                    background-color: #3c3f41;
-                    color: #e0e0e0;
-                    border: 1px solid #555;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-                
-                QPushButton:hover {
-                    background-color: #4e5153;
-                }
-                
-                QPushButton:pressed {
-                    background-color: #2d2f30;
+                QStatusBar { 
+                    background-color: #353535; 
+                    color: white; 
                 }
             """)
+            
         elif theme == 'light':
+            # Light theme (system default)
+            QApplication.setPalette(QApplication.style().standardPalette())
             self.setStyleSheet("""
-                /* Main window and dialogs */
-                QMainWindow, QDialog, QWidget {
-                    background-color: #f0f0f0;
-                    color: #333333;
-                    selection-background-color: #4a90e2;
-                    selection-color: #ffffff;
+                QToolTip { 
+                    border: 1px solid #76797C; 
+                    background-color: #f0f0f0; 
+                    color: #000000; 
                 }
-                
-                /* Text and labels */
-                QLabel, QCheckBox {
-                    color: #333333;
-                }
-                
-                /* Input fields and buttons */
-                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit {
-                    background-color: #ffffff;
-                    color: #333333;
-                    border: 1px solid #cccccc;
-                    padding: 3px;
-                    border-radius: 3px;
-                }
-                
-                /* Tree and list widgets */
-                QTreeView, QTreeWidget, QListView, QListWidget, QTableWidget {
-                    background-color: #ffffff;
-                    color: #333333;
-                    border: 1px solid #cccccc;
-                    alternate-background-color: #f8f8f8;
-                }
-                
-                /* Tree and list items */
-                QTreeView::item, QTreeWidget::item, QListWidget::item {
-                    padding: 5px;
-                    border: 1px solid transparent;
-                }
-                
-                /* Selected items */
-                QTreeView::item:selected, QTreeWidget::item:selected, 
-                QListWidget::item:selected, QTableView::item:selected {
-                    background-color: #4a90e2;
-                    color: #ffffff;
-                }
-                
-                /* Hover effect */
-                QTreeView::item:hover, QTreeWidget::item:hover, 
-                QListWidget::item:hover, QTableView::item:hover {
-                    background-color: #f0f0f0;
-                }
-                
-                /* Headers */
-                QHeaderView::section {
-                    background-color: #e0e0e0;
-                    color: #333333;
-                    padding: 5px;
-                    border: 1px solid #cccccc;
-                }
-                
-                /* Buttons */
-                QPushButton {
-                    background-color: #f8f8f8;
-                    color: #333333;
-                    border: 1px solid #cccccc;
-                    padding: 5px 10px;
-                    border-radius: 3px;
-                }
-                
-                QPushButton:hover {
-                    background-color: #e8e8e8;
-                }
-                
-                QPushButton:pressed {
-                    background-color: #e0e0e0;
+                QMenu::item:selected { 
+                    background-color: #2a82da; 
+                    color: white;
                 }
             """)
-        else:  # system
-            self.setStyleSheet("")  # Reset to system theme
+            
+        # Force a style refresh
+        self.update()
     
     def load_scan_results(self):
         """Load scan results from a CSV file."""
@@ -2814,47 +2817,68 @@ class PDFDuplicateFinder(MainWindow):
             with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 
-                # Reset current state
-                self.duplicate_groups = []
-                current_group = -1
+                # Check if required columns exist
+                required_columns = ['Group', 'File Path', 'Size (bytes)']
+                if not all(col in reader.fieldnames for col in required_columns):
+                    raise ValueError("Invalid CSV format. Required columns not found.")
                 
-                # Read data row by row
+                # Group files by group number
+                groups = {}
                 for row in reader:
-                    group_num = int(row.get('Group', '0'))
+                    group_num = int(row['Group'])
+                    if group_num not in groups:
+                        groups[group_num] = []
                     
-                    # Create a new group if needed
-                    if group_num > current_group:
-                        self.duplicate_groups.append([])
-                        current_group = group_num
-                    
-                    # Add file info to the current group
+                    # Create file info dictionary
                     file_info = {
-                        'path': row.get('File Path', ''),
+                        'path': row['File Path'],
                         'size': int(row.get('Size (bytes)', 0)),
-                        'pages': int(row.get('Pages', 0)),
+                        'pages': int(row.get('Pages', 0)) if row.get('Pages') else 0,
                         'creation_date': row.get('Creation Date', ''),
                         'modification_date': row.get('Modification Date', ''),
                         'md5': row.get('MD5 Hash', '')
                     }
-                    self.duplicate_groups[-1].append(file_info)
-            
-            # Update the UI with the loaded results
-            if hasattr(self, 'duplicates_view') and self.duplicate_groups:
-                self.current_group_index = 0
-                self.current_file_index = 0
-                self.update_duplicates_view()
+                    groups[group_num].append(file_info)
+                
+                # Convert to list of groups
+                duplicate_groups = list(groups.values())
+                
+                # Update the UI with loaded results
+                self.duplicate_groups = duplicate_groups
+                if hasattr(self, 'duplicates_view'):
+                    # Disconnect previous model signals if any
+                    try:
+                        self.duplicates_view.selectionModel().selectionChanged.disconnect()
+                    except (TypeError, RuntimeError):
+                        pass
+                    
+                    # Create a new model with the loaded results
+                    model = DuplicateFilesModel(duplicate_groups)
+                    self.duplicates_view.setModel(model)
+                    
+                    # Connect selection change signal
+                    selection_model = self.duplicates_view.selectionModel()
+                    selection_model.selectionChanged.connect(self.on_file_selection_changed)
+                    
+                    # Update the view
+                    self.duplicates_view.resizeColumnsToContents()
+                    
+                    # Select first item if available
+                    if duplicate_groups:
+                        self.current_group_index = 0
+                        self.show_current_group()
+                    
+                    # Update status
+                    total_duplicates = sum(len(group) - 1 for group in duplicate_groups)
+                    status_text = f"Loaded {len(duplicate_groups)} groups with {total_duplicates} duplicate files"
+                    self.status_label.setText(status_text)
+                
                 self.update_ui_state()
                 
                 QMessageBox.information(
-                    self,
-                    "Load Successful",
-                    f"Successfully loaded {len(self.duplicate_groups)} duplicate groups from:\n{file_path}"
-                )
-            else:
-                QMessageBox.warning(
-                    self,
-                    "No Valid Data",
-                    "The selected file does not contain valid scan results."
+                    self, 
+                    "Load Successful", 
+                    f"Successfully loaded {len(duplicate_groups)} groups from:\n{file_path}"
                 )
                 
         except Exception as e:

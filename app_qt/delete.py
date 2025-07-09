@@ -170,109 +170,100 @@ def delete_files(file_paths, parent=None, use_recycle_bin=True, max_retries=3, r
         file_path = remaining_files.pop(0)
         retry_count = 0
         deleted = False
+        last_error = None
         
         while retry_count <= max_retries and not deleted:
             try:
-                if permanently:
-                    os.remove(file_path)
+                if permanently or not use_recycle_bin:
+                    try:
+                        os.remove(file_path)
+                        deleted = True
+                        success += 1
+                        logger.info(f"Permanently deleted: {file_path}")
+                    except PermissionError as perm_error:
+                        last_error = str(perm_error)
+                        process_info = _get_process_using_file(file_path)
+                        error_msg = f"Permission denied while deleting {os.path.basename(file_path)}. "
+                        if process_info != "Unknown process":
+                            error_msg += f"The file is being used by: {process_info}"
+                        else:
+                            error_msg += "The file might be in use or you don't have permission to delete it."
+                        
+                        # Show error to user
+                        if retry_count == max_retries:  # Only show on last attempt
+                            QMessageBox.warning(
+                                parent,
+                                "Delete Failed",
+                                error_msg
+                            )
                 else:
                     try:
                         send2trash.send2trash(file_path)
+                        deleted = True
+                        success += 1
+                        logger.info(f"Moved to recycle bin: {file_path}")
                     except Exception as trash_error:
-                        # If recycle bin fails, ask user if they want to permanently delete
-                        logger.warning(f"Recycle bin operation failed: {file_path}")
-                        logger.debug(f"Recycle bin error: {trash_error}")
+                        last_error = str(trash_error)
+                        logger.warning(f"Recycle bin operation failed for {file_path}: {last_error}")
                         
-                        # Show a more specific error message for OLE errors
-                        error_msg = str(trash_error)
-                        if hasattr(trash_error, 'winerror') and 'OLE' in str(trash_error):
-                            error_msg = "The file couldn't be moved to the recycle bin. This can happen if the file is too large for the recycle bin or the recycle bin is disabled."
+                        # If recycle bin fails, ask user if they want to try permanent deletion
+                        if retry_count == 0:  # Only ask once per file
+                            msg = QMessageBox(parent)
+                            msg.setIcon(QMessageBox.Warning)
+                            msg.setWindowTitle("Recycle Bin Failed")
+                            msg.setText(f"Could not move to Recycle Bin: {os.path.basename(file_path)}")
+                            msg.setInformativeText(
+                                f"The file could not be moved to the Recycle Bin.\n"
+                                f"Error: {last_error}\n\n"
+                                "Would you like to permanently delete the file instead?"
+                            )
+                            
+                            permanent_btn = msg.addButton("Permanently Delete", QMessageBox.YesRole)
+                            skip_btn = msg.addButton("Skip", QMessageBox.NoRole)
+                            retry_btn = msg.addButton("Retry", QMessageBox.ResetRole)
+                            
+                            msg.setDefaultButton(retry_btn)
+                            msg.exec()
+                            
+                            if msg.clickedButton() == permanent_btn:
+                                permanently = True
+                                continue  # Retry with permanent deletion
+                            elif msg.clickedButton() == skip_btn:
+                                break  # Skip this file
+                            # else retry
                         
-                        # Ask user if they want to permanently delete
-                        reply = QMessageBox.question(
-                            parent,
-                            "Recycle Bin Error",
-                            f"{error_msg}\n\nDo you want to permanently delete the file instead?\n\n{os.path.basename(file_path)}",
-                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                            QMessageBox.StandardButton.No
-                        )
-                        
-                        if reply == QMessageBox.StandardButton.Yes:
-                            try:
-                                os.remove(file_path)
-                                logger.info(f"Permanently deleted after recycle bin failure: {file_path}")
-                            except Exception as perm_error:
-                                logger.error(f"Failed to permanently delete {file_path}: {perm_error}")
-                                raise  # Re-raise to be handled by the outer exception handler
-                        else:
-                            # User chose not to delete, count as failed
-                            raise Exception("User chose not to delete permanently")
-                
-                success += 1
-                logger.info(f"{'Permanently ' if permanently else ''}Deleted: {file_path}")
-                deleted = True
-                
-            except OSError as os_error:
-                if hasattr(os_error, 'winerror') and os_error.winerror == 32:  # File in use
+                if not deleted:
                     retry_count += 1
-                    if retry_count > max_retries:
-                        # Get process info and show dialog
-                        process_info = _get_process_using_file(file_path)
-                        result = _show_file_in_use_dialog(parent, file_path, process_info)
-                        
-                        if result == "retry":
-                            retry_count = 0  # Reset retry counter
-                            QApplication.processEvents()  # Keep UI responsive
-                            time.sleep(retry_delay)
-                            continue
-                        elif result == "skip":
-                            logger.warning(f"Skipped file in use: {file_path}")
-                            failed += 1
-                            break
-                        else:  # Close
-                            # Put remaining files back and exit
-                            remaining_files.append(file_path)
-                            return success, failed + len(remaining_files)
-                    
-                    # Simple retry with delay
-                    time.sleep(retry_delay)
-                    continue
-                else:
-                    # Other OS error
-                    error_msg = str(os_error)
-                    if hasattr(os_error, 'winerror'):
-                        error_msg = f"Windows error {os_error.winerror}: {error_msg}"
-                    logger.error(f"Failed to delete {file_path}: {error_msg}")
-                    failed += 1
-                    break
-                    
+                    if retry_count <= max_retries:
+                        time.sleep(retry_delay)
+            
             except Exception as e:
-                logger.error(f"Unexpected error deleting {file_path}: {e}", exc_info=True)
-                failed += 1
-                break
+                last_error = str(e)
+                logger.error(f"Unexpected error deleting {file_path}: {last_error}")
+                retry_count += 1
+                if retry_count > max_retries:
+                    break
+                time.sleep(retry_delay)
+        
+        if not deleted:
+            failed += 1
+            logger.error(f"Failed to delete {file_path} after {max_retries} attempts")
+            if last_error:
+                logger.error(f"Last error: {last_error}")
     
-    # Show results if we have a parent window
-    if parent:
-        if failed > 0 and success > 0:
-            QMessageBox.warning(
-                parent,
-                "Deletion Complete",
-                f"Successfully deleted {success} file(s).\n"
-                f"Failed to delete {failed} file(s).\n\n"
-                "Check the log for details."
-            )
-        elif failed > 0:
-            QMessageBox.critical(
-                parent,
-                "Deletion Failed",
-                f"Failed to delete {failed} file(s).\n\n"
-                "Check the log for details."
-            )
-        elif success > 0:
+    # Show summary of results
+    if success > 0 or failed > 0:
+        summary = []
+        if success > 0:
+            summary.append(f"Successfully deleted: {success} file(s)")
+        if failed > 0:
+            summary.append(f"Failed to delete: {failed} file(s)")
+        
+        if parent and (success > 0 or failed > 0):
             QMessageBox.information(
                 parent,
                 "Deletion Complete",
-                f"Successfully deleted {success} file(s)."
+                "\n".join(summary)
             )
     
     return success, failed
