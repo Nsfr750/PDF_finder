@@ -1,6 +1,6 @@
 # PDF Duplicate Finder
 
-[![GitHub release](https://img.shields.io/badge/release-v2.7.1-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/latest)
+[![GitHub release](https://img.shields.io/badge/release-v2.7.2-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/releases/latest)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/Nsfr750/PDF_finder/graphs/commit-activity)
@@ -23,6 +23,8 @@ A Python application that helps you find and remove duplicate PDF files based on
 - **Portable**: No installation required, runs directly from source
 - **Enhanced Help System**: Contextual help with multi-language support
 - **Settings Management**: Save and restore application preferences
+- **Memory Efficient**: Optimized for handling large PDF collections
+- **Detailed Logging**: Comprehensive logging for troubleshooting
 
 ## 🚀 Getting Started
 
@@ -41,7 +43,7 @@ A Python application that helps you find and remove duplicate PDF files based on
    cd PDF_Finder
    ```
 
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment (recommended):
 
    ```bash
    python -m venv venv
@@ -49,11 +51,19 @@ A Python application that helps you find and remove duplicate PDF files based on
    source venv/bin/activate  # Linux/Mac
    ```
 
-3. Install dependencies:
+3. Install the required dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
+
+### Dependencies
+
+- **Core**: PyPDF2, pdf2image, Pillow, PyMuPDF
+- **GUI**: PySide6, ttkthemes
+- **Utilities**: send2trash, python-dotenv, psutil
+
+For detailed version requirements, see `requirements.txt`.
 
 ### Usage
 

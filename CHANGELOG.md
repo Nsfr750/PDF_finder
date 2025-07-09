@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.7.2] - 2025-07-09
+
+### Added in 2.7.2
+
+- Enhanced error handling for file operations
+- Improved logging for better debugging
+- Added more detailed progress feedback during scans
+
+### Fixed in 2.7.2
+
+- Fixed memory leaks in PDF processing
+- Resolved issues with special characters in file paths
+- Improved stability during large file processing
+
+### Changed in 2.7.2
+
+- Updated dependencies to latest stable versions
+- Optimized memory usage for better performance
+
 ## [2.7.1] - 2025-07-03
 
 ### Added in 2.7.1
