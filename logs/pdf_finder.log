@@ -1,1 +1,20 @@
 
+2025-07-09 18:44:01,027 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-09 18:44:01,027 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-09 18:44:01,028 - PDFDuplicateFinder - INFO - Log file: logs\pdf_finder.log
+2025-07-09 18:44:01,028 - PDFDuplicateFinder - INFO - ================================================================================
+2025-07-09 18:44:01,029 - PDFDuplicateFinder - INFO - PDF Duplicate Finder started
+2025-07-09 18:44:01,029 - PDFDuplicateFinder - INFO - Log file: C:\Users\guara\AppData\Local\Temp\onefile_17384_133965530349201734\logs\pdf_finder.log
+2025-07-09 18:44:01,082 - PDFDuplicateFinder - INFO - Settings loaded successfully
+2025-07-09 18:44:01,135 - PDFDuplicateFinder - INFO - Application started successfully
+2025-07-09 18:44:48,976 - PDFDuplicateFinder - DEBUG - UI retranslated to en
+2025-07-09 18:44:48,976 - PDFDuplicateFinder - DEBUG - Help dialog initialized successfully
+2025-07-09 18:44:51,533 - PDFDuplicateFinder - DEBUG - Language changed from en to it
+2025-07-09 18:44:51,535 - PDFDuplicateFinder - DEBUG - UI retranslated to it
+2025-07-09 18:44:52,597 - PDFDuplicateFinder - DEBUG - Language changed from it to en
+2025-07-09 18:44:52,599 - PDFDuplicateFinder - DEBUG - UI retranslated to en
+2025-07-09 18:44:54,006 - PDFDuplicateFinder - DEBUG - Language changed from en to it
+2025-07-09 18:44:54,007 - PDFDuplicateFinder - DEBUG - UI retranslated to it
+2025-07-09 18:45:15,071 - PDFDuplicateFinder - INFO - Application is shutting down
+2025-07-09 18:45:15,074 - PDFDuplicateFinder - INFO - Settings saved successfully
+2025-07-09 18:45:15,075 - PDFDuplicateFinder - INFO - Application shutdown completed

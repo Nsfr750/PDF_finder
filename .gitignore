@@ -119,3 +119,6 @@ $RECYCLE.BIN/
 
 Compila.bat
 logs/pdf_finder.log
+logs/pdf_finder.log
+/main.dist
+/logs
