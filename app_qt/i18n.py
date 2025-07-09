@@ -3,21 +3,21 @@ Internationalization support for PDF Duplicate Finder.
 """
 import os
 from pathlib import Path
-from PySide6.QtCore import QCoreApplication, QLocale, QTranslator, QLibraryInfo, Qt, Signal, QObject
+from PyQt6.QtCore import QCoreApplication, QLocale, QTranslator, QLibraryInfo, Qt, pyqtSignal as Signal, QObject
 
 class LanguageNotifier(QObject):
     """Simple class to handle language change notifications."""
-    language_changed = Signal()
+    language_changed = Signal(str)
     
-    def emit_language_changed(self):
+    def emit_language_changed(self, language_code):
         """Emit the language_changed signal."""
-        self.language_changed.emit()
+        self.language_changed.emit(language_code)
 
 class Translator:
     def __init__(self, app):
         self.app = app
-        self.translator_qt = QTranslator()
-        self.translator_app = QTranslator()
+        self.qt_translator = QTranslator()
+        self.app_translator = QTranslator()
         self.current_language = 'en'  # Default language
         self.notifier = LanguageNotifier()
         
@@ -36,29 +36,34 @@ class Translator:
         }
         return names.get(code, code)
     
-    def load_language(self, language_code):
-        """Load the specified language."""
-        # Remove old translations
-        QCoreApplication.removeTranslator(self.translator_qt)
-        QCoreApplication.removeTranslator(self.translator_app)
+    def load_language(self, language_code: str):
+        """
+        Load translations for the specified language.
         
-        # Load Qt base translations
-        qt_translations_dir = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
-        if self.translator_qt.load(f'qtbase_{language_code}', qt_translations_dir):
-            QCoreApplication.installTranslator(self.translator_qt)
+        Args:
+            language_code: Two-letter language code (e.g., 'en', 'it')
+        """
+        # Remove old translations
+        QCoreApplication.removeTranslator(self.qt_translator)
+        QCoreApplication.removeTranslator(self.app_translator)
+        
+        # Load Qt translations
+        qt_translations_dir = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        if self.qt_translator.load(f"qtbase_{language_code}", qt_translations_dir):
+            QCoreApplication.installTranslator(self.qt_translator)
         
         # Load application translations
         translations_dir = Path(__file__).parent / 'translations'
-        if self.translator_app.load(f'pdf_finder_{language_code}', str(translations_dir)):
-            QCoreApplication.installTranslator(self.translator_app)
+        if self.app_translator.load(f"pdf_finder_{language_code}", str(translations_dir)):
+            QCoreApplication.installTranslator(self.app_translator)
         
         self.current_language = language_code
         
         # Update the application's layout direction
         if language_code in ['ar', 'he', 'fa']:  # RTL languages
-            self.app.setLayoutDirection(Qt.RightToLeft)
+            self.app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         else:
-            self.app.setLayoutDirection(Qt.LeftToRight)
+            self.app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
             
         # Notify the application that the language has changed
-        self.notifier.emit_language_changed()
+        self.notifier.emit_language_changed(language_code)

@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QMainWindow
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QMainWindow
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QImage
 import fitz  # PyMuPDF
 import tempfile
 import os

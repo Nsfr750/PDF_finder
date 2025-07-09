@@ -4,7 +4,7 @@ Recent folders management for PDF Duplicate Finder.
 import os
 from pathlib import Path
 from typing import List, Optional, Callable
-from PySide6.QtCore import QSettings, Signal, QObject
+from PyQt6.QtCore import QSettings, pyqtSignal as Signal, QObject
 
 
 class RecentFoldersManager(QObject):

@@ -3,10 +3,13 @@ import logging
 import time
 import tempfile
 import shutil
-from typing import List, Dict, Any, Optional, Tuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from PySide6.QtCore import QObject, Signal, QThreadPool, QRunnable, Slot, Qt
-from PySide6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+import hashlib
+import fitz  # PyMuPDF
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple, Set, Callable
+import concurrent.futures
+from PyQt6.QtCore import QObject, pyqtSignal as Signal, QThreadPool, QRunnable, pyqtSlot as Slot, Qt
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
 
 from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
@@ -200,7 +203,7 @@ class ScanManager(QObject):
             None
         )
         self.progress_dialog.setWindowTitle("Scanning")
-        self.progress_dialog.setWindowModality(Qt.WindowModal)
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.progress_dialog.canceled.connect(self.cancel_scan)
         self.progress_dialog.show()
         

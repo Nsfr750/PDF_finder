@@ -4,7 +4,10 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate, QStyleOptionViewItem, QApplication, QStyle
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QModelIndex, QRect
-from PyQt6.QtGui import QColor, QBrush, QFont, QIcon, QPixmap, QPainter
+from PyQt6.QtGui import QColor, QBrush, QFont, QIcon, QPixmap, QPainter, QFontMetrics
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FileListWidget(QTreeWidget):
     """Widget for displaying duplicate PDF groups in a tree structure."""
@@ -215,46 +218,88 @@ class FileItemDelegate(QStyledItemDelegate):
     
     def paint(self, painter, option, index):
         """Custom paint method for items."""
-        # Save the painter state
+        # Check if painter is valid
+        if not painter.isActive():
+            logger.warning("Painter is not active, skipping paint operation")
+            return
+            
+        # Save the painter state at the start
         painter.save()
         
-        # Set up the style options
-        options = QStyleOptionViewItem(option)
-        self.initStyleOption(options, index)
-        
-        # Get the item
-        model = index.model()
-        item = model.itemFromIndex(index)
-        
-        # Highlight the first item in each group (the one to keep)
-        if item and item.parent() is not None and item.parent().indexOfChild(item) == 0:
-            # Draw highlight background
-            highlight_rect = option.rect
-            painter.fillRect(highlight_rect, self.highlight_color)
+        try:
+            # Set up the style options
+            options = QStyleOptionViewItem(option)
+            self.initStyleOption(options, index)
             
-            # Draw border
-            pen = QPen(QColor(180, 210, 255), 1)
-            painter.setPen(pen)
-            painter.drawRect(highlight_rect.adjusted(0, 0, -1, -1))
-        
-        # Draw the item text
-        text = options.text
-        if text:
-            # Calculate text rectangle
-            text_rect = options.rect.adjusted(2, 0, -2, 0)
+            # Configure the painter with rendering hints
+            painter.setRenderHints(
+                QPainter.RenderHint.Antialiasing | 
+                QPainter.RenderHint.TextAntialiasing |
+                QPainter.RenderHint.SmoothPixmapTransform
+            )
             
-            # Draw text with elision if needed
-            metrics = QApplication.fontMetrics()
-            elided_text = metrics.elidedText(text, Qt.TextElideMode.ElideRight, text_rect.width())
+            # Get the item
+            model = index.model()
+            if not model:
+                return
+                
+            item = model.itemFromIndex(index)
+            if not item:
+                return
             
-            # Set text color
-            painter.setPen(Qt.GlobalColor.black if option.state & QStyle.StateFlag.State_Enabled else Qt.GlobalColor.gray)
+            # Get the style
+            style = option.widget.style() if option.widget else QApplication.style()
             
-            # Draw text
-            painter.drawText(text_rect, int(option.displayAlignment()), elided_text)
-        
-        # Restore the painter state
-        painter.restore()
+            # Draw the item background
+            style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, option, painter, option.widget)
+            
+            # Highlight the first item in each group (the one to keep)
+            if item.parent() is not None and item.parent().indexOfChild(item) == 0:
+                # Draw highlight background
+                highlight_rect = option.rect
+                highlight_brush = QBrush(QColor(220, 240, 255))
+                painter.fillRect(highlight_rect, highlight_brush)
+            
+            # Get the text to display
+            text = index.data(Qt.ItemDataRole.DisplayRole)
+            
+            if text:
+                # Calculate text rectangle with some padding
+                text_rect = options.rect.adjusted(2, 0, -2, 0)
+                
+                # Draw text with elision if needed
+                metrics = painter.fontMetrics()
+                elided_text = metrics.elidedText(text, Qt.TextElideMode.ElideRight, text_rect.width())
+                
+                # Set text color based on state
+                text_color = QColor(Qt.GlobalColor.black)
+                if not (option.state & QStyle.StateFlag.State_Enabled):
+                    text_color = QColor(Qt.GlobalColor.gray)
+                
+                painter.setPen(text_color)
+                
+                # Draw the text
+                text_flags = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+                if option.state & QStyle.StateFlag.State_Selected:
+                    text_flags |= Qt.AlignmentFlag.AlignHCenter
+                
+                painter.drawText(text_rect, int(text_flags), elided_text)
+                
+        except Exception as e:
+            logger.error(f"Error painting item: {e}", exc_info=True)
+            # If there's an error, fall back to default painting
+            try:
+                super().paint(painter, option, index)
+            except Exception as inner_e:
+                logger.error(f"Error in fallback paint: {inner_e}")
+                
+        finally:
+            # Always restore the painter state
+            if painter.isActive():
+                try:
+                    painter.restore()
+                except Exception as e:
+                    logger.error(f"Error restoring painter state: {e}")
     
     def sizeHint(self, option, index):
         """Return the size hint for the item."""

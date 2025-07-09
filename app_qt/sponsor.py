@@ -1,13 +1,16 @@
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
                              QHBoxLayout, QTextBrowser, QApplication, QWidget,
                              QGridLayout, QSizePolicy)
-from PySide6.QtCore import Qt, QUrl, QSize, QBuffer
-from PySide6.QtGui import QPixmap, QDesktopServices, QImage
+from PyQt6.QtCore import Qt, QUrl, QSize, QBuffer, QTimer
+from PyQt6.QtGui import QPixmap, QDesktopServices, QImage, QIcon
 import webbrowser
 import os
 import io
 import qrcode
-from PIL import ImageQt
+from PIL import Image, ImageQt
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SponsorDialog(QDialog):
     def __init__(self, parent=None):
@@ -20,7 +23,7 @@ class SponsorDialog(QDialog):
         # Title
         title = QLabel("Support PDF Duplicate Finder")
         title.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 20px;")
-        title.setAlignment(Qt.AlignCenter)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
         
         # Message
@@ -29,7 +32,7 @@ class SponsorDialog(QDialog):
             "\n\nYour support helps cover hosting costs and encourages further development."
         )
         message.setWordWrap(True)
-        message.setAlignment(Qt.AlignCenter)
+        message.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(message)
         
         # Create a grid layout for donation methods
@@ -38,40 +41,57 @@ class SponsorDialog(QDialog):
         # GitHub Sponsors
         github_label = QLabel('<a href="https://github.com/sponsors/Nsfr750">GitHub Sponsors</a>')
         github_label.setOpenExternalLinks(True)
-        github_label.setAlignment(Qt.AlignCenter)
+        github_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # PayPal
         paypal_label = QLabel('<a href="https://paypal.me/3dmega">PayPal Donation</a>')
         paypal_label.setOpenExternalLinks(True)
-        paypal_label.setAlignment(Qt.AlignCenter)
+        paypal_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Monero
         monero_address = "47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF"
         monero_label = QLabel("Monero:")
-        monero_address_label = QLabel(f"<code>{monero_address}</code>")
-        monero_address_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        monero_address_label.setWordWrap(True)
+        monero_address_label = QLabel(monero_address)
+        monero_address_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        monero_address_label.setStyleSheet("""
+            QLabel {
+                font-family: monospace;
+                background-color: #f0f0f0;
+                padding: 5px;
+                border-radius: 3px;
+                border: 1px solid #ddd;
+            }
+        """)
         
         # Generate QR Code
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=4,
+            box_size=10,
             border=4,
         )
         qr.add_data(f'monero:{monero_address}')
         qr.make(fit=True)
         
+        # Convert QR code to a PIL Image
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Convert PIL Image to QPixmap
-        qimage = ImageQt.ImageQt(img)
-        pixmap = QPixmap.fromImage(qimage).scaled(
-            200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # Convert PIL Image to bytes
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        
+        # Load image data into QPixmap
+        pixmap = QPixmap()
+        pixmap.loadFromData(buffer.getvalue())
+        
+        # Scale the pixmap
+        pixmap = pixmap.scaled(200, 200, 
+                             Qt.AspectRatioMode.KeepAspectRatio, 
+                             Qt.TransformationMode.SmoothTransformation)
         
         qr_label = QLabel()
         qr_label.setPixmap(pixmap)
-        qr_label.setAlignment(Qt.AlignCenter)
+        qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         qr_label.setToolTip("Scan to donate XMR")
         
         # Add widgets to grid

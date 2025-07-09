@@ -4,8 +4,12 @@ import tempfile
 import fitz  # PyMuPDF
 from PIL import Image
 import imagehash
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional, Union
 import logging
+from pathlib import Path
+
+# Import utility functions
+from .utils import get_file_path, get_file_info_dict
 
 logger = logging.getLogger('PDFUtils')
 
@@ -107,6 +111,20 @@ def calculate_image_hash(image_path: str, hash_size: int = 8) -> str:
         logger.error(f"Error calculating image hash for {image_path}: {e}")
         return None
 
+def compare_hashes(hash1: str, hash2: str) -> float:
+    """
+    Compare two hashes and return a similarity score.
+    
+    Args:
+        hash1: First hash
+        hash2: Second hash
+        
+    Returns:
+        Similarity score (0.0 to 1.0)
+    """
+    distance = sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
+    return 1 - (distance / len(hash1))
+
 def extract_first_page_image(pdf_path: str, output_path: str, dpi: int = 100) -> bool:
     """
     Extract the first page of a PDF as an image.
@@ -151,98 +169,95 @@ def find_duplicates(directory: str = '', recursive: bool = True,
     
     Args:
         directory: Directory to search for PDFs (ignored if processed_files is provided)
-        recursive: Whether to search subdirectories (ignored if processed_files is provided)
-        min_file_size: Minimum file size in bytes (ignored if processed_files is provided)
-        max_file_size: Maximum file size in bytes (ignored if processed_files is provided)
-        hash_size: Size of the perceptual hash (higher = more accurate but slower)
-        threshold: Similarity threshold (0-1) for considering files as duplicates
-        processed_files: Optional list of pre-processed file info dicts
+        recursive: Whether to search recursively in subdirectories
+        min_file_size: Minimum file size in bytes
+        max_file_size: Maximum file size in bytes
+        hash_size: Size of the perceptual hash
+        threshold: Similarity threshold (0.0 to 1.0)
+        processed_files: Optional list of pre-processed file info dictionaries
         
     Returns:
-        List of duplicate file groups, where each group is a list of file info dicts
+        List of duplicate file groups, where each group is a list of file info dictionaries
     """
-    if processed_files is not None:
-        # Use pre-processed files
-        logger.info(f"Processing {len(processed_files)} pre-processed files")
-        file_infos = processed_files
-    else:
-        # Find all PDF files
-        logger.info(f"Searching for duplicate PDFs in {directory}")
-        pdf_files = []
-        if recursive:
-            for root, _, files in os.walk(directory):
-                for file in files:
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # If we have pre-processed files, use them
+        if processed_files is not None and processed_files:
+            logger.info(f"Using {len(processed_files)} pre-processed files")
+            file_infos = processed_files
+        else:
+            # Otherwise, find and process all PDF files in the directory
+            file_infos = []
+            pdf_files = []
+            
+            # Find all PDF files
+            if recursive:
+                for root, _, files in os.walk(directory):
+                    for file in files:
+                        if file.lower().endswith('.pdf'):
+                            file_path = os.path.join(root, file)
+                            try:
+                                file_size = os.path.getsize(file_path)
+                                if min_file_size <= file_size <= max_file_size:
+                                    pdf_files.append((file_path, file_size))
+                            except OSError as e:
+                                logger.warning(f"Could not get size for {file_path}: {e}")
+            else:
+                for file in os.listdir(directory):
                     if file.lower().endswith('.pdf'):
-                        file_path = os.path.join(root, file)
+                        file_path = os.path.join(directory, file)
                         try:
                             file_size = os.path.getsize(file_path)
                             if min_file_size <= file_size <= max_file_size:
                                 pdf_files.append((file_path, file_size))
-                        except Exception as e:
+                        except OSError as e:
                             logger.warning(f"Could not get size for {file_path}: {e}")
-        else:
-            for file in os.listdir(directory):
-                if file.lower().endswith('.pdf'):
-                    file_path = os.path.join(directory, file)
-                    try:
-                        file_size = os.path.getsize(file_path)
-                        if min_file_size <= file_size <= max_file_size:
-                            pdf_files.append((file_path, file_size))
-                    except Exception as e:
-                        logger.warning(f"Could not get size for {file_path}: {e}")
+            
+            # Get file info for each PDF
+            for file_path, file_size in pdf_files:
+                try:
+                    info = get_pdf_info(file_path)
+                    if info:
+                        file_infos.append(info)
+                except Exception as e:
+                    logger.warning(f"Could not get info for {file_path}: {e}")
         
-        logger.info(f"Found {len(pdf_files)} PDF files to process")
+        # Group by size first
+        size_groups = {}
+        for file_info in file_infos:
+            size = file_info.get('size', 0)
+            if size not in size_groups:
+                size_groups[size] = []
+            size_groups[size].append(file_info)
         
-        # Get file info for each PDF
-        file_infos = []
-        for file_path, _ in pdf_files:
-            try:
-                info = get_pdf_info(file_path)
-                if info:
-                    file_infos.append(info)
-            except Exception as e:
-                logger.warning(f"Could not get info for {file_path}: {e}")
-    
-    # Group files by size first (files with different sizes can't be duplicates)
-    size_groups = {}
-    for file_info in file_infos:
-        file_size = file_info.get('size', 0)
-        if file_size not in size_groups:
-            size_groups[file_size] = []
-        size_groups[file_size].append(file_info)
-    
-    # Only keep groups with more than one file
-    size_groups = {k: v for k, v in size_groups.items() if len(v) > 1}
-    logger.info(f"Found {len(size_groups)} groups of files with the same size")
-    
-    # Process each size group to find duplicates
-    duplicate_groups = []
-    
-    for size, files in size_groups.items():
-        if len(files) < 2:
-            continue
+        # Only keep groups with more than one file
+        potential_duplicates = [group for group in size_groups.values() if len(group) > 1]
         
-        # Extract first page as image and calculate hashes
-        file_hashes = {}
-        temp_dir = tempfile.mkdtemp()
+        if not potential_duplicates:
+            return []
+        
+        # For each group of same-size files, compare content hashes
+        duplicate_groups = []
+        temp_dir = tempfile.mkdtemp(prefix='pdf_finder_')
         
         try:
-            for file_info in files:
-                file_path = file_info['path']
-                # Extract first page as image
+            # Calculate perceptual hashes for all files
+            file_hashes = {}
+            for file_info in file_infos:
+                file_path = get_file_path(file_info, 'path')
+                if not file_path:
+                    continue
+                    
+                # Create a temporary image for the first page
                 image_path = os.path.join(temp_dir, f"{os.path.basename(file_path)}.png")
                 if extract_first_page_image(file_path, image_path):
-                    # Calculate perceptual hash
-                    phash = calculate_image_hash(image_path, hash_size)
-                    if phash:
+                    try:
+                        # Calculate perceptual hash
+                        phash = calculate_image_hash(image_path, hash_size=hash_size)
                         file_hashes[file_path] = (phash, file_info)
-                
-                # Clean up the temporary image file
-                try:
-                    if os.path.exists(image_path):
-                        os.remove(image_path)
-                except Exception as e:
-                    logger.warning(f"Could not delete temporary file {image_path}: {e}")
+                    except Exception as e:
+                        logger.warning(f"Could not calculate hash for {file_path}: {e}")
             
             # Compare hashes to find duplicates
             processed = set()
@@ -255,28 +270,30 @@ def find_duplicates(directory: str = '', recursive: bool = True,
                 for file2, (hash2, file_info2) in file_hashes.items():
                     if file1 == file2 or file2 in processed:
                         continue
-                    
-                    # Calculate hamming distance between hashes
-                    distance = sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
-                    similarity = 1 - (distance / len(hash1))
-                    
+                        
+                    # Compare hashes
+                    similarity = compare_hashes(hash1, hash2)
                     if similarity >= threshold:
                         duplicates.append(file_info2)
                         processed.add(file2)
                 
                 if len(duplicates) > 1:
                     duplicate_groups.append(duplicates)
-        
+                
+                processed.add(file1)
+                
         finally:
-            # Clean up temporary directory
+            # Clean up temporary files
             try:
-                import shutil
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception as e:
                 logger.warning(f"Could not delete temporary directory {temp_dir}: {e}")
-    
-    logger.info(f"Found {len(duplicate_groups)} groups of duplicate PDFs")
-    return duplicate_groups
+        
+        return duplicate_groups
+        
+    except Exception as e:
+        logger.error(f"Error finding duplicates: {e}", exc_info=True)
+        raise
 
 # Example usage
 if __name__ == "__main__":
@@ -293,4 +310,6 @@ if __name__ == "__main__":
     for i, group in enumerate(duplicates, 1):
         print(f"\nGroup {i}:")
         for file_info in group:
-            print(f"  - {file_info['path']} ({file_info['size'] / 1024:.1f} KB)")
+            file_path = get_file_path(file_info, 'path')
+            size = file_info.get('size', 0)
+            print(f"  - {file_path} ({size / 1024:.1f} KB)")

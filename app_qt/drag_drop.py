@@ -1,7 +1,7 @@
 import os
 import logging
-from PySide6.QtCore import QMimeData, Qt, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
+from PyQt6.QtCore import QMimeData, Qt, QUrl
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 from typing import List, Optional, Union, Callable
 
 logger = logging.getLogger('PDFDuplicateFinder')

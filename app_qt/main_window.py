@@ -5,12 +5,12 @@ import os
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any
 
-from PySide6.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMainWindow, QFileDialog, QMenuBar, QMenu,
     QMessageBox, QApplication
 )
-from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtCore import Signal, QObject, QLocale, Qt, QTranslator, QLibraryInfo
+from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtCore import pyqtSignal as Signal, QObject, QLocale, Qt, QTranslator, QLibraryInfo
 
 from .i18n import Translator
 

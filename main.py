@@ -16,17 +16,17 @@ from app_qt.version import get_version
 from app_qt.view_log import show_log_viewer
 
 # Qt imports
-from PySide6.QtCore import (
-    Qt, QSize, QThread, Signal, Slot, QObject, QTimer, QSettings, 
+from PyQt6.QtCore import (
+    Qt, QSize, QThread, pyqtSignal as Signal, pyqtSlot as Slot, QObject, QTimer, QSettings, 
     QPoint, QEvent, QMimeData, QUrl, QByteArray, QBuffer, QIODevice,
     QLocale, QTranslator, QLibraryInfo
 )
-from PySide6.QtGui import (
+from PyQt6.QtGui import (
     QIcon, QPixmap, QFont, QColor, QPalette, QKeySequence, 
     QDragEnterEvent, QDropEvent, QImage, QImageReader, 
     QAction, QActionGroup
 )
-from PySide6.QtWidgets import (
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
     QLabel, QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView, QSplitter,
     QFileDialog, QMessageBox, QMenuBar, QMenu, QStyle, QTreeWidget,
@@ -54,6 +54,7 @@ from app_qt.pdf_utils import (
     calculate_image_hash, find_duplicates
 )
 from app_qt.preview_widget import PDFPreviewWidget, PreviewWindow
+from app_qt.utils import get_file_path, get_file_info_dict
 
 # Set up logging before importing Qt
 log_dir = Path("logs")
@@ -350,11 +351,14 @@ class PDFDuplicateFinder(MainWindow):
     
     def retranslate_ui(self):
         """Retranslate all UI elements."""
-        # Check if the widget is being destroyed
-        if not self or not hasattr(self, 'isVisible'):
+        # Check if the widget is being destroyed or if translation is already in progress
+        if not self or not hasattr(self, 'isVisible') or hasattr(self, '_translating') and self._translating:
             return
             
         try:
+            # Set flag to prevent recursion
+            self._translating = True
+            
             # Call parent's retranslate_ui first
             super().retranslate_ui()
             
@@ -413,6 +417,11 @@ class PDFDuplicateFinder(MainWindow):
                 logger.debug("Qt object deleted during retranslate_ui")
                 return
             raise
+            
+        finally:
+            # Always clear the flag when done
+            if hasattr(self, '_translating'):
+                del self._translating
             
     def change_language(self, language_code: str):
         """Change the application language.
@@ -1136,8 +1145,8 @@ class PDFDuplicateFinder(MainWindow):
                 view.setModel(model)  # This will delete the old model and its selection model
                 
                 # Set up selection behavior
-                view.setSelectionBehavior(QAbstractItemView.SelectRows)
-                view.setSelectionMode(QAbstractItemView.SingleSelection)
+                view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+                view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
                 
                 # Get the new selection model and connect signals
                 selection_model = view.selectionModel()
@@ -1181,7 +1190,7 @@ class PDFDuplicateFinder(MainWindow):
                 QMessageBox.critical(
                     self,
                     "Error",
-                    f"Failed to update UI with scan results: {str(e)}"
+                    f"Failed to update UI with scan results: {str(e)}\n\nCheck the log file for more details."
                 )
                 
             finally:
@@ -1199,6 +1208,12 @@ class PDFDuplicateFinder(MainWindow):
         finally:
             # Update UI state to reflect the new scan results
             self.update_ui_state()
+            
+            # Force update the menu bar to ensure it's refreshed
+            self.menuBar().update()
+            
+            # Force a menu bar update to ensure all menu states are refreshed
+            self.menuBar().repaint()
     
     def update_progress(self, current, total, message):
         """
@@ -1300,112 +1315,131 @@ class PDFDuplicateFinder(MainWindow):
         self.update_ui_state()
     
     def create_menus(self):
+        # Get the menubar
         menubar = self.menuBar()
         
-        # File menu
-        file_menu = menubar.addMenu("File")
+        # Clear existing menus to prevent duplicates
+        menubar.clear()
         
-        self.scan_folder_action = QAction("Scan Folder...", self)
+        # File menu
+        file_menu = menubar.addMenu(self.tr("&File"))
+        
+        # Scan Folder action
+        self.scan_folder_action = QAction(self.tr("&Scan Folder..."), self)
         self.scan_folder_action.triggered.connect(self.on_scan_folder)
+        self.scan_folder_action.setShortcut("Ctrl+O")
         file_menu.addAction(self.scan_folder_action)
         
         file_menu.addSeparator()
         
-        # Save results action
-        self.save_results_action = QAction("Save Results...", self)
+        # Save Results action
+        self.save_results_action = QAction(self.tr("&Save Results..."), self)
         self.save_results_action.triggered.connect(self.save_scan_results)
         self.save_results_action.setShortcut("Ctrl+S")
+        self.save_results_action.setEnabled(False)  # Disabled by default until we have results
         file_menu.addAction(self.save_results_action)
         
-        # Load results action
-        self.load_results_action = QAction("Load Results...", self)
+        # Load Results action
+        self.load_results_action = QAction(self.tr("Load Results..."), self)
         self.load_results_action.triggered.connect(self.load_scan_results)
-        self.load_results_action.setShortcut("Ctrl+O")
+        self.load_results_action.setShortcut("Ctrl+L")
         file_menu.addAction(self.load_results_action)
         
-        # Add Recent Folders submenu
-        file_menu.addSeparator()
-        self.recent_menu = file_menu.addMenu(self.tr("Recent Folders"))
         file_menu.addSeparator()
         
-        self.exit_action = QAction(self.tr("Exit"))
-        self.exit_action.triggered.connect(self.close)
-        file_menu.addAction(self.exit_action)
+        # Recent folders submenu
+        self.recent_menu = file_menu.addMenu(self.tr("Recent &Folders"))
+        self.load_recent_files()  # This will populate the recent folders
+        
+        file_menu.addSeparator()
+        
+        # Exit action
+        exit_action = QAction(self.tr("E&xit"), self)
+        exit_action.triggered.connect(self.close)
+        exit_action.setShortcut("Ctrl+Q")
+        file_menu.addAction(exit_action)
         
         # Edit menu
-        edit_menu = menubar.addMenu(self.tr("Edit"))
+        edit_menu = menubar.addMenu(self.tr("&Edit"))
         
-        self.settings_action = QAction("Settings...", self)
+        # Settings action
+        self.settings_action = QAction(self.tr("&Settings..."), self)
         self.settings_action.triggered.connect(self.on_settings)
         edit_menu.addAction(self.settings_action)
         
-        # Tools menu (moved from MainWindow)
-        self.tools_menu = menubar.addMenu(self.tr("Tools"))
-        
-        # Add Language submenu to Tools
-        self.language_menu = self.tools_menu.addMenu(self.tr("Language"))
-        
-        # Add language actions
-        self.language_group = QActionGroup(self)
-        for lang_code in self.translator.available_languages():
-            action = QAction(self.translator.language_name(lang_code), self)
-            action.setCheckable(True)
-            action.setData(lang_code)
-            action.triggered.connect(lambda checked, code=lang_code: self.change_language(code))
-            self.language_menu.addAction(action)
-            self.language_group.addAction(action)
-        
-        # Set current language from settings or system default
-        current_lang = self.app_settings.get('language')
-        if not current_lang or current_lang not in self.translator.available_languages():
-            current_lang = QLocale.system().name()[:2]  # Get 2-letter language code
-            if current_lang not in self.translator.available_languages():
-                current_lang = 'en'  # Default to English
-        
-        # Update the checked state and load the language
-        for action in self.language_group.actions():
-            if action.data() == current_lang:
-                action.setChecked(True)
-                # Ensure the language is loaded
-                self.translator.load_language(current_lang)
-                break
-                
-        # Add separator
-        self.tools_menu.addSeparator()
-        
-        # Check for Updates
-        self.update_action = QAction("Check for Updates...", self)
-        self.update_action.triggered.connect(self.on_check_updates)
-        self.tools_menu.addAction(self.update_action)
-        
-        # View Log action
-        self.view_log_action = QAction("View Log", self)
-        self.view_log_action.triggered.connect(self.on_view_log)
-        self.tools_menu.addAction(self.view_log_action)
-        
         # View menu
-        view_menu = menubar.addMenu("View")
+        view_menu = menubar.addMenu(self.tr("&View"))
         
-        self.prev_group_action = QAction("Previous Group", self)
+        # Navigation actions
+        self.prev_group_action = QAction(self.tr("&Previous Group"), self)
         self.prev_group_action.triggered.connect(self.on_prev_group)
         view_menu.addAction(self.prev_group_action)
         
-        self.next_group_action = QAction("Next Group", self)
+        self.next_group_action = QAction(self.tr("&Next Group"), self)
         self.next_group_action.triggered.connect(self.on_next_group)
         view_menu.addAction(self.next_group_action)
         
         view_menu.addSeparator()
         
-        self.prev_file_action = QAction("Previous File", self)
+        self.prev_file_action = QAction(self.tr("Pre&vious File"), self)
         self.prev_file_action.triggered.connect(self.on_prev_file)
         view_menu.addAction(self.prev_file_action)
         
-        self.next_file_action = QAction("Next File", self)
+        self.next_file_action = QAction(self.tr("Ne&xt File"), self)
         self.next_file_action.triggered.connect(self.on_next_file)
         view_menu.addAction(self.next_file_action)
         
+        view_menu.addSeparator()
+        
+        # Toggle preview action
+        self.toggle_preview_action = QAction(self.tr("Show &Preview"), self, checkable=True)
+        self.toggle_preview_action.setChecked(True)
+        self.toggle_preview_action.triggered.connect(self.toggle_preview_window)
+        view_menu.addAction(self.toggle_preview_action)
+        
+        # Tools menu
+        tools_menu = menubar.addMenu(self.tr("&Tools"))
+        
+        # Language submenu
+        language_menu = tools_menu.addMenu(self.tr("&Language"))
+        
+        # Add language actions
+        self.language_group = QActionGroup(self)
+        self.language_group.setExclusive(True)
+        
+        # Add available languages
+        languages = [
+            ("English", "en"),
+            ("Italiano", "it"),
+            # Add more languages as needed
+        ]
+        
+        for name, code in languages:
+            action = QAction(name, self, checkable=True)
+            action.setData(code)
+            if code == self.app_settings.get('language', 'en'):
+                action.setChecked(True)
+            action.triggered.connect(lambda checked, code=code: self.change_language(code))
+            language_menu.addAction(action)
+            self.language_group.addAction(action)
+        
+        # Add Check for Updates action
+        self.update_action = QAction("Check for Updates...", self)
+        self.update_action.triggered.connect(self.on_check_updates)
+        tools_menu.addAction(self.update_action)
+        
+        # Add View Log action
+        self.view_log_action = QAction("View Log", self)
+        self.view_log_action.triggered.connect(self.on_view_log)
+        tools_menu.addAction(self.view_log_action)
+        
         # Help menu
-        help_menu = menubar.addMenu("Help")
+        help_menu = menubar.addMenu(self.tr("&Help"))
+        
+        # Documentation action
+        self.documentation_action = QAction("Documentation", self)
+        self.documentation_action.triggered.connect(self.on_help)
+        help_menu.addAction(self.documentation_action)
         
         # View Help action
         self.help_action = QAction("Help", self)
@@ -1413,7 +1447,7 @@ class PDFDuplicateFinder(MainWindow):
         self.help_action.triggered.connect(self.on_help)
         help_menu.addAction(self.help_action)
 
-         # About action
+        # About action
         self.about_action = QAction("About", self)
         self.about_action.triggered.connect(self.on_about)
         help_menu.addAction(self.about_action)
@@ -1425,15 +1459,22 @@ class PDFDuplicateFinder(MainWindow):
         self.sponsor_action.triggered.connect(self.on_sponsor)
         help_menu.addAction(self.sponsor_action)
         
+        # Store menu references for later use
+        self.file_menu = file_menu
+        self.edit_menu = edit_menu
+        self.view_menu = view_menu
+        self.tools_menu = tools_menu
+        self.help_menu = help_menu
+    
     def create_toolbar(self):
         toolbar = self.addToolBar("Main Toolbar")
         toolbar.setObjectName("mainToolbar")  # Add this line to set objectName
         toolbar.setMovable(False)
         toolbar.setIconSize(QSize(24, 24))
-        toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         
         # Import QStyle at the top of the file if not already imported
-        from PySide6.QtWidgets import QStyle
+        from PyQt6.QtWidgets import QStyle
         
         # Scan button
         self.scan_button = QAction("Scan Folder", self)
@@ -1539,7 +1580,7 @@ class PDFDuplicateFinder(MainWindow):
         # Add stretch to push remaining items to the right
         toolbar.addSeparator()
         spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         toolbar.addWidget(spacer)
     
     def create_main_content(self):
@@ -1678,7 +1719,7 @@ class PDFDuplicateFinder(MainWindow):
         folder = QFileDialog.getExistingDirectory(
             self, 
             self.tr("Select Folder to Scan"),
-            dir=last_dir,
+            directory=last_dir,
             options=QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
         )
         
@@ -2116,24 +2157,12 @@ class PDFDuplicateFinder(MainWindow):
         self.prev_group_action.setEnabled(has_groups and self.current_group_index > 0)
         self.next_group_action.setEnabled(has_groups and self.current_group_index < len(self.duplicate_groups) - 1)
         self.prev_file_action.setEnabled(has_selection and self.current_file_index > 0)
-        next_file_enabled = has_selection and self.current_file_index < len(self.duplicate_groups[self.current_group_index]) - 1
-        self.next_file_action.setEnabled(next_file_enabled)
+        self.next_file_action.setEnabled(has_selection and self.current_file_index < len(self.duplicate_groups[self.current_group_index]) - 1)
         
-        # Update toolbar buttons
-        if hasattr(self, 'prev_group_button'):
-            self.prev_group_button.setEnabled(has_groups and self.current_group_index > 0)
-        if hasattr(self, 'next_group_button'):
-            self.next_group_button.setEnabled(has_groups and self.current_group_index < len(self.duplicate_groups) - 1)
-        if hasattr(self, 'prev_file_button'):
-            self.prev_file_button.setEnabled(has_selection and self.current_file_index > 0)
-        if hasattr(self, 'next_file_button'):
-            self.next_file_button.setEnabled(next_file_enabled)
-        
-        # Update scan-related UI
-        if hasattr(self, 'scan_button'):
-            self.scan_button.setEnabled(not self.is_scanning)
-        if hasattr(self, 'stop_scan_button'):
-            self.stop_scan_button.setEnabled(self.is_scanning)
+        # Enable/disable action buttons
+        if hasattr(self, 'save_results_action'):
+            self.save_results_action.setEnabled(has_groups)
+            
         if hasattr(self, 'delete_action'):
             self.delete_action.setEnabled(has_selection)
         
@@ -2180,23 +2209,28 @@ class PDFDuplicateFinder(MainWindow):
             if 0 <= self.current_file_index < len(group):
                 file_info = group[self.current_file_index]
                 
+                # Get the file path using the utility function
+                file_path = get_file_path(file_info)
+                
+                if not file_path:
+                    logger.warning("No valid file path found in file_info")
+                    return
+                
                 # Update the preview if available
                 if hasattr(self, 'preview_widget'):
                     try:
-                        self.preview_widget.load_pdf(file_info.file_path)
+                        self.preview_widget.load_pdf(file_path)
                     except Exception as e:
-                        logger.error(f"Error loading PDF preview: {e}")
-                        self.preview_widget.clear()
+                        logger.error(f"Error loading PDF preview: {e}", exc_info=True)
+                        if hasattr(self.preview_widget, 'clear'):
+                            self.preview_widget.clear()
                 
                 # Update file details if available and has set_file method
                 if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
                     try:
-                        if hasattr(file_info, 'file_path'):
-                            self.file_details.set_file(file_info.file_path)
-                        elif isinstance(file_info, dict) and 'file_path' in file_info:
-                            self.file_details.set_file(file_info['file_path'])
+                        self.file_details.set_file(file_path)
                     except Exception as e:
-                        logger.error(f"Error updating file details: {e}")
+                        logger.error(f"Error updating file details: {e}", exc_info=True)
                 
                 # Update the UI state
                 self.update_ui_state()
@@ -2522,13 +2556,12 @@ class PDFDuplicateFinder(MainWindow):
             self.duplicates_view.setModel(model)
             
             # Set up selection behavior
-            self.duplicates_view.setSelectionBehavior(QAbstractItemView.SelectRows)
-            self.duplicates_view.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.duplicates_view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows) 
+            self.duplicates_view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
             
             # Connect selection changed signal
             selection_model = self.duplicates_view.selectionModel()
-            if selection_model:
-                selection_model.selectionChanged.connect(self.on_file_selection_changed)
+            selection_model.selectionChanged.connect(self.on_file_selection_changed)
             
             # Connect double click signal
             self.duplicates_view.doubleClicked.disconnect()
@@ -2544,21 +2577,6 @@ class PDFDuplicateFinder(MainWindow):
                 self.current_file_index = 0
                 self.show_current_group()
                 self.show_current_file()
-            
-            # Update status
-            total_duplicates = sum(len(group) - 1 for group in duplicate_groups) if duplicate_groups else 0
-            if duplicate_groups:
-                self.status_label.setText(
-                    self.tr("Found {} groups with {} duplicate files").format(
-                        len(duplicate_groups), 
-                        total_duplicates
-                    )
-                )
-            else:
-                self.status_label.setText(self.tr("No duplicate files found."))
-        
-        # Update UI state to reflect the new scan results
-        self.update_ui_state()
         
         # Update status
         if duplicate_groups:
@@ -2567,17 +2585,18 @@ class PDFDuplicateFinder(MainWindow):
                 len(duplicate_groups), 
                 total_duplicates
             )
-            self.status_label.setText(status_text)
+            # Force update the menu bar to ensure it's refreshed
+            self.menuBar().update()
         else:
-            self.status_label.setText(self.tr("No duplicate files found."))
+            status_text = self.tr("No duplicate files found.")
             
+        self.status_label.setText(status_text)
+        
+        # Update UI state to reflect the new scan results
         self.update_ui_state()
         
-        # Save to recent files
-        for directory in self.scan_directories:
-            self.recent_manager.add_file(directory)
-        
-        self.update_ui_state()
+        # Force a menu bar update to ensure all menu states are refreshed
+        self.menuBar().repaint()
     
     def on_file_processed(self, current, total, filename):
         """Update progress when a file is processed."""
@@ -2607,6 +2626,7 @@ class PDFDuplicateFinder(MainWindow):
                 if file_menu:
                     self.recent_menu = file_menu.addMenu(self.tr("Recent Folders"))
                 else:
+                    logger.warning("Could not find File menu to add Recent Folders submenu")
                     return
             
             # Clear existing actions
@@ -2988,8 +3008,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     QMessageBox.critical(
         None,
         "Unexpected Error",
-        f"{error_msg}\n\nPlease check the log file for more details.",
-        QMessageBox.StandardButton.Ok
+        f"{error_msg}\n\nPlease check the log file for more details."
     )
 
 def main():

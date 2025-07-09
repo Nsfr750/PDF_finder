@@ -5,10 +5,11 @@ import os
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
-from PySide6.QtGui import QIcon, QPainter, QPalette, QColor
-from PySide6.QtWidgets import (
-    QTreeView, QStyledItemDelegate, QStyleOptionViewItem, QApplication, QStyle
+from PyQt6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
+from PyQt6.QtGui import QIcon, QPainter, QPalette, QColor
+from PyQt6.QtWidgets import (
+    QTreeView, QStyledItemDelegate, QStyleOptionViewItem, QApplication, QStyle,
+    QAbstractItemView, QHeaderView
 )
 
 class DuplicateFileItem:
@@ -20,17 +21,17 @@ class DuplicateFileItem:
         self.modified = modified
         self.is_original = is_original
     
-    def data(self, role: int = Qt.DisplayRole):
+    def data(self, role: int = Qt.ItemDataRole.DisplayRole):
         """Return data for the specified role."""
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             # Return just the file name for display
             return os.path.basename(self.file_path) if self.file_path else ""
-        elif role == Qt.UserRole:
+        elif role == Qt.ItemDataRole.UserRole:
             return self
-        elif role == Qt.DecorationRole:
+        elif role == Qt.ItemDataRole.DecorationRole:
             # Return a file icon or other decoration
             return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             # Show full path in tooltip
             if not self.file_path:
                 return ""
@@ -48,19 +49,19 @@ class DuplicateGroup:
         self.files = files
         self.is_expanded = False
     
-    def data(self, role: int = Qt.DisplayRole):
+    def data(self, role: int = Qt.ItemDataRole.DisplayRole):
         """Return data for the specified role."""
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             count = len(self.files)
             if count == 1:
                 return "1 duplicate file"
             return f"{count} duplicate files"
-        elif role == Qt.UserRole:
+        elif role == Qt.ItemDataRole.UserRole:
             return self
-        elif role == Qt.DecorationRole:
+        elif role == Qt.ItemDataRole.DecorationRole:
             # Return a folder icon or other decoration
             return QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             if not self.files:
                 return "No duplicate files in this group"
             return f"Click to expand/collapse - {len(self.files)} duplicate files"
@@ -148,29 +149,29 @@ class DuplicateFilesModel(QAbstractItemModel):
         """Return the number of columns for the children of the given parent."""
         return 1  # Only one column for the file/group name
     
-    def data(self, index: QModelIndex, role: int = Qt.DisplayRole):
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         """Return the data stored under the given role for the item referred to by the index."""
         if not index.isValid():
             return None
         
         item = index.internalPointer()
-        if role == Qt.DisplayRole or role == Qt.DecorationRole or role == Qt.ToolTipRole or role == Qt.UserRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.DecorationRole or role == Qt.ItemDataRole.ToolTipRole or role == Qt.ItemDataRole.UserRole:
             return item.data(role)
         
         return None
     
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole):
         """Return the data for the given role and section in the header with the specified orientation."""
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        if orientation == Qt.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return "Duplicate Files"
         return None
     
     def flags(self, index: QModelIndex):
         """Return the item flags for the given index."""
         if not index.isValid():
-            return Qt.NoItemFlags
+            return Qt.ItemFlag.NoItemFlags
         
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
     
     def mark_as_original(self, file_paths: List[str]):
         """Mark the specified files as originals."""
@@ -203,7 +204,7 @@ class DuplicateFilesView(QTreeView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setHeaderHidden(True)
-        self.setSelectionMode(QTreeView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setAnimated(True)
         self.setIndentation(20)
         self.setExpandsOnDoubleClick(True)
@@ -230,9 +231,9 @@ class DuplicateFilesView(QTreeView):
         """Handle mouse move events to update tooltips."""
         index = self.indexAt(event.pos())
         if index.isValid():
-            item = index.data(Qt.UserRole)
+            item = index.data(Qt.ItemDataRole.UserRole)
             if item:
-                self.setToolTip(item.data(Qt.ToolTipRole) or "")
+                self.setToolTip(item.data(Qt.ItemDataRole.ToolTipRole) or "")
         else:
             self.setToolTip("")
         
@@ -248,7 +249,7 @@ class DuplicateItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         """Paint the item using the given painter and style options."""
         # Get the item data
-        item = index.data(Qt.UserRole)
+        item = index.data(Qt.ItemDataRole.UserRole)
         if not item:
             return super().paint(painter, option, index)
         
@@ -264,56 +265,40 @@ class DuplicateItemDelegate(QStyledItemDelegate):
         
         try:
             # Draw the item background
-            if options.state & QStyle.State_Selected:
-                painter.fillRect(option.rect, options.palette.highlight())
-            elif options.state & QStyle.State_MouseOver:
-                painter.fillRect(option.rect, options.palette.alternateBase())
+            style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, options, painter, options.widget)
             
-            # Highlight original files with a different background
-            if isinstance(item, DuplicateFileItem) and item.is_original:
-                highlight_color = QColor(225, 245, 225)  # Light green
-                if options.state & QStyle.State_Selected:
-                    highlight_color = highlight_color.darker(110)
-                painter.fillRect(option.rect, highlight_color)
+            # Set up text and icon rectangles
+            text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, options, options.widget)
+            text_rect.adjust(self.margin, 0, -self.margin, 0)  # Add horizontal margin
             
-            # Calculate text rectangle
-            text_rect = option.rect.adjusted(self.margin, 0, -self.margin, 0)
-            
-            # Draw the icon if available
-            icon = index.data(Qt.DecorationRole)
+            # Draw the icon if present
+            icon = index.data(Qt.ItemDataRole.DecorationRole)
             if icon and isinstance(icon, QIcon):
-                icon_rect = option.rect.adjusted(4, 2, -2, -2)
-                icon_rect.setWidth(16)
-                icon_rect.setHeight(16)
-                icon.paint(painter, icon_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                text_rect.adjust(22, 0, 0, 0)  # Make room for the icon
+                icon_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemDecoration, options, options.widget)
+                icon.paint(painter, icon_rect, Qt.AlignmentFlag.AlignCenter)
+                text_rect.setLeft(icon_rect.right() + self.margin)
             
             # Draw the text
-            text = index.data(Qt.DisplayRole) or ""
-            if text:
-                # Set text color based on selection state
-                if options.state & QStyle.State_Selected:
-                    painter.setPen(options.palette.highlightedText().color())
-                else:
-                    painter.setPen(options.palette.text().color())
-                
-                # Draw the text with elision if needed
-                metrics = painter.fontMetrics()
-                elided_text = metrics.elidedText(
-                    text, 
-                    Qt.TextElideMode.ElideMiddle, 
-                    text_rect.width()
-                )
-                painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided_text)
-                
-                # Add a small indicator for original files
-                if isinstance(item, DuplicateFileItem) and item.is_original:
-                    original_text = " (Original)"
-                    original_width = metrics.horizontalAdvance(original_text)
-                    original_rect = text_rect.adjusted(metrics.horizontalAdvance(elided_text) + 4, 0, 0, 0)
-                    original_rect.setWidth(original_width)
-                    painter.setPen(Qt.darkGreen)
-                    painter.drawText(original_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, original_text)
+            text = index.data(Qt.ItemDataRole.DisplayRole) or ""
+            metrics = painter.fontMetrics()
+            elided_text = metrics.elidedText(text, Qt.TextElideMode.ElideRight, text_rect.width())
+            
+            # Set text color based on selection state
+            if option.state & QStyle.StateFlag.State_Selected:
+                painter.setPen(option.palette.highlightedText().color())
+            else:
+                painter.setPen(option.palette.text().color())
+            
+            # Draw the text
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided_text)
+            
+            # Draw "(Original)" text if this is marked as an original file
+            if isinstance(item, DuplicateFileItem) and item.is_original:
+                original_text = " (Original)"
+                text_width = metrics.horizontalAdvance(elided_text)
+                original_rect = text_rect.adjusted(text_width + 4, 0, 0, 0)
+                painter.setPen(QColor("darkGreen"))
+                painter.drawText(original_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, original_text)
         finally:
             # Restore the painter state
             painter.restore()

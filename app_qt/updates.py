@@ -1,7 +1,7 @@
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
                              QHBoxLayout, QTextBrowser, QProgressBar)
-from PySide6.QtCore import Qt, QThread, Signal, QObject, QUrl
-from PySide6.QtGui import QDesktopServices
+from PyQt6.QtCore import Qt, QThread, pyqtSignal as Signal, QObject, QUrl
+from PyQt6.QtGui import QDesktopServices
 import requests
 import json
 import platform
@@ -49,7 +49,7 @@ class UpdateDialog(QDialog):
         
         # Status label
         self.status_label = QLabel("Checking for updates...")
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
         
         # Progress bar

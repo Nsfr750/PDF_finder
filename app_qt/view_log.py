@@ -7,11 +7,11 @@ This module provides a graphical interface to view and filter log messages.
 import os
 import re
 from datetime import datetime
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextEdit,
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextEdit,
                              QComboBox, QPushButton, QLabel, QFileDialog,
                              QMessageBox, QApplication, QLineEdit)
-from PySide6.QtCore import Qt, QRegularExpression
-from PySide6.QtGui import QTextCharFormat, QColor, QTextCursor, QSyntaxHighlighter, QFont
+from PyQt6.QtCore import Qt, QRegularExpression
+from PyQt6.QtGui import QTextCharFormat, QColor, QTextCursor, QSyntaxHighlighter, QFont
 
 
 class LogHighlighter(QSyntaxHighlighter):
@@ -24,18 +24,18 @@ class LogHighlighter(QSyntaxHighlighter):
         # Format for different log levels
         error_format = QTextCharFormat()
         error_format.setForeground(QColor(200, 0, 0))  # Red
-        error_format.setFontWeight(QFont.Bold)
+        error_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'ERROR.*'), error_format))
         
         warning_format = QTextCharFormat()
         warning_format.setForeground(QColor(255, 165, 0))  # Orange
-        warning_format.setFontWeight(QFont.Bold)
+        warning_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'WARNING.*'), warning_format))
         
         critical_format = QTextCharFormat()
         critical_format.setForeground(QColor(255, 255, 255))  # White
         critical_format.setBackground(QColor(200, 0, 0))  # Red background
-        critical_format.setFontWeight(QFont.Bold)
+        critical_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'CRITICAL.*'), critical_format))
         
         debug_format = QTextCharFormat()
@@ -44,12 +44,13 @@ class LogHighlighter(QSyntaxHighlighter):
         
         info_format = QTextCharFormat()
         info_format.setForeground(QColor(0, 0, 200))  # Blue
+        info_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'INFO.*'), info_format))
         
         # Format for timestamps
         time_format = QTextCharFormat()
         time_format.setForeground(QColor(0, 128, 0))  # Dark green
-        time_format.setFontWeight(QFont.Bold)
+        time_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'), time_format))
         
         # Format for tracebacks
@@ -157,19 +158,37 @@ class LogViewer(QDialog):
             level = self.level_combo.currentText()
             search_text = self.search_edit.text().lower()
             
+            print(f"Filtering logs - Level: {level}, Search text: {search_text}")  # Debug
+            
             self.filtered_content = []
             
-            for line in self.log_content:
+            for i, line in enumerate(self.log_content):
                 # Skip empty lines
                 if not line.strip():
                     continue
                     
-                # Check log level
-                if level != "ALL" and not line.startswith(level):
-                    continue
+                # Debug: stampa le prime 5 righe per vedere il formato
+                if i < 5:
+                    print(f"Log line {i}: {line.strip()}")
+                
+                # Estrai il livello di log dal formato: YYYY-MM-DD HH:MM:SS,SSS - PDFDuplicateFinder - LEVEL - message
+                log_level = None
+                import re
+                
+                # Pattern per il formato: 2025-07-09 14:12:29,742 - PDFDuplicateFinder - INFO - message
+                level_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - [^-]+ - (\w+) -', line)
+                if level_match:
+                    log_level = level_match.group(1)
+                
+                print(f"Line {i}: Extracted log level: {log_level}")  # Debug
+                
+                # Se non riusciamo a determinare il livello, includiamo la riga solo se il livello è "ALL"
+                if level != "ALL":
+                    if not log_level or log_level != level:
+                        continue
                     
                 # Check search text
-                if search_text and search_text.lower() not in line.lower():
+                if search_text and search_text not in line.lower():
                     continue
                     
                 self.filtered_content.append(line)
@@ -180,12 +199,13 @@ class LogViewer(QDialog):
             
             # Scroll to bottom
             cursor = self.log_display.textCursor()
-            cursor.movePosition(QTextCursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             self.log_display.setTextCursor(cursor)
             
             self.status_bar.setText(f"Showing {len(self.filtered_content)} of {len(self.log_content)} log entries")
             
         except Exception as e:
+            print(f"Error in filter_logs: {str(e)}")  # Debug
             QMessageBox.critical(self, "Error", f"Failed to filter logs: {str(e)}")
     
     def clear_logs(self):
@@ -198,11 +218,11 @@ class LogViewer(QDialog):
                 self,
                 'Clear Logs',
                 'Are you sure you want to clear all log files?',
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
             )
             
-            if reply == QMessageBox.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 with open(self.log_file, 'w', encoding='utf-8') as f:
                     f.write("")
                 self.load_log_file()
@@ -251,8 +271,8 @@ def show_log_viewer(log_file, parent=None):
         return
     
     viewer = LogViewer(log_file, parent)
-    viewer.exec_()
-
+    viewer.exec()
+    
 
 if __name__ == "__main__":
     import sys
@@ -266,4 +286,4 @@ if __name__ == "__main__":
     
     viewer = LogViewer(log_file)
     viewer.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

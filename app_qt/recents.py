@@ -1,9 +1,10 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from pathlib import Path
+from typing import List, Optional, Dict, Any
 from datetime import datetime
-from PySide6.QtCore import QSettings, QObject, Signal
+from PyQt6.QtCore import QSettings, QObject, pyqtSignal as Signal
 
 logger = logging.getLogger('PDFDuplicateFinder')
 

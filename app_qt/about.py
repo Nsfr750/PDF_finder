@@ -1,8 +1,9 @@
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
                              QHBoxLayout, QTextBrowser, QApplication)
-from PySide6.QtCore import Qt, QSize, QUrl
-from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
+from PyQt6.QtCore import Qt, QSize, QUrl, QT_VERSION_STR, PYQT_VERSION_STR
+from PyQt6.QtGui import QPixmap, QIcon, QDesktopServices
 from .version import get_version
+import os
 import sys
 import platform
 from pathlib import Path
@@ -24,7 +25,7 @@ class AboutDialog(QDialog):
             logo_label = QLabel()
             pixmap = QPixmap(str(logo_path))
             # Scale logo to a reasonable size while maintaining aspect ratio
-            scaled_pixmap = pixmap.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
             # Add some spacing
             logo_label.setContentsMargins(0, 0, 20, 0)
@@ -34,7 +35,7 @@ class AboutDialog(QDialog):
             print(f"Logo not found at: {logo_path}")
             logo_label = QLabel("LOGO")
             logo_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #666;")
-            logo_label.setAlignment(Qt.AlignCenter)
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             logo_label.setFixedSize(128, 128)
             header.addWidget(logo_label)
         
@@ -46,6 +47,7 @@ class AboutDialog(QDialog):
         
         version = QLabel(f"Version {get_version()}")
         version.setStyleSheet("color: #666;")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         app_info.addWidget(title)
         app_info.addWidget(version)
@@ -75,11 +77,11 @@ class AboutDialog(QDialog):
         
         # Copyright and license
         copyright = QLabel(
-            "© 2025 Nsfr750\n"
+            " 2025 Nsfr750\n"
             "This software is licensed under the GPL3 License."
         )
         copyright.setStyleSheet("color: #666; font-size: 11px;")
-        copyright.setAlignment(Qt.AlignCenter)
+        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(copyright)
         
         # Buttons
@@ -103,31 +105,46 @@ class AboutDialog(QDialog):
     def get_system_info(self):
         """Get system information for the about dialog."""
         try:
-            import PySide6
-            pyside_version = PySide6.__version__
-        except ImportError:
-            pyside_version = "Not available"
-        
-        # Get system information
-        try:
-            import psutil
-            # Get total RAM in GB
-            ram_gb = psutil.virtual_memory().total / (1024 ** 3)
-            ram_info = f"{ram_gb:.1f} GB"
-            # Get number of CPU cores
-            cpu_cores = psutil.cpu_count(logical=True)
-            cpu_info = f"{cpu_cores} cores"
-        except (ImportError, Exception) as e:
-            ram_info = "Not available"
-            cpu_info = "Not available"
+            # Get PyQt version
+            python_version = sys.version.split(' ')[0]
             
-        return f"""
-        <table>
-            <tr><td><b>OS:</b></td><td>{platform.system()} {platform.release()}</td></tr>
-            <tr><td><b>Python:</b></td><td>{platform.python_version()}</td></tr>
-            <tr><td><b>PySide6:</b></td><td>{pyside_version}</td></tr>
-            <tr><td><b>Processor:</b></td><td>{platform.processor() or 'Unknown'}</td></tr>
-            <tr><td><b>CPU Cores:</b></td><td>{cpu_info}</td></tr>
-            <tr><td><b>Total RAM:</b></td><td>{ram_info}</td></tr>
-        </table>
-        """
+            # Get operating system information
+            os_info = f"{platform.system()} {platform.release()} {platform.version()}"
+            
+            # Get screen resolution
+            screen = QApplication.primaryScreen()
+            screen_geometry = screen.availableGeometry()
+            resolution = f"{screen_geometry.width()}x{screen_geometry.height()}"
+            
+            # Get memory information
+            try:
+                import psutil
+                memory = psutil.virtual_memory()
+                total_memory = memory.total / (1024 ** 3)  # Convert to GB
+                available_memory = memory.available / (1024 ** 3)
+                memory_info = f"{available_memory:.1f} GB available of {total_memory:.1f} GB"
+            except ImportError:
+                memory_info = "psutil not available"
+            
+            # Format the information as HTML
+            info = f"""
+            <html>
+            <body>
+            <h3>System Information</h3>
+            <table>
+            <tr><td><b>Operating System:</b></td><td>{os_info}</td></tr>
+            <tr><td><b>Python Version:</b></td><td>{python_version}</td></tr>
+            <tr><td><b>Qt Version:</b></td><td>{QT_VERSION_STR}</td></tr>
+            <tr><td><b>PyQt Version:</b></td><td>{PYQT_VERSION_STR}</td></tr>
+            <tr><td><b>Screen Resolution:</b></td><td>{resolution}</td></tr>
+            <tr><td><b>Memory:</b></td><td>{memory_info}</td></tr>
+            </table>
+            </body>
+            </html>
+            """
+            
+            return info
+            
+        except Exception as e:
+            print(f"Error getting system info: {e}")
+            return f"<p>Error getting system information: {str(e)}</p>"

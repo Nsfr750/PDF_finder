@@ -5,10 +5,10 @@ This module provides a help dialog for the PDF Duplicate Finder application.
 It includes support for multiple languages and a clean, modern interface.
 """
 
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
                              QPushButton, QWidget, QFrame)
-from PySide6.QtCore import Qt, QUrl, Signal, QSize
-from PySide6.QtGui import QDesktopServices
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal as Signal, QSize
+from PyQt6.QtGui import QDesktopServices
 import os
 
 # Import application logger
@@ -55,7 +55,7 @@ class HelpDialog(QDialog):
         
             # Create a frame to contain the buttons
             button_frame = QFrame()
-            button_frame.setFrameShape(QFrame.StyledPanel)
+            button_frame.setFrameShape(QFrame.Shape.StyledPanel)
             button_frame.setStyleSheet("""
                 QFrame {
                     border-radius: 4px;
@@ -119,13 +119,13 @@ class HelpDialog(QDialog):
             self.text_browser.anchorClicked.connect(self.open_link)
             
             # Close button
-            self.close_btn = QPushButton("Close")
+            self.close_btn = QPushButton(self.tr("Close"))
             self.close_btn.clicked.connect(self.accept)
             
             # Add widgets to layout
             layout.addWidget(lang_widget)
             layout.addWidget(self.text_browser, 1)
-            layout.addWidget(self.close_btn, alignment=Qt.AlignRight)
+            layout.addWidget(self.close_btn, alignment=Qt.AlignmentFlag.AlignRight)
             
         except Exception as e:
             logger.error(f"Error initializing UI: {e}")

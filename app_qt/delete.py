@@ -2,11 +2,11 @@ import os
 import logging
 import psutil
 import time
-from PySide6.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton, 
     QHBoxLayout, QMessageBox, QCheckBox, QApplication
 )
-from PySide6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer
 import send2trash
 
 logger = logging.getLogger('PDFDuplicateFinder')
@@ -95,7 +95,7 @@ def _get_process_using_file(file_path):
 def _show_file_in_use_dialog(parent, file_path, process_info):
     """Show a dialog when a file is in use."""
     msg = QMessageBox(parent)
-    msg.setIcon(QMessageBox.Warning)
+    msg.setIcon(QMessageBox.Icon.Warning)
     msg.setWindowTitle("File in Use")
     msg.setText(f"Cannot delete file: {os.path.basename(file_path)}")
     msg.setInformativeText(
@@ -104,9 +104,9 @@ def _show_file_in_use_dialog(parent, file_path, process_info):
         f"Location: {os.path.dirname(file_path)}"
     )
     
-    retry_btn = msg.addButton("&Retry", QMessageBox.ActionRole)
-    skip_btn = msg.addButton("&Skip", QMessageBox.RejectRole)
-    close_btn = msg.addButton("&Close", QMessageBox.AcceptRole)
+    retry_btn = msg.addButton("&Retry", QMessageBox.ButtonRole.ActionRole)
+    skip_btn = msg.addButton("&Skip", QMessageBox.ButtonRole.RejectRole)
+    close_btn = msg.addButton("&Close", QMessageBox.ButtonRole.AcceptRole)
     
     msg.setDefaultButton(retry_btn)
     msg.exec()
@@ -191,7 +191,7 @@ def delete_files(file_paths, parent=None, use_recycle_bin=True, max_retries=3, r
                         
                         # Show error to user
                         if retry_count == max_retries:  # Only show on last attempt
-                            QMessageBox.warning(
+                            QMessageBox.information(
                                 parent,
                                 "Delete Failed",
                                 error_msg
@@ -209,7 +209,7 @@ def delete_files(file_paths, parent=None, use_recycle_bin=True, max_retries=3, r
                         # If recycle bin fails, ask user if they want to try permanent deletion
                         if retry_count == 0:  # Only ask once per file
                             msg = QMessageBox(parent)
-                            msg.setIcon(QMessageBox.Warning)
+                            msg.setIcon(QMessageBox.Icon.Warning)
                             msg.setWindowTitle("Recycle Bin Failed")
                             msg.setText(f"Could not move to Recycle Bin: {os.path.basename(file_path)}")
                             msg.setInformativeText(
@@ -218,9 +218,9 @@ def delete_files(file_paths, parent=None, use_recycle_bin=True, max_retries=3, r
                                 "Would you like to permanently delete the file instead?"
                             )
                             
-                            permanent_btn = msg.addButton("Permanently Delete", QMessageBox.YesRole)
-                            skip_btn = msg.addButton("Skip", QMessageBox.NoRole)
-                            retry_btn = msg.addButton("Retry", QMessageBox.ResetRole)
+                            permanent_btn = msg.addButton("Permanently Delete", QMessageBox.ButtonRole.YesRole)
+                            skip_btn = msg.addButton("Skip", QMessageBox.ButtonRole.NoRole)
+                            retry_btn = msg.addButton("Retry", QMessageBox.ButtonRole.ResetRole)
                             
                             msg.setDefaultButton(retry_btn)
                             msg.exec()
