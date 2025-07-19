@@ -1,0 +1,7 @@
+# PDF_Finder Setup
+pip install -r requirements.txt
+pip install pyinstaller
+python build_simple.py
+makensis install-scripts/installer.nsi
+
+pyinstaller install-scripts/build.spec

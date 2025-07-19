@@ -171,7 +171,7 @@ class AboutDialog(QDialog):
         description.setWordWrap(True)
         
         # Copyright
-        copyright = QLabel(" 2025 Nsfr750")
+        copyright = QLabel("© 2025 Nsfr750")
         copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # OK button

@@ -20,7 +20,7 @@ class AboutDialog(QDialog):
         header = QHBoxLayout()
         
         # Load application logo
-        logo_path = Path(__file__).parent.parent / "images" / "logo.png"
+        logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
         if logo_path.exists():
             logo_label = QLabel()
             pixmap = QPixmap(str(logo_path))
