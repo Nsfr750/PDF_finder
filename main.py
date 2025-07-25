@@ -23,27 +23,36 @@ from script.settings import settings_manager
 # Import logger
 from script.logger import setup_logging, logger
 
-# Qt imports
+# Qt imports - Core
 from PyQt6.QtCore import (
-    Qt, QSize, QThread, pyqtSignal as Signal, pyqtSlot as Slot, QObject, QTimer, QSettings, 
-    QPoint, QEvent, QMimeData, QUrl, QByteArray, QBuffer, QIODevice,
-    QLocale, QTranslator, QLibraryInfo
+    Qt, QSize, QThread, pyqtSignal as Signal, pyqtSlot as Slot, 
+    QObject, QTimer, QSettings, QPoint, QEvent, QMimeData, 
+    QUrl, QByteArray, QBuffer, QIODevice, QSizeF, QLocale, 
+    QTranslator, QLibraryInfo, QRect
 )
+# Qt imports - Gui
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QFont, QColor, QPalette, QKeySequence, 
-    QDragEnterEvent, QDropEvent, QImage, QImageReader, 
-    QAction, QActionGroup
+    QAction, QActionGroup, QIcon, QPixmap, QFont, 
+    QColor, QPalette, QKeySequence, QDragEnterEvent, 
+    QDropEvent, QImage, QImageReader, QPainter, QBrush, 
+    QLinearGradient, QGradient, QTextCursor, QTextCharFormat, 
+    QTextFormat, QTextLength, QTextBlockFormat, QTextDocument, 
+    QTextFrameFormat, QTextImageFormat, QTextTableFormat, QTextTable,
+    QScreen
 )
+# Qt imports - Widgets
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QLabel, QProgressBar, QTableWidget, QTableWidgetItem, QHeaderView, QSplitter,
-    QFileDialog, QMessageBox, QMenuBar, QMenu, QStyle, QTreeWidget,
-    QTreeWidgetItem, QAbstractItemView, QToolBar, QStatusBar, QCheckBox, QSpinBox,
-    QDoubleSpinBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLineEdit,
-    QTextEdit, QTabWidget, QGroupBox, QRadioButton, QButtonGroup, QScrollArea,
-    QFrame, QSizePolicy, QSpacerItem, QSystemTrayIcon, QStyleFactory, QInputDialog,
-    QListWidget, QListWidgetItem, QAbstractItemView, QStyledItemDelegate, QStyleOptionViewItem,
-    QProgressDialog, QToolButton
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QPushButton, QLabel, QProgressBar, QTableWidget, QTableWidgetItem, 
+    QHeaderView, QSplitter, QFileDialog, QMessageBox, QMenuBar, 
+    QMenu, QStyle, QTreeWidget, QTreeWidgetItem, QAbstractItemView, 
+    QToolBar, QStatusBar, QCheckBox, QSpinBox, QDoubleSpinBox, 
+    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLineEdit, 
+    QTextEdit, QTabWidget, QGroupBox, QRadioButton, QButtonGroup, 
+    QScrollArea, QFrame, QSizePolicy, QSpacerItem, QSystemTrayIcon, 
+    QStyleFactory, QInputDialog, QListWidget, QListWidgetItem, 
+    QStyledItemDelegate, QStyleOptionViewItem, QProgressDialog, 
+    QToolButton, QSplashScreen
 )
 
 # Application imports
@@ -78,7 +87,18 @@ class PDFDuplicateFinder(MainWindow):
     """Main application window for PDF Duplicate Finder."""
     
     def __init__(self, parent=None):
-        super().__init__(parent)
+        # Initialize the language manager first
+        self.language_manager = LanguageManager()
+        
+        # Now call the parent's __init__ with the language_manager
+        super().__init__(self.language_manager, parent)
+        
+        # Set application icon
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images', 'icon.ico')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
+        # Initialize settings
         self.app_settings = settings_manager.app_settings  # Use the settings manager
         
         # Initialize variables
@@ -97,7 +117,9 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize menu manager
         self.menu_manager = MenuManager(self, self.language_manager)
-        self.setup_menu_connections()
+        
+        # Initialize file drop handler
+        self._file_drop_handler = FileDropHandler(self)
         
         # Initialize UI
         self.init_ui()
@@ -220,41 +242,6 @@ class PDFDuplicateFinder(MainWindow):
         self.theme.setCurrentText('system')
         self.language.setCurrentText('en')
 
-class PDFDuplicateFinder(MainWindow):
-    """Main application window for PDF Duplicate Finder."""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.app_settings = settings_manager.app_settings  # Use the settings manager
-        
-        # Initialize variables
-        self.duplicate_groups = []
-        self.current_group_index = -1
-        self.current_file_index = -1
-        self.scan_directories = []
-        self.scan_thread = None
-        self.is_scanning = False
-        self.preview_window = None  # Will hold the preview window instance
-        
-        # Initialize managers
-        self.recent_manager = RecentFilesManager()
-        self.recent_folders_manager = RecentFoldersManager()
-        self.scan_manager = ScanManager()
-        
-        # Initialize UI
-        self.init_ui()
-        
-        # Apply theme
-        self.apply_theme()
-        
-        # Load recent files after UI is fully initialized
-        self.load_recent_files()
-        
-        # Connect signals
-        self.scan_manager.scan_completed.connect(self.on_scan_completed)
-        self.scan_manager.progress.connect(self.update_progress)
-        self.scan_manager.file_processed.connect(self.on_file_processed)
-    
     def stop_scan(self):
         """Stop the current scan operation."""
         if hasattr(self, 'scan_manager'):
@@ -430,62 +417,6 @@ class PDFDuplicateFinder(MainWindow):
             
         # Update window title
         self.setWindowTitle(self.tr("PDF Duplicate Finder"))
-    
-    def __init__(self):
-        # Initialize the translator
-        translator = Translator(QApplication.instance())
-        super().__init__(translator)
-        
-        # Set application icon
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images', 'icon.ico')
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
-        
-        # Store the translator instance
-        self.translator = translator
-        
-        # Connect to translator's notifier signal
-        self.translator.notifier.language_changed.connect(self.retranslate_ui)
-        
-        # Set up the rest of the UI
-        self.setup_ui()
-        
-        # Register retranslate callback
-        self.retranslate_callbacks.append(self.retranslate_ui)
-        
-        # Initialize file drop handler
-        self._file_drop_handler = FileDropHandler(self)
-        
-        # Initialize settings
-        self.app_settings = settings_manager.app_settings  # Use the settings manager
-        
-        # Initialize variables
-        self.duplicate_groups = []
-        self.current_group_index = -1
-        self.current_file_index = -1
-        self.scan_directories = []
-        self.scan_thread = None
-        self.is_scanning = False
-        self.preview_window = None  # Will hold the preview window instance
-        
-        # Initialize managers
-        self.recent_manager = RecentFilesManager()
-        self.recent_folders_manager = RecentFoldersManager()
-        self.scan_manager = ScanManager()
-        
-        # Initialize UI
-        self.init_ui()
-        
-        # Apply theme
-        self.apply_theme()
-        
-        # Load recent files after UI is fully initialized
-        self.load_recent_files()
-        
-        # Connect signals
-        self.scan_manager.scan_completed.connect(self.on_scan_completed)
-        self.scan_manager.progress.connect(self.update_progress)
-        self.scan_manager.file_processed.connect(self.on_file_processed)
     
     def save_scan_results(self):
         """Save the current scan results to a CSV file."""

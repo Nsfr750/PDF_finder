@@ -33,35 +33,23 @@ class LanguageManager(QObject):
             default_lang: Default language code (e.g., 'en', 'it')
         """
         super().__init__()
-        logger.debug(self.tr(
-            "language_manager.initializing", 
-            "Initializing LanguageManager..."
-        ))
+        
+        # Initialize translations dictionary first
+        self._translations = {}
+        self._available_languages = {}
         
         # Store the QApplication instance
         self.app = app
         
         # Initialize settings
         self.settings = QSettings("PDF_Finder", "PDF_Finder")
-        logger.debug(self.tr(
-            "language_manager.settings_file", 
-            "Settings file: {file}"
-        ).format(file=self.settings.fileName()))
         
         # Load current language from settings or use default
         self._current_lang = self.settings.value("language", default_lang)
-        logger.debug(self.tr(
-            "language_manager.current_language", 
-            "Current language from settings: {lang}"
-        ).format(lang=self._current_lang))
         
         # Initialize Qt translators
         self.qt_translator = QTranslator()
         self.app_translator = QTranslator()
-        
-        # Initialize translations dictionary
-        self._translations = {}
-        self._available_languages = {}
         
         # Load translations
         self._load_translations()
@@ -72,27 +60,22 @@ class LanguageManager(QObject):
         # If current language is not available, fall back to default
         if self._current_lang not in self._available_languages:
             logger.warning(
-                self.tr(
-                    "language_manager.language_not_available", 
-                    "Language '{lang}' not available, falling back to '{default_lang}'"
-                ).format(lang=self._current_lang, default_lang=default_lang)
+                "Language '%s' not available, falling back to '%s'",
+                self._current_lang, default_lang
             )
             self._current_lang = default_lang
         
         # Load the current language
         self._load_language(self._current_lang)
             
-        logger.info(self.tr(
-            "language_manager.initialized", 
-            "LanguageManager initialized with language: {lang}"
-        ).format(lang=self._current_lang))
+        logger.info("LanguageManager initialized with language: %s", self._current_lang)
 
     def _setup_available_languages(self):
         """Set up the available languages based on loaded translations."""
-        # Define language names
+        # Define language names (using direct strings to avoid recursion)
         language_names = {
-            "en": self.tr("language.english", "English"),
-            "it": self.tr("language.italian", "Italiano"),
+            "en": "English",
+            "it": "Italiano",
             # Add more languages here as they become available
         }
         
@@ -131,10 +114,10 @@ class LanguageManager(QObject):
             
             # Load main translations
             self._translations = TRANSLATIONS
-            logger.debug(self.tr(
-                "language_manager.loaded_translations", 
-                "Loaded main translations for languages: {languages}"
-            ).format(languages=", ".join(TRANSLATIONS.keys()) if TRANSLATIONS else self.tr("common.none", "none")))
+            logger.debug(
+                "Loaded main translations for languages: %s",
+                ", ".join(TRANSLATIONS.keys()) if TRANSLATIONS else "none"
+            )
             
             # Merge help translations
             for lang, translations in HELP_TRANSLATIONS.items():
@@ -142,16 +125,13 @@ class LanguageManager(QObject):
                     self._translations[lang] = {}
                 self._update_dict_recursive(self._translations[lang], translations)
                 
-            logger.debug(self.tr(
-                "language_manager.merged_help_translations", 
-                "Merged help translations for languages: {languages}"
-            ).format(languages=", ".join(HELP_TRANSLATIONS.keys()) if HELP_TRANSLATIONS else self.tr("common.none", "none")))
+            logger.debug(
+                "Merged help translations for languages: %s",
+                ", ".join(HELP_TRANSLATIONS.keys()) if HELP_TRANSLATIONS else "none"
+            )
             
         except ImportError as e:
-            logger.error(self.tr(
-                "language_manager.load_translations_error", 
-                "Failed to load translations: {error}"
-            ).format(error=str(e)))
+            logger.error("Failed to load translations: %s", str(e))
             self._translations = {"en": {}}  # Fallback to empty English translations
 
     def _update_dict_recursive(self, d: Dict, u: Dict) -> Dict:
@@ -178,7 +158,7 @@ class LanguageManager(QObject):
         QCoreApplication.removeTranslator(self.app_translator)
         
         # Load Qt translations
-        qt_translations_dir = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        qt_translations_dir = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath) 
         if self.qt_translator.load(f"qtbase_{language_code}", qt_translations_dir):
             QCoreApplication.installTranslator(self.qt_translator)
         
@@ -189,7 +169,7 @@ class LanguageManager(QObject):
         
         # Update the application's layout direction for RTL languages
         if language_code in ['ar', 'he', 'fa']:  # RTL languages
-            self.app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            self.app.setLayoutDirection(Qt.LayoutDirection.RightToLeft) 
         else:
             self.app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
@@ -204,17 +184,14 @@ class LanguageManager(QObject):
             bool: True if language was changed, False otherwise
         """
         if lang_code not in self._available_languages:
-            logger.warning(self.tr(
-                "language_manager.unsupported_language", 
-                "Attempted to set unsupported language: {lang}"
-            ).format(lang=lang_code))
+            logger.warning("Attempted to set unsupported language: %s", lang_code)
             return False
 
         if lang_code != self._current_lang:
-            logger.info(self.tr(
-                "language_manager.language_changing", 
-                "Changing language from {old_lang} to {new_lang}"
-            ).format(old_lang=self._current_lang, new_lang=lang_code))
+            logger.info(
+                "Changing language from %s to %s",
+                self._current_lang, lang_code
+            )
             
             self._current_lang = lang_code
             self.settings.setValue("language", lang_code)
@@ -244,6 +221,10 @@ class LanguageManager(QObject):
             return default_text
             
         try:
+            # For language manager's own use, don't try to translate if not initialized
+            if not hasattr(self, '_current_lang') or not hasattr(self, '_translations'):
+                return default_text
+                
             # Split the key into parts (e.g., 'menu.file.open' -> ['menu', 'file', 'open'])
             parts = key.split('.')
             
@@ -252,7 +233,7 @@ class LanguageManager(QObject):
             
             # Navigate through the nested dictionaries to find the translation
             for part in parts:
-                if part in current:
+                if isinstance(current, dict) and part in current:
                     current = current[part]
                 else:
                     # If any part of the key is not found, return the default text
@@ -262,8 +243,5 @@ class LanguageManager(QObject):
             return current if isinstance(current, str) else default_text
             
         except Exception as e:
-            logger.error(self.tr(
-                "language_manager.translation_error", 
-                "Error translating key '{key}': {error}"
-            ).format(key=key, error=str(e)))
+            logger.error("Error translating key '%s': %s", key, str(e))
             return default_text

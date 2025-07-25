@@ -6,15 +6,16 @@ of the application's menu bar, menus, and actions.
 """
 from typing import Dict, Any, Callable, Optional
 
-from PyQt6.QtWidgets import (
-    QMenuBar, QMenu, QAction, QActionGroup, QFileDialog, QMessageBox
-)
 from PyQt6.QtCore import pyqtSignal, QObject, Qt
-from PyQt6.QtGui import QKeySequence, QIcon
-
+from PyQt6.QtGui import QIcon, QKeySequence, QAction, QActionGroup, QDesktopServices
+from PyQt6.QtWidgets import (
+    QMenuBar, QMenu, QFileDialog, QMessageBox
+)
 from .language_manager import LanguageManager
-from .translation import LANGUAGES
+from .translation import TRANSLATIONS
 
+# Get available languages from TRANSLATIONS
+LANGUAGES = list(TRANSLATIONS.keys())
 
 class MenuManager(QObject):
     """Manages the application's menu bar and actions."""
@@ -96,7 +97,7 @@ class MenuManager(QObject):
         self.settings_action = QAction(
             self.parent.tr("file.settings"),
             self.parent,
-            shortcut=QKeySequence.Preferences,
+            shortcut=QKeySequence("Ctrl+,"),  # Common shortcut for preferences
             statusTip=self.parent.tr("tooltips.settings"),
             triggered=self.settings_triggered.emit
         )
@@ -137,7 +138,7 @@ class MenuManager(QObject):
         self.documentation_action = QAction(
             self.parent.tr("help.documentation"),
             self.parent,
-            shortcut=QKeySequence.HelpContents,
+            shortcut=QKeySequence("F1"),  # Standard help key
             statusTip=self.parent.tr("tooltips.documentation"),
             triggered=self.documentation_triggered.emit
         )
@@ -145,7 +146,7 @@ class MenuManager(QObject):
         self.markdown_docs_action = QAction(
             self.parent.tr("help.markdown_docs"),
             self.parent,
-            shortcut=QKeySequence("F1"),
+            shortcut=QKeySequence("Shift+F1"),  # Alternative help key for markdown docs
             statusTip=self.parent.tr("tooltips.markdown_docs"),
             triggered=self.markdown_docs_triggered.emit
         )
@@ -208,9 +209,9 @@ class MenuManager(QObject):
             self.language_group = QActionGroup(self.parent)
             self.language_group.setExclusive(True)
             
-            # Add available languages
-            for code, lang_data in LANGUAGES.items():
-                action = QAction(lang_data['native_name'], self.parent, checkable=True)
+            # Add available languages from language manager
+            for code, name in self.language_manager.available_languages.items():
+                action = QAction(name, self.parent, checkable=True)
                 action.setData(code)
                 action.triggered.connect(lambda checked, code=code: self.on_language_changed(code))
                 self.language_group.addAction(action)
@@ -270,8 +271,8 @@ class MenuManager(QObject):
         if hasattr(self, 'language_menu'):
             self.language_menu.setTitle(self.parent.tr("menu.language"))
             for action in self.language_group.actions():
-                if action.data() in LANGUAGES:
-                    action.setText(LANGUAGES[action.data()]['native_name'])
+                if action.data() in self.language_manager.available_languages:
+                    action.setText(self.language_manager.available_languages[action.data()])
     
     def set_menu_bar(self):
         """Set the menu bar for the main window."""

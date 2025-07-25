@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QApplication
 )
 from PyQt6.QtGui import QAction, QActionGroup
-from PyQt6.QtCore import pyqtSignal as Signal, QObject, QLocale, Qt, QTranslator, QLibraryInfo
+from PyQt6.QtCore import pyqtSignal as Signal, QObject, Qt, QLocale, QTranslator, QLibraryInfo
 
 # Import the new language manager
 from .language_manager import LanguageManager

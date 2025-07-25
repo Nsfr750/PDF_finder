@@ -4,9 +4,11 @@ Logging configuration for PDF Duplicate Finder.
 import os
 import logging
 import time
+import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 from PyQt6.QtCore import QObject, pyqtSignal, QCoreApplication, QTranslator
 
 # Import language manager if available
@@ -98,6 +100,12 @@ def setup_logging(app_name='PDFDuplicateFinder', log_level=logging.INFO, languag
     file_handler.suffix = "%Y-%m-%d"  # Add date to rotated log files
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
+    
+    # Get current date in YYYY-MM-DD format
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    # Create the log file with date in the name
+    log_file = log_dir / f"{log_base}-{date_str}.log"
     
     # Add console handler
     console_handler = logging.StreamHandler()
