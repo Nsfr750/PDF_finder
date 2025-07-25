@@ -15,7 +15,7 @@ logger = logging.getLogger('PDFDuplicateFinder')
 class PDFScanner:
     """Handles scanning for duplicate PDFs in directories."""
     
-    def __init__(self):
+    def __init__(self, language_manager=None):
         self.stop_event = threading.Event()
         self.progress_callback = None
         self.status_callback = None
@@ -27,6 +27,8 @@ class PDFScanner:
         self.total_files = 0
         self.start_time = 0
         self.lock = threading.Lock()
+        self.language_manager = language_manager
+        self.tr = language_manager.tr if language_manager else lambda key, default: default
     
     def scan_directory(self, directory: str, recursive: bool = True, 
                       min_file_size: int = 1024, max_file_size: int = 1024*1024*1024) -> None:
@@ -53,7 +55,11 @@ class PDFScanner:
             self.total_files = len(pdf_files)
             
             if self.status_callback:
-                self.status_callback("Scanning PDF files...", 0, self.total_files)
+                self.status_callback(
+                    self.tr("scanner.status.scanning", "Scanning PDF files..."), 
+                    0, 
+                    self.total_files
+                )
             
             # Process files in parallel
             self._process_files(pdf_files)
@@ -61,17 +67,33 @@ class PDFScanner:
             # Group similar PDFs
             if not self.stop_event.is_set():
                 if self.status_callback:
-                    self.status_callback("Finding duplicates...", 0, 0)
+                    self.status_callback(
+                        self.tr("scanner.status.finding_duplicates", "Finding duplicates..."), 
+                        0, 
+                        0
+                    )
                 self._find_duplicates()
             
             self.scan_complete = True
             if self.status_callback:
-                self.status_callback("Scan complete!", self.scanned_files, self.total_files)
+                self.status_callback(
+                    self.tr("scanner.status.complete", "Scan complete!"), 
+                    self.scanned_files, 
+                    self.total_files
+                )
                 
         except Exception as e:
-            logger.error(f"Error during scanning: {e}")
+            error_msg = self.tr(
+                "scanner.error.during_scan", 
+                "Error during scanning: {error}"
+            ).format(error=str(e))
+            logger.error(error_msg)
             if self.status_callback:
-                self.status_callback(f"Error: {str(e)}", 0, 0)
+                self.status_callback(
+                    self.tr("scanner.error.prefix", "Error: {error}").format(error=str(e)), 
+                    0, 
+                    0
+                )
         finally:
             self.stop_event.set()
     
@@ -101,7 +123,11 @@ class PDFScanner:
                         elif entry.is_dir() and recursive:
                             scan_dir(entry.path)
             except (PermissionError, OSError) as e:
-                logger.warning(f"Cannot access {path}: {e}")
+                warning_msg = self.tr(
+                    "scanner.warning.access_denied", 
+                    "Cannot access {path}: {error}"
+                ).format(path=path, error=str(e))
+                logger.warning(warning_msg)
         
         scan_dir(directory)
         return pdf_files
@@ -133,7 +159,11 @@ class PDFScanner:
                                 self.scan_results[doc.content_hash] = []
                             self.scan_results[doc.content_hash].append(doc)
                 except Exception as e:
-                    logger.error(f"Error processing {path}: {e}")
+                    error_msg = self.tr(
+                        "scanner.error.processing_file", 
+                        "Error processing {path}: {error}"
+                    ).format(path=path, error=str(e))
+                    logger.error(error_msg)
     
     def _process_single_file(self, file_path: str) -> Optional[PDFDocument]:
         """Process a single PDF file."""
@@ -141,9 +171,13 @@ class PDFScanner:
             return None
             
         try:
-            return PDFDocument(file_path)
+            return PDFDocument(file_path, language_manager=self.language_manager)
         except Exception as e:
-            logger.warning(f"Error loading PDF {file_path}: {e}")
+            warning_msg = self.tr(
+                "scanner.warning.loading_pdf", 
+                "Error loading PDF {path}: {error}"
+            ).format(path=file_path, error=str(e))
+            logger.warning(warning_msg)
             return None
     
     def _find_duplicates(self):

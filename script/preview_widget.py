@@ -6,8 +6,10 @@ import tempfile
 import os
 
 class PDFPreviewWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language_manager=None):
         super().__init__(parent)
+        self.language_manager = language_manager
+        self.tr = language_manager.tr if language_manager else lambda key, default: default
         self.setup_ui()
         self.current_pdf = None
         self.current_page = 0
@@ -32,16 +34,31 @@ class PDFPreviewWidget(QWidget):
     
     def load_pdf(self, file_path):
         if not os.path.exists(file_path):
-            self.status_label.setText("File not found")
+            self.status_label.setText(self.tr("preview.file_not_found", "File not found"))
             return
         
         try:
             self.current_pdf = fitz.open(file_path)
             self.current_page = 0
             self.show_page(0)
-            self.status_label.setText(f"Page 1 of {len(self.current_pdf)}")
+            self.update_status_label()
         except Exception as e:
-            self.status_label.setText(f"Error loading PDF: {str(e)}")
+            self.status_label.setText(
+                self.tr("preview.error_loading_pdf", "Error loading PDF: {error}").format(error=str(e))
+            )
+    
+    def update_status_label(self):
+        """Update the status label with current page information."""
+        if self.current_pdf is not None:
+            self.status_label.setText(
+                self.tr(
+                    "preview.page_status", 
+                    "Page {current} of {total}"
+                ).format(
+                    current=self.current_page + 1, 
+                    total=len(self.current_pdf)
+                )
+            )
     
     def show_page(self, page_num):
         if not self.current_pdf or page_num < 0 or page_num >= len(self.current_pdf):
@@ -81,10 +98,15 @@ class PDFPreviewWidget(QWidget):
             # Display the image
             self.image_label.setPixmap(QPixmap.fromImage(scaled_img))
             self.current_page = page_num
-            self.status_label.setText(f"Page {page_num + 1} of {len(self.current_pdf)}")
+            self.update_status_label()
             
         except Exception as e:
-            self.status_label.setText(f"Error displaying page: {str(e)}")
+            self.status_label.setText(
+                self.tr(
+                    "preview.error_displaying_page", 
+                    "Error displaying page: {error}"
+                ).format(error=str(e))
+            )
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -121,13 +143,16 @@ class PDFPreviewWidget(QWidget):
 class PreviewWindow(QMainWindow):
     """A separate window for displaying PDF previews."""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language_manager=None):
         super().__init__(parent)
-        self.setWindowTitle("PDF Preview")
+        self.language_manager = language_manager
+        self.tr = language_manager.tr if language_manager else lambda key, default: default
+        
+        self.setWindowTitle(self.tr("preview.window_title", "PDF Preview"))
         self.setMinimumSize(800, 600)
         
         # Create the preview widget
-        self.preview_widget = PDFPreviewWidget()
+        self.preview_widget = PDFPreviewWidget(parent=self, language_manager=language_manager)
         self.setCentralWidget(self.preview_widget)
         
         # Store reference to parent to prevent garbage collection
@@ -137,13 +162,18 @@ class PreviewWindow(QMainWindow):
         """Load a PDF file into the preview widget."""
         if hasattr(self.preview_widget, 'load_pdf'):
             self.preview_widget.load_pdf(file_path)
-            self.setWindowTitle(f"PDF Preview - {os.path.basename(file_path)}")
+            self.setWindowTitle(
+                self.tr(
+                    "preview.window_title_with_file", 
+                    "PDF Preview - {filename}"
+                ).format(filename=os.path.basename(file_path))
+            )
             
     def clear(self):
         """Clear the preview."""
         if hasattr(self.preview_widget, 'clear'):
             self.preview_widget.clear()
-            self.setWindowTitle("PDF Preview")
+            self.setWindowTitle(self.tr("preview.window_title", "PDF Preview"))
             
     def closeEvent(self, event):
         """Handle window close event."""

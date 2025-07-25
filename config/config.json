@@ -1,0 +1,13 @@
+{
+    "app_name": "PDFDuplicateFinder",
+    "app_settings": {
+      "theme": "dark",
+      "language": "en",
+      "last_scan_directory": "/home/user",
+      "...": "..."
+    },
+    "recent_files": [],
+    "recent_folders": [],
+    "window_geometry": "base64_encoded_data",
+    "window_state": "base64_encoded_data"
+  }

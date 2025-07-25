@@ -14,17 +14,20 @@ class RecentFilesManager(QObject):
     # Signal emitted when recent files list changes
     recents_changed = Signal(list)
     
-    def __init__(self, max_files: int = 10, parent: Optional[QObject] = None):
+    def __init__(self, max_files: int = 10, parent: Optional[QObject] = None, language_manager=None):
         """Initialize the recent files manager.
         
         Args:
             max_files: Maximum number of recent files to store
             parent: Parent QObject
+            language_manager: Optional language manager for translations
         """
         super().__init__(parent)
         self.max_files = max(1, max_files)
         self._files: List[Dict[str, Any]] = []
         self._settings = QSettings("PDFDuplicateFinder", "RecentFiles")
+        self.language_manager = language_manager
+        self.tr = language_manager.tr if language_manager else lambda key, default: default
         self._load()
     
     def add_file(self, file_path: str, metadata: Optional[dict] = None):
@@ -35,7 +38,12 @@ class RecentFilesManager(QObject):
             metadata: Optional metadata to store with the path
         """
         if not file_path or not (os.path.exists(file_path) and (os.path.isfile(file_path) or os.path.isdir(file_path))):
-            logger.warning(f"Cannot add non-existent path to recents: {file_path}")
+            logger.warning(
+                self.tr(
+                    "recents.cannot_add_nonexistent_path", 
+                    "Cannot add non-existent path to recents: {path}"
+                ).format(path=file_path)
+            )
             return
         
         # Remove any existing entry for this file
@@ -124,7 +132,12 @@ class RecentFilesManager(QObject):
                     self._files = self._files[:self.max_files]
                     
         except Exception as e:
-            logger.error(f"Error loading recent files: {e}")
+            logger.error(
+                self.tr(
+                    "recents.error_loading", 
+                    "Error loading recent files: {error}"
+                ).format(error=str(e))
+            )
             self._files = []
     
     def _save(self):
@@ -133,7 +146,12 @@ class RecentFilesManager(QObject):
             self._settings.setValue("recentFiles", json.dumps(self._files))
             self._settings.sync()
         except Exception as e:
-            logger.error(f"Error saving recent files: {e}")
+            logger.error(
+                self.tr(
+                    "recents.error_saving", 
+                    "Error saving recent files: {error}"
+                ).format(error=str(e))
+            )
     
     def __len__(self) -> int:
         """Get the number of recent files."""

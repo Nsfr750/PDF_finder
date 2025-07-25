@@ -7,13 +7,21 @@ import csv
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
-from logging.handlers import RotatingFileHandler
 
 # Import Version
-from app_qt.version import get_version
+from script.version import get_version
 
 # Import log viewer
-from app_qt.view_log import show_log_viewer
+from script.view_log import show_log_viewer
+
+# Import language manager
+from script.language_manager import LanguageManager
+
+# Import settings manager
+from script.settings import settings_manager
+
+# Import logger
+from script.logger import setup_logging, logger
 
 # Qt imports
 from PyQt6.QtCore import (
@@ -39,246 +47,159 @@ from PyQt6.QtWidgets import (
 )
 
 # Application imports
-from app_qt.main_window import MainWindow
-from app_qt.i18n import Translator
-from app_qt.drag_drop import FileDropHandler
-from app_qt.gest_scan import ScanManager
-from app_qt.recents import RecentFilesManager
-from app_qt.gest_recent import RecentFoldersManager
-from app_qt.delete import DeleteConfirmationDialog, delete_files
-from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
+from script.main_window import MainWindow
+from script.drag_drop import FileDropHandler
+from script.gest_scan import ScanManager
+from script.recents import RecentFilesManager
+from script.gest_recent import RecentFoldersManager
+from script.about import AboutDialog
+from script.delete import DeleteConfirmationDialog, delete_files
+from script.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
 
 # Import utility functions
-from app_qt.pdf_utils import (
+from script.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from app_qt.preview_widget import PDFPreviewWidget, PreviewWindow
-from app_qt.utils import get_file_path, get_file_info_dict
+from script.preview_widget import PDFPreviewWidget, PreviewWindow
+from script.utils import get_file_path, get_file_info_dict
 
-# Set up logging before importing Qt
-log_dir = Path("logs")
-log_dir.mkdir(exist_ok=True)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        RotatingFileHandler(
-            log_dir / 'pdf_finder.log',
-            maxBytes=5*1024*1024,  # 5 MB
-            backupCount=3,
-            encoding='utf-8'
-        ),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger('PDFDuplicateFinder')
-logger.info('=' * 80)
-logger.info('PDF Duplicate Finder started')
-logger.info(f'Log file: {log_dir / "pdf_finder.log"}')
-
-# Import application modules
-
-# Import app_qt modules
-from app_qt.i18n import Translator
-from app_qt.main_window import MainWindow
-from app_qt.drag_drop import FileDropHandler
-from app_qt.gest_scan import ScanManager
-from app_qt.recents import RecentFilesManager
-from app_qt.delete import DeleteConfirmationDialog, delete_files
-from app_qt.search_dup import DuplicateFilesView, DuplicateFilesModel, DuplicateGroup, DuplicateFileItem
-
-# Import utility functions
-from app_qt.pdf_utils import (
-    get_pdf_info, calculate_file_hash, extract_first_page_image,
-    calculate_image_hash, find_duplicates
-)
-from app_qt.preview_widget import PDFPreviewWidget, PreviewWindow
-
-def setup_logging():
-    """Configure the logging system for the application."""
-    # Create logs directory if it doesn't exist
-    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # Main log file path
-    log_file = os.path.join(log_dir, 'pdf_finder.log')
-    
-    # Create a custom formatter
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    formatter = logging.Formatter(log_format)
-    
-    # Configure the root logger
-    logger = logging.getLogger('PDFDuplicateFinder')
-    logger.setLevel(logging.DEBUG)
-    
-    # Add file handler
-    file_handler = RotatingFileHandler(
-        log_file, 
-        maxBytes=5*1024*1024,  # 5 MB
-        backupCount=3,
-        encoding='utf-8'
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
-    
-    # Add console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.INFO)
-    
-    # Remove any existing handlers
-    logger.handlers = []
-    
-    # Add handlers to the logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
-    # Log the start of the application
-    logger.info("=" * 80)
-    logger.info("PDF Duplicate Finder started")
-    logger.info(f"Log file: {log_file}")
-    
-    return logger
+# Import menu manager
+from script.menu import MenuManager
 
 # Set up logging
-logger = setup_logging()
+logger = setup_logging('PDFDuplicateFinder')
 
 # Constants
 APP_NAME = "PDF Duplicate Finder"
 APP_VERSION = get_version()
-
-class AboutDialog(QDialog):
+    
+class PDFDuplicateFinder(MainWindow):
+    """Main application window for PDF Duplicate Finder."""
+    
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"About {APP_NAME}")
-        self.setFixedSize(400, 300)
+        self.app_settings = settings_manager.app_settings  # Use the settings manager
         
-        layout = QVBoxLayout()
+        # Initialize variables
+        self.duplicate_groups = []
+        self.current_group_index = -1
+        self.current_file_index = -1
+        self.scan_directories = []
+        self.scan_thread = None
+        self.is_scanning = False
+        self.preview_window = None  # Will hold the preview window instance
         
-        # App name and version
-        title = QLabel(f"<h1>{APP_NAME}</h1>")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version = QLabel(f"Version: {APP_VERSION}")
-        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Initialize managers
+        self.recent_manager = RecentFilesManager()
+        self.recent_folders_manager = RecentFoldersManager()
+        self.scan_manager = ScanManager()
         
-        # Description
-        description = QLabel(
-            "A tool to find and manage duplicate PDF files on your computer."
-        )
-        description.setWordWrap(True)
+        # Initialize menu manager
+        self.menu_manager = MenuManager(self, self.language_manager)
+        self.setup_menu_connections()
         
-        # Copyright
-        copyright = QLabel("© 2025 Nsfr750")
-        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # OK button
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        button_box.accepted.connect(self.accept)
-        
-        # Add widgets to layout
-        layout.addWidget(title)
-        layout.addWidget(version)
-        layout.addSpacing(20)
-        layout.addWidget(description)
-        layout.addStretch()
-        layout.addWidget(copyright)
-        layout.addWidget(button_box)
-        
-        self.setLayout(layout)
-
-class SettingsDialog(QDialog):
-    def __init__(self, parent=None, current_settings=None):
-        super().__init__(parent)
-        self.setWindowTitle("Settings")
-        self.setMinimumSize(500, 400)
-        
-        # Initialize with default settings
-        self.settings = {
-            'scan_recursive': True,
-            'min_file_size': 100,  # KB
-            'max_file_size': 10000,  # KB
-            'hash_size': 8,
-            'threshold': 5,
-            'theme': 'system',
-            'language': 'en'
-        }
-        
-        # Update with any provided current settings
-        if current_settings:
-            self.settings.update(current_settings)
-        
+        # Initialize UI
         self.init_ui()
+        
+        # Apply theme
+        self.apply_theme()
+        
+        # Load recent files after UI is fully initialized
+        self.load_recent_files()
+        
+        # Connect signals
+        self.scan_manager.scan_completed.connect(self.on_scan_completed)
+        self.scan_manager.progress.connect(self.update_progress)
+        self.scan_manager.file_processed.connect(self.on_file_processed)
+
+    def setup_menu_connections(self):
+        """Set up connections for menu actions."""
+        # Connect menu signals to slots
+        self.menu_manager.open_folder_triggered.connect(self.on_scan_folder)
+        self.menu_manager.save_results_triggered.connect(self.save_scan_results)
+        self.menu_manager.load_results_triggered.connect(self.load_scan_results)
+        self.menu_manager.settings_triggered.connect(self.on_settings)
+        self.menu_manager.exit_triggered.connect(self.close)
+        self.menu_manager.view_log_triggered.connect(self.on_view_log)
+        self.menu_manager.check_updates_triggered.connect(self.on_check_updates)
+        self.menu_manager.about_triggered.connect(self.on_about)
+        self.menu_manager.documentation_triggered.connect(self.on_help)
+        self.menu_manager.markdown_docs_triggered.connect(self.on_markdown_docs)  # Add this line
+        self.menu_manager.sponsor_triggered.connect(self.on_sponsor)
+        self.menu_manager.pdf_viewer_triggered.connect(self.on_pdf_viewer)
+        self.menu_manager.language_changed.connect(self.change_language)
     
     def init_ui(self):
-        layout = QVBoxLayout()
+        """Initialize the user interface."""
+        # Set window properties
+        self.setWindowTitle(self.tr("PDF Duplicate Finder"))
+        self.setMinimumSize(1024, 768)
         
-        # Create form layout for settings
-        form = QFormLayout()
+        # Set up the main widget and layout
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
         
-        # Scan options
-        self.scan_recursive = QCheckBox("Scan subdirectories")
-        self.scan_recursive.setChecked(self.settings['scan_recursive'])
+        # Set up the menu bar
+        self.menu_manager.set_menu_bar()
         
-        # File size range
-        size_layout = QHBoxLayout()
-        self.min_size = QSpinBox()
-        self.min_size.setRange(0, 100000)
-        self.min_size.setValue(self.settings['min_file_size'])
-        self.max_size = QSpinBox()
-        self.max_size.setRange(1, 1000000)
-        self.max_size.setValue(self.settings['max_file_size'])
-        size_layout.addWidget(QLabel("Min (KB):"))
-        size_layout.addWidget(self.min_size)
-        size_layout.addWidget(QLabel("Max (KB):"))
-        size_layout.addWidget(self.max_size)
-        size_layout.addStretch()
+        # Set up the main layout
+        layout = QVBoxLayout(main_widget)
         
-        # Hash settings
-        self.hash_size = QSpinBox()
-        self.hash_size.setRange(4, 16)
-        self.hash_size.setValue(self.settings['hash_size'])
+        # Add the main content
+        self.create_main_content()
         
-        self.threshold = QSpinBox()
-        self.threshold.setRange(0, 100)
-        self.threshold.setValue(self.settings['threshold'])
+        # Add the main content to the layout
+        layout.addWidget(self.main_widget)
         
-        # Theme
-        self.theme = QComboBox()
-        self.theme.addItems(['system', 'light', 'dark'])
-        self.theme.setCurrentText(self.settings['theme'])
+        # Add status bar
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
         
-        # Language
-        self.language = QComboBox()
-        self.language.addItems(['en', 'it'])
-        self.language.setCurrentText(self.settings['language'])
+        # Add status label
+        self.status_label = QLabel()
+        self.status_bar.addPermanentWidget(self.status_label)
         
-        # Add fields to form
-        form.addRow("Scan options:", self.scan_recursive)
-        form.addRow("File size range:", size_layout)
-        form.addRow("Hash size:", self.hash_size)
-        form.addRow("Similarity threshold (%):", self.threshold)
-        form.addRow("Theme:", self.theme)
-        form.addRow("Language:", self.language)
-        
-        # Buttons
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | 
-            QDialogButtonBox.StandardButton.Cancel |
-            QDialogButtonBox.StandardButton.RestoreDefaults
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        buttons.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.restore_defaults)
-        
-        # Add to main layout
-        layout.addLayout(form)
-        layout.addWidget(buttons)
-        
-        self.setLayout(layout)
+        # Add progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.status_bar.addPermanentWidget(self.progress_bar)
     
+    def retranslate_ui(self):
+        """Retranslate all UI elements."""
+        # Check if the widget is being destroyed or if translation is already in progress
+        if not self or not hasattr(self, 'isVisible') or hasattr(self, '_translating') and self._translating:
+            return
+            
+        try:
+            # Set flag to prevent recursion
+            self._translating = True
+            
+            # Call parent's retranslate_ui first
+            super().retranslate_ui()
+            
+            # Update main window title
+            self.setWindowTitle(self.tr("PDF Duplicate Finder"))
+            
+            # Update menu items
+            self.menu_manager.retranslate_ui()
+            
+            # Update status bar
+            if hasattr(self, 'status_label') and self.status_label:
+                self.status_label.setText("")
+                
+        except RuntimeError as e:
+            # Catch and log any RuntimeError that might occur if Qt objects are deleted
+            if 'deleted' in str(e):
+                logger.debug("Qt object deleted during retranslate_ui")
+                return
+            raise
+            
+        finally:
+            # Always clear the flag when done
+            if hasattr(self, '_translating'):
+                del self._translating
+
     def get_settings(self):
         return {
             'scan_recursive': self.scan_recursive.isChecked(),
@@ -304,8 +225,7 @@ class PDFDuplicateFinder(MainWindow):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
-        self.app_settings = {}  # Will be populated in load_settings()
+        self.app_settings = settings_manager.app_settings  # Use the settings manager
         
         # Initialize variables
         self.duplicate_groups = []
@@ -323,9 +243,6 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize UI
         self.init_ui()
-        
-        # Load settings
-        self.load_settings()
         
         # Apply theme
         self.apply_theme()
@@ -435,7 +352,7 @@ class PDFDuplicateFinder(MainWindow):
             
             # Update the application settings
             self.app_settings['language'] = language_code
-            self.save_settings()
+            settings_manager.save_settings()
             
             # Update the checked state of the language actions
             if hasattr(self, 'language_group'):
@@ -540,8 +457,7 @@ class PDFDuplicateFinder(MainWindow):
         self._file_drop_handler = FileDropHandler(self)
         
         # Initialize settings
-        self.settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
-        self.app_settings = {}  # Will be populated in load_settings()
+        self.app_settings = settings_manager.app_settings  # Use the settings manager
         
         # Initialize variables
         self.duplicate_groups = []
@@ -559,9 +475,6 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize UI
         self.init_ui()
-        
-        # Load settings
-        self.load_settings()
         
         # Apply theme
         self.apply_theme()
@@ -649,47 +562,68 @@ class PDFDuplicateFinder(MainWindow):
             with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 
-                # Reset current state
-                self.duplicate_groups = []
-                current_group = -1
+                # Check if required columns exist
+                required_columns = ['Group', 'File Path', 'Size (bytes)']
+                if not all(col in reader.fieldnames for col in required_columns):
+                    raise ValueError("Invalid CSV format. Required columns not found.")
                 
-                # Read data row by row
+                # Group files by group number
+                groups = {}
                 for row in reader:
-                    group_num = int(row.get('Group', '0'))
+                    group_num = int(row['Group'])
+                    if group_num not in groups:
+                        groups[group_num] = []
                     
-                    # Create a new group if needed
-                    if group_num > current_group:
-                        self.duplicate_groups.append([])
-                        current_group = group_num
-                    
-                    # Add file info to the current group
+                    # Create file info dictionary
                     file_info = {
-                        'path': row.get('File Path', ''),
+                        'path': row['File Path'],
                         'size': int(row.get('Size (bytes)', 0)),
-                        'pages': int(row.get('Pages', 0)),
+                        'pages': int(row.get('Pages', 0)) if row.get('Pages') else 0,
                         'creation_date': row.get('Creation Date', ''),
                         'modification_date': row.get('Modification Date', ''),
                         'md5': row.get('MD5 Hash', '')
                     }
-                    self.duplicate_groups[-1].append(file_info)
-            
-            # Update the UI with the loaded results
-            if hasattr(self, 'duplicates_view') and self.duplicate_groups:
-                self.current_group_index = 0
-                self.current_file_index = 0
-                self.update_duplicates_view()
+                    groups[group_num].append(file_info)
+                
+                # Convert to list of groups
+                duplicate_groups = list(groups.values())
+                
+                # Update the UI with loaded results
+                self.duplicate_groups = duplicate_groups
+                if hasattr(self, 'duplicates_view'):
+                    # Disconnect previous model signals if any
+                    try:
+                        self.duplicates_view.selectionModel().selectionChanged.disconnect()
+                    except (TypeError, RuntimeError):
+                        pass
+                    
+                    # Create a new model with the loaded results
+                    model = DuplicateFilesModel(duplicate_groups)
+                    self.duplicates_view.setModel(model)
+                    
+                    # Connect selection change signal
+                    selection_model = self.duplicates_view.selectionModel()
+                    selection_model.selectionChanged.connect(self.on_file_selection_changed)
+                    
+                    # Update the view
+                    self.duplicates_view.resizeColumnsToContents()
+                    
+                    # Select first item if available
+                    if duplicate_groups:
+                        self.current_group_index = 0
+                        self.show_current_group()
+                    
+                    # Update status
+                    total_duplicates = sum(len(group) - 1 for group in duplicate_groups)
+                    status_text = f"Loaded {len(duplicate_groups)} groups with {total_duplicates} duplicate files"
+                    self.status_label.setText(status_text)
+                
                 self.update_ui_state()
                 
                 QMessageBox.information(
-                    self,
-                    "Load Successful",
-                    f"Successfully loaded {len(self.duplicate_groups)} duplicate groups from:\n{file_path}"
-                )
-            else:
-                QMessageBox.warning(
-                    self,
-                    "No Valid Data",
-                    "The selected file does not contain valid scan results."
+                    self, 
+                    "Load Successful", 
+                    f"Successfully loaded {len(duplicate_groups)} groups from:\n{file_path}"
                 )
                 
         except Exception as e:
@@ -807,237 +741,14 @@ class PDFDuplicateFinder(MainWindow):
         self.start_scan()
     
     def load_settings(self):
-        """Load application settings from QSettings."""
-        try:
-            # Load window geometry
-            self.restoreGeometry(self.settings.value("geometry", QByteArray()))
-            
-            # Load window state (toolbars, dock widgets, etc.)
-            self.restoreState(self.settings.value("windowState", QByteArray()))
-            
-            # Load recent files and folders
-            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'load'):
-                self.recent_manager.load()
-            if hasattr(self, 'recent_folders_manager') and hasattr(self.recent_folders_manager, 'load'):
-                self.recent_folders_manager.load()
-            
-            # Load application settings
-            self.app_settings = {
-                'theme': self.settings.value('theme', 'dark'),
-                'language': self.settings.value('language', 'en'),
-                'last_directory': self.settings.value('last_directory', os.path.expanduser('~')),
-                'check_updates': self.settings.value('check_updates', True, type=bool),
-                'show_hidden': self.settings.value('show_hidden', False, type=bool),
-                'min_file_size': self.settings.value('min_file_size', 1024, type=int),  # 1KB
-                'max_file_size': self.settings.value('max_file_size', 1024 * 1024 * 1024, type=int),  # 1GB
-                'compare_method': self.settings.value('compare_method', 'content'),  # 'content' or 'metadata'
-                'thread_count': self.settings.value('thread_count', 4, type=int),
-                'auto_save_results': self.settings.value('auto_save_results', True, type=bool),
-                'auto_load_last': self.settings.value('auto_load_last', False, type=bool)
-            }
-            
-            # Apply theme
-            self.apply_theme()
-            
-            # Apply language if available
-            if 'language' in self.app_settings and hasattr(self, 'translator'):
-                self.translator.load_language(self.app_settings['language'])
-            
-            logger.info("Settings loaded successfully")
-            
-        except Exception as e:
-            logger.error(f"Error loading settings: {e}")
-            # Reset to default settings on error
-            self.app_settings = {
-                'theme': 'dark',
-                'language': 'en',
-                'last_directory': os.path.expanduser('~'),
-                'check_updates': True,
-                'show_hidden': False,
-                'min_file_size': 1024,  # 1KB
-                'max_file_size': 1024 * 1024 * 1024,  # 1GB
-                'compare_method': 'content',
-                'thread_count': 4,
-                'auto_save_results': True,
-                'auto_load_last': True
-            }
-    
-    def apply_theme(self, theme=None):
-        """
-        Apply the selected theme to the application.
-        
-        Args:
-            theme (str, optional): Theme name to apply. If None, uses the theme from app_settings.
-        """
-        if theme is None:
-            theme = self.app_settings.get('theme', 'dark')
-            
-        # Save the theme to settings
-        self.app_settings['theme'] = theme
-        self.settings.setValue('theme', theme)
-        
-        # Define color palettes for different themes
-        if theme == 'dark':
-            # Dark theme colors
-            palette = QPalette()
-            palette.setColor(QPalette.Window, QColor(53, 53, 53))
-            palette.setColor(QPalette.WindowText, Qt.white)
-            palette.setColor(QPalette.Base, QColor(25, 25, 25))
-            palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-            palette.setColor(QPalette.ToolTipBase, Qt.white)
-            palette.setColor(QPalette.ToolTipText, Qt.white)
-            palette.setColor(QPalette.Text, Qt.white)
-            palette.setColor(QPalette.Button, QColor(53, 53, 53))
-            palette.setColor(QPalette.ButtonText, Qt.white)
-            palette.setColor(QPalette.BrightText, Qt.red)
-            palette.setColor(QPalette.Link, QColor(42, 130, 218))
-            palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-            palette.setColor(QPalette.HighlightedText, Qt.black)
-            
-            # Apply the palette
-            QApplication.setPalette(palette)
-            
-            # Additional style tweaks for dark theme
-            self.setStyleSheet("""
-                QToolTip { 
-                    color: #ffffff; 
-                    background-color: #2a82da; 
-                    border: 1px solid white; 
-                }
-                QMenu::item:selected { 
-                    background-color: #2a82da; 
-                }
-                QStatusBar { 
-                    background-color: #353535; 
-                    color: white; 
-                }
-            """)
-            
-        elif theme == 'light':
-            # Light theme (system default)
-            QApplication.setPalette(QApplication.style().standardPalette())
-            self.setStyleSheet("""
-                QToolTip { 
-                    border: 1px solid #76797C; 
-                    background-color: #f0f0f0; 
-                    color: #000000; 
-                }
-                QMenu::item:selected { 
-                    background-color: #2a82da; 
-                    color: white;
-                }
-            """)
-            
-        # Force a style refresh
-        self.update()
-    
-    def load_recent_files(self):
-        """Load the list of recently accessed files and update the UI."""
-        try:
-            # Clear the recent files menu
-            if hasattr(self, 'recent_menu'):
-                self.recent_menu.clear()
-            else:
-                # If the menu doesn't exist yet, create it
-                menubar = self.menuBar()
-                file_menu = menubar.findChild(QMenu, "file_menu")
-                if file_menu:
-                    self.recent_menu = file_menu.addMenu(self.tr("Recent Files"))
-                else:
-                    logger.warning("Could not find File menu to add Recent Files submenu")
-                    return
-            
-            # Get recent files from the manager
-            recent_files = []
-            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'get_recent_files'):
-                recent_files = self.recent_manager.get_recent_files()
-            
-            # Add recent files to the menu
-            if not recent_files:
-                no_files_action = QAction(self.tr("No recent files"), self)
-                no_files_action.setEnabled(False)
-                self.recent_menu.addAction(no_files_action)
-                return
-            
-            # Add each recent file to the menu
-            for i, file_path in enumerate(recent_files, 1):
-                # Show a maximum of 10 recent files
-                if i > 10:
-                    break
-                    
-                # Create a user-friendly display name
-                display_name = f"&{i} {os.path.basename(file_path)}"
-                action = QAction(display_name, self)
-                action.setData(file_path)
-                action.triggered.connect(lambda checked, path=file_path: self.open_recent_file(path))
-                self.recent_menu.addAction(action)
-            
-            # Add a separator and clear action if we have recent files
-            if recent_files:
-                self.recent_menu.addSeparator()
-                clear_action = QAction(self.tr("Clear Recent Files"), self)
-                clear_action.triggered.connect(self.clear_recent_files)
-                self.recent_menu.addAction(clear_action)
-        
-        except Exception as e:
-            logger.error(f"Error loading recent files: {e}")
-    
-    def open_recent_file(self, file_path):
-        """
-        Open a recently accessed file.
-        
-        Args:
-            file_path (str): Path to the file to open
-        """
-        try:
-            if not os.path.exists(file_path):
-                QMessageBox.warning(
-                    self,
-                    "File Not Found",
-                    f"The file '{os.path.basename(file_path)}' could not be found."
-                )
-                # Remove the file from recent files if it doesn't exist
-                if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'remove_recent_file'):
-                    self.recent_manager.remove_recent_file(file_path)
-                    self.load_recent_files()  # Refresh the recent files menu
-                return
-            
-            # Check if the file is a directory or a file
-            if os.path.isdir(file_path):
-                self.scan_directories = [file_path]
-            else:
-                self.scan_directories = [os.path.dirname(file_path)]
-                
-            # Start the scan
-            self.start_scan()
-            
-            # Update the recent files list
-            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'add_recent_file'):
-                self.recent_manager.add_recent_file(file_path)
-                self.load_recent_files()  # Refresh the recent files menu
-                
-        except Exception as e:
-            logger.error(f"Error opening recent file '{file_path}': {e}")
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Could not open file '{os.path.basename(file_path)}': {str(e)}"
-            )
-    
-    def clear_recent_files(self):
-        """Clear the list of recently accessed files."""
-        try:
-            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'clear_recent_files'):
-                self.recent_manager.clear_recent_files()
-                self.load_recent_files()  # Refresh the recent files menu
-        except Exception as e:
-            logger.error(f"Error clearing recent files: {e}")
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Could not clear recent files: {str(e)}"
-            )
-    
+        """Load application settings."""
+        # Settings are now loaded by the SettingsManager
+        pass
+
+    def save_settings(self):
+        """Save application settings."""
+        settings_manager.save_settings()
+
     def update_duplicates_view(self):
         """Update the duplicates view with the current duplicate groups."""
         try:
@@ -1433,6 +1144,16 @@ class PDFDuplicateFinder(MainWindow):
         self.view_log_action.triggered.connect(self.on_view_log)
         tools_menu.addAction(self.view_log_action)
         
+        # Add PDF Viewer action
+        self.pdf_viewer_action = QAction("PDF Viewer", self)
+        self.pdf_viewer_action.triggered.connect(self.on_pdf_viewer)
+        tools_menu.addAction(self.pdf_viewer_action)
+        
+        # Add Markdown Docs action
+        self.markdown_docs_action = QAction("Markdown Documentation", self)
+        self.markdown_docs_action.triggered.connect(self.on_markdown_docs)
+        tools_menu.addAction(self.markdown_docs_action)
+        
         # Help menu
         help_menu = menubar.addMenu(self.tr("&Help"))
         
@@ -1737,7 +1458,7 @@ class PDFDuplicateFinder(MainWindow):
                 
                 # Save the last used directory
                 self.app_settings['last_scan_directory'] = os.path.dirname(folder) if os.path.isfile(folder) else folder
-                self.save_settings()
+                settings_manager.save_settings()
             
             # Start the scan with the selected folder
             self.scan_directories = [folder]
@@ -1928,7 +1649,7 @@ class PDFDuplicateFinder(MainWindow):
                 except Exception as e:
                     logger.error(f"Error loading PDF in preview window: {e}")
             
-            # Update file details if available
+            # Update file details if available and has set_file method
             if hasattr(self, 'file_details') and hasattr(self.file_details, 'set_file'):
                 try:
                     self.file_details.set_file(item.file_path)
@@ -2023,29 +1744,15 @@ class PDFDuplicateFinder(MainWindow):
                     "Check the log for details."
                 )
     def save_settings(self):
-        """Save application settings to persistent storage."""
-        try:
-            if hasattr(self, 'app_settings') and hasattr(self, 'settings'):
-                # Save each setting individually
-                for key, value in self.app_settings.items():
-                    self.settings.setValue(key, value)
-                self.settings.sync()
-                logger.info("Settings saved successfully")
-        except Exception as e:
-            logger.error(f"Error saving settings: {e}")
-            QMessageBox.critical(
-                self,
-                "Error",
-                f"Failed to save settings:\n{str(e)}",
-                QMessageBox.StandardButton.Ok
-            )
-    
+        """Save application settings."""
+        settings_manager.save_settings()
+
     def on_settings(self):
         dialog = SettingsDialog(self, self.app_settings)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Save settings
             self.app_settings = dialog.get_settings()
-            self.save_settings()
+            settings_manager.save_settings()
             self.apply_theme()
     
     def on_view_log(self):
@@ -2691,300 +2398,23 @@ class PDFDuplicateFinder(MainWindow):
             self.recent_folders_manager.clear_recent_folders()
             self.load_recent_files()
     
-    def load_settings(self):
-        """Load application settings from QSettings."""
-        try:
-            # Load window geometry
-            self.restoreGeometry(self.settings.value("geometry", QByteArray()))
-            
-            # Load window state (toolbars, dock widgets, etc.)
-            self.restoreState(self.settings.value("windowState", QByteArray()))
-            
-            # Load recent files and folders
-            if hasattr(self, 'recent_manager') and hasattr(self.recent_manager, 'load'):
-                self.recent_manager.load()
-            if hasattr(self, 'recent_folders_manager') and hasattr(self.recent_folders_manager, 'load'):
-                self.recent_folders_manager.load()
-            
-            # Load application settings
-            self.app_settings = {
-                'scan_recursive': self.settings.value('scan_recursive', True, type=bool),
-                'min_file_size': self.settings.value('min_file_size', 100, type=int),
-                'max_file_size': self.settings.value('max_file_size', 10000, type=int),
-                'hash_size': self.settings.value('hash_size', 8, type=int),
-                'threshold': self.settings.value('threshold', 5, type=int),
-                'theme': self.settings.value('theme', 'system', type=str),
-                'language': self.settings.value('language', 'en', type=str)
-            }
-            
-            # Apply theme
-            self.apply_theme()
-            
-            # Apply language if available
-            if 'language' in self.app_settings and hasattr(self, 'translator'):
-                self.translator.load_language(self.app_settings['language'])
-            
-            logger.info("Settings loaded successfully")
-            
-        except Exception as e:
-            logger.error(f"Error loading settings: {e}")
-            # Reset to default settings on error
-            self.app_settings = {
-                'scan_recursive': True,
-                'min_file_size': 100,
-                'max_file_size': 10000,
-                'hash_size': 8,
-                'threshold': 5,
-                'theme': 'system',
-                'language': 'en'
-            }
-    
-    def save_settings(self):
-        """Save application settings to QSettings."""
-        try:
-            if hasattr(self, 'app_settings') and hasattr(self, 'settings'):
-                # Save each setting individually
-                for key, value in self.app_settings.items():
-                    self.settings.setValue(key, value)
-                self.settings.sync()
-                logger.info("Settings saved successfully")
-        except Exception as e:
-            logger.error(f"Error saving settings: {e}")
-            logger.debug(traceback.format_exc())
-            # Set default settings if saving fails
-            self.app_settings = {
-                'scan_recursive': True,
-                'min_file_size': 100,
-                'max_file_size': 10000,
-                'hash_size': 8,
-                'threshold': 5,
-                'theme': 'system',
-                'language': 'en'
-            }
-    
-    def apply_theme(self):
-        # Apply the selected theme
-        theme = self.app_settings.get('theme', 'system')
-        
-        if theme == 'dark':
-            # Dark theme colors
-            palette = QPalette()
-            palette.setColor(QPalette.Window, QColor(53, 53, 53))
-            palette.setColor(QPalette.WindowText, Qt.white)
-            palette.setColor(QPalette.Base, QColor(25, 25, 25))
-            palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-            palette.setColor(QPalette.ToolTipBase, Qt.white)
-            palette.setColor(QPalette.ToolTipText, Qt.white)
-            palette.setColor(QPalette.Text, Qt.white)
-            palette.setColor(QPalette.Button, QColor(53, 53, 53))
-            palette.setColor(QPalette.ButtonText, Qt.white)
-            palette.setColor(QPalette.BrightText, Qt.red)
-            palette.setColor(QPalette.Link, QColor(42, 130, 218))
-            palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-            palette.setColor(QPalette.HighlightedText, Qt.black)
-            
-            # Apply the palette
-            QApplication.setPalette(palette)
-            
-            # Additional style tweaks for dark theme
-            self.setStyleSheet("""
-                QToolTip { 
-                    color: #ffffff; 
-                    background-color: #2a82da; 
-                    border: 1px solid white; 
-                }
-                QMenu::item:selected { 
-                    background-color: #2a82da; 
-                }
-                QStatusBar { 
-                    background-color: #353535; 
-                    color: white; 
-                }
-            """)
-            
-        elif theme == 'light':
-            # Light theme (system default)
-            QApplication.setPalette(QApplication.style().standardPalette())
-            self.setStyleSheet("""
-                QToolTip { 
-                    border: 1px solid #76797C; 
-                    background-color: #f0f0f0; 
-                    color: #000000; 
-                }
-                QMenu::item:selected { 
-                    background-color: #2a82da; 
-                    color: white;
-                }
-            """)
-            
-        # Force a style refresh
-        self.update()
-    
-    def load_scan_results(self):
-        """Load scan results from a CSV file."""
-        # Open file dialog to select the CSV file
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Load Scan Results",
-            os.path.expanduser("~"),
-            "CSV Files (*.csv)"
-        )
-        
-        if not file_path:
-            return  # User cancelled
-            
-        try:
-            with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                
-                # Check if required columns exist
-                required_columns = ['Group', 'File Path', 'Size (bytes)']
-                if not all(col in reader.fieldnames for col in required_columns):
-                    raise ValueError("Invalid CSV format. Required columns not found.")
-                
-                # Group files by group number
-                groups = {}
-                for row in reader:
-                    group_num = int(row['Group'])
-                    if group_num not in groups:
-                        groups[group_num] = []
-                    
-                    # Create file info dictionary
-                    file_info = {
-                        'path': row['File Path'],
-                        'size': int(row.get('Size (bytes)', 0)),
-                        'pages': int(row.get('Pages', 0)) if row.get('Pages') else 0,
-                        'creation_date': row.get('Creation Date', ''),
-                        'modification_date': row.get('Modification Date', ''),
-                        'md5': row.get('MD5 Hash', '')
-                    }
-                    groups[group_num].append(file_info)
-                
-                # Convert to list of groups
-                duplicate_groups = list(groups.values())
-                
-                # Update the UI with loaded results
-                self.duplicate_groups = duplicate_groups
-                if hasattr(self, 'duplicates_view'):
-                    # Disconnect previous model signals if any
-                    try:
-                        self.duplicates_view.selectionModel().selectionChanged.disconnect()
-                    except (TypeError, RuntimeError):
-                        pass
-                    
-                    # Create a new model with the loaded results
-                    model = DuplicateFilesModel(duplicate_groups)
-                    self.duplicates_view.setModel(model)
-                    
-                    # Connect selection change signal
-                    selection_model = self.duplicates_view.selectionModel()
-                    selection_model.selectionChanged.connect(self.on_file_selection_changed)
-                    
-                    # Update the view
-                    self.duplicates_view.resizeColumnsToContents()
-                    
-                    # Select first item if available
-                    if duplicate_groups:
-                        self.current_group_index = 0
-                        self.show_current_group()
-                    
-                    # Update status
-                    total_duplicates = sum(len(group) - 1 for group in duplicate_groups)
-                    status_text = f"Loaded {len(duplicate_groups)} groups with {total_duplicates} duplicate files"
-                    self.status_label.setText(status_text)
-                
-                self.update_ui_state()
-                
-                QMessageBox.information(
-                    self, 
-                    "Load Successful", 
-                    f"Successfully loaded {len(duplicate_groups)} groups from:\n{file_path}"
-                )
-                
-        except Exception as e:
-            logger.error(f"Error loading scan results: {e}")
-            QMessageBox.critical(
-                self,
-                "Load Error",
-                f"Failed to load scan results:\n{str(e)}"
-            )
-    
-    def save_scan_results(self):
-        """Save the current scan results to a CSV file."""
-        if not hasattr(self, 'duplicate_groups') or not self.duplicate_groups:
-            QMessageBox.information(self, "No Results", "No scan results to save.")
-            return
-            
-        # Get the default filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        default_filename = f"pdf_duplicate_scan_{timestamp}.csv"
-        
-        # Open file dialog to select save location
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Scan Results",
-            os.path.join(os.path.expanduser("~"), default_filename),
-            "CSV Files (*.csv)"
-        )
-        
-        if not file_path:
-            return  # User cancelled
-            
-        try:
-            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.writer(csvfile)
-                
-                # Write header
-                writer.writerow([
-                    'Group', 'File Path', 'Size (bytes)', 'Pages', 
-                    'Creation Date', 'Modification Date', 'MD5 Hash'
-                ])
-                
-                # Write data for each duplicate group
-                for i, group in enumerate(self.duplicate_groups, 1):
-                    for file_info in group:
-                        writer.writerow([
-                            i,  # Group number
-                            file_info.get('path', ''),
-                            file_info.get('size', ''),
-                            file_info.get('pages', ''),
-                            file_info.get('creation_date', ''),
-                            file_info.get('modification_date', ''),
-                            file_info.get('md5', '')
-                        ])
-            
-            QMessageBox.information(
-                self, 
-                "Save Successful", 
-                f"Scan results saved to:\n{file_path}"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error saving scan results: {e}")
-            QMessageBox.critical(
-                self,
-                "Save Error",
-                f"Failed to save scan results:\n{str(e)}"
-            )
-    
     def closeEvent(self, event):
         """Handle the window close event."""
         try:
             logger.info("Application is shutting down")
             
             # Save window geometry and state
-            settings = QSettings("PDFDuplicateFinder", "PDFDuplicateFinder")
-            settings.setValue("geometry", self.saveGeometry())
-            settings.setValue("windowState", self.saveState())
+            settings_manager.window_geometry = self.saveGeometry()
+            settings_manager.window_state = self.saveState()
             
             # Save current view state
             if hasattr(self, 'current_group_index'):
-                settings.setValue("current_group_index", self.current_group_index)
+                settings_manager.set('current_group_index', self.current_group_index)
             if hasattr(self, 'current_file_index'):
-                settings.setValue("current_file_index", self.current_file_index)
+                settings_manager.set('current_file_index', self.current_file_index)
             
             # Save settings
-            self.save_settings()
+            settings_manager.save_settings()
             
             logger.info("Application shutdown completed")
             
@@ -2993,6 +2423,41 @@ class PDFDuplicateFinder(MainWindow):
             logger.debug(traceback.format_exc())
         
         event.accept()
+
+    def on_pdf_viewer(self):
+        """Open the PDF viewer dialog."""
+        from script.PDF_viewer import show_pdf_viewer
+        
+        # Get the current file if available
+        current_file = None
+        if hasattr(self, 'current_file') and self.current_file:
+            current_file = self.current_file
+        
+        # Show the PDF viewer
+        viewer = show_pdf_viewer(current_file, self, self.language_manager)
+        viewer.show()
+
+    def on_markdown_docs(self):
+        """Open the markdown documentation viewer."""
+        from script.markdown_viewer import MarkdownViewer
+        import os
+        
+        # Path to the documentation file
+        docs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'documentation.md')
+        
+        # Check if file exists
+        if not os.path.exists(docs_path):
+            QMessageBox.warning(
+                self,
+                self.tr("Documentation Not Found"),
+                self.tr("Could not find the documentation file at: {}").format(docs_path)
+            )
+            return
+        
+        # Create and show the markdown viewer
+        self.markdown_viewer = MarkdownViewer(docs_path, self.language_manager, self)
+        self.markdown_viewer.setWindowTitle(self.tr("Documentation"))
+        self.markdown_viewer.show()
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     """Handle uncaught exceptions."""

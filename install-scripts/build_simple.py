@@ -25,7 +25,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('build.log')
+        logging.FileHandler(get_project_root() / 'logs/build.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -41,10 +41,10 @@ def get_version() -> str:
         version = {}
         with open(version_file, 'r', encoding='utf-8') as f:
             exec(f.read(), version)
-        return version.get('__version__', '0.0.0')
+        return version.get('__version__', '2.8.0')
     except Exception as e:
         logger.warning(f"Could not read version from {version_file}: {e}")
-        return '0.0.0'
+        return '2.8.0'
 
 def clean_directory(dir_path: Path) -> None:
     """
@@ -219,7 +219,7 @@ def build_installer() -> bool:
         "description": "A tool for finding and managing PDF files",
         "author": "Nsfr750",
         "entry_point": str(base_dir / "main.py"),
-        "icon": str(base_dir / "images" / "icon.ico"),
+        "icon": str(base_dir / "assets" / "icon.ico"),
         "hidden_imports": [
             "script.about",
             "script.help",
@@ -240,8 +240,13 @@ def build_installer() -> bool:
             "script.update_preview"
         ],
         "data_files": [
-            (str(base_dir / "images"), "assets"),
-            (str(base_dir / "app_qt"), "script")
+            (str(base_dir / "assets"), "assets"),
+            (str(base_dir / "script"), "script"),
+            (str(base_dir / "docs"), "docs"),
+            (str(base_dir / "config"), "config"),
+            (str(base_dir / "README.md"), "."),
+            (str(base_dir / "LICENSE"), "."),
+            (str(base_dir / "CHANGELOG.md"), ".")
         ]
     }
     
@@ -320,10 +325,10 @@ def main() -> int:
     
     try:
         if args.version:
-            print(f"PDF_Finder Build Script - Version {get_version()}")
+            print(f"Build Script - Version {get_version()}")
             return 0
             
-        logger.info(f"Starting PDF_Finder build (Python {platform.python_version()})")
+        logger.info(f"Starting build (Python {platform.python_version()})")
         logger.info(f"Platform: {platform.system()} {platform.release()}")
         
         if args.clean:

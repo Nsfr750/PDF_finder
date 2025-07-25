@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextEdit,
 from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QTextCharFormat, QColor, QTextCursor, QSyntaxHighlighter, QFont
 
+# Import translation utilities
+from .language_manager import LanguageManager
 
 class LogHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for log messages."""
@@ -71,18 +73,23 @@ class LogHighlighter(QSyntaxHighlighter):
 class LogViewer(QDialog):
     """Log viewer dialog for displaying and filtering log messages."""
     
-    def __init__(self, log_file, parent=None):
+    def __init__(self, log_file, language_manager: LanguageManager, parent=None):
         super().__init__(parent)
         self.log_file = log_file
+        self.language_manager = language_manager
         self.log_content = []
         self.filtered_content = []
         self.current_level = "ALL"
         
-        self.setWindowTitle("Log Viewer")
+        self.setWindowTitle(self.tr("log_viewer.window_title", "Log Viewer"))
         self.setMinimumSize(900, 600)
         
         self.init_ui()
         self.load_log_file()
+    
+    def tr(self, key: str, default_text: str = "") -> str:
+        """Translate a string using the language manager."""
+        return self.language_manager.tr(key, default_text)
     
     def init_ui(self):
         """Initialize the user interface."""
@@ -92,29 +99,36 @@ class LogViewer(QDialog):
         toolbar = QHBoxLayout()
         
         # Log level filter
-        toolbar.addWidget(QLabel("Filter by level:"))
+        toolbar.addWidget(QLabel(self.tr("log_viewer.filter_by_level", "Filter by level:")))
         self.level_combo = QComboBox()
-        self.level_combo.addItems(["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.level_combo.addItems([
+            self.tr("log_viewer.level_all", "ALL"),
+            self.tr("log_viewer.level_debug", "DEBUG"),
+            self.tr("log_viewer.level_info", "INFO"),
+            self.tr("log_viewer.level_warning", "WARNING"),
+            self.tr("log_viewer.level_error", "ERROR"),
+            self.tr("log_viewer.level_critical", "CRITICAL")
+        ])
         self.level_combo.currentTextChanged.connect(self.filter_logs)
         toolbar.addWidget(self.level_combo)
         
         # Search box
-        toolbar.addWidget(QLabel("Search:"))
+        toolbar.addWidget(QLabel(self.tr("log_viewer.search", "Search:")))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Search in logs...")
+        self.search_edit.setPlaceholderText(self.tr("log_viewer.search_placeholder", "Search in logs..."))
         self.search_edit.textChanged.connect(self.filter_logs)
         toolbar.addWidget(self.search_edit)
         
         # Buttons
-        self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn = QPushButton(self.tr("log_viewer.refresh", "Refresh"))
         self.refresh_btn.clicked.connect(self.load_log_file)
         toolbar.addWidget(self.refresh_btn)
         
-        self.clear_btn = QPushButton("Clear Logs")
+        self.clear_btn = QPushButton(self.tr("log_viewer.clear_logs", "Clear Logs"))
         self.clear_btn.clicked.connect(self.clear_logs)
         toolbar.addWidget(self.clear_btn)
         
-        self.save_btn = QPushButton("Save As...")
+        self.save_btn = QPushButton(self.tr("log_viewer.save_as", "Save As..."))
         self.save_btn.clicked.connect(self.save_logs)
         toolbar.addWidget(self.save_btn)
         
@@ -140,17 +154,26 @@ class LogViewer(QDialog):
         """Load the log file content."""
         try:
             if not os.path.exists(self.log_file):
-                self.log_display.setPlainText(f"Log file not found: {self.log_file}")
+                self.log_display.setPlainText(
+                    self.tr("log_viewer.file_not_found", "Log file not found: {file}").format(file=self.log_file)
+                )
                 return
             
             with open(self.log_file, 'r', encoding='utf-8') as f:
                 self.log_content = f.readlines()
             
             self.filter_logs()
-            self.status_bar.setText(f"Loaded {len(self.log_content)} log entries")
+            self.status_bar.setText(
+                self.tr("log_viewer.entries_loaded", "Loaded {count} log entries")
+                .format(count=len(self.log_content))
+            )
             
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load log file: {str(e)}")
+            QMessageBox.critical(
+                self,
+                self.tr("log_viewer.error", "Error"),
+                self.tr("log_viewer.load_error", "Failed to load log file: {error}").format(error=str(e))
+            )
     
     def filter_logs(self):
         """Filter logs based on selected level and search text."""
@@ -158,36 +181,37 @@ class LogViewer(QDialog):
             level = self.level_combo.currentText()
             search_text = self.search_edit.text().lower()
             
-            print(f"Filtering logs - Level: {level}, Search text: {search_text}")  # Debug
+            # Map translated level names back to their original values for filtering
+            level_mapping = {
+                self.tr("log_viewer.level_all", "ALL"): "ALL",
+                self.tr("log_viewer.level_debug", "DEBUG"): "DEBUG",
+                self.tr("log_viewer.level_info", "INFO"): "INFO",
+                self.tr("log_viewer.level_warning", "WARNING"): "WARNING",
+                self.tr("log_viewer.level_error", "ERROR"): "ERROR",
+                self.tr("log_viewer.level_critical", "CRITICAL"): "CRITICAL"
+            }
+            
+            level_code = level_mapping.get(level, "ALL")
             
             self.filtered_content = []
             
-            for i, line in enumerate(self.log_content):
+            for line in self.log_content:
                 # Skip empty lines
                 if not line.strip():
                     continue
-                    
-                # Debug: stampa le prime 5 righe per vedere il formato
-                if i < 5:
-                    print(f"Log line {i}: {line.strip()}")
                 
-                # Estrai il livello di log dal formato: YYYY-MM-DD HH:MM:SS,SSS - PDFDuplicateFinder - LEVEL - message
+                # Extract log level from the line
                 log_level = None
-                import re
-                
-                # Pattern per il formato: 2025-07-09 14:12:29,742 - PDFDuplicateFinder - INFO - message
                 level_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - [^-]+ - (\w+) -', line)
                 if level_match:
                     log_level = level_match.group(1)
                 
-                print(f"Line {i}: Extracted log level: {log_level}")  # Debug
-                
-                # Se non riusciamo a determinare il livello, includiamo la riga solo se il livello è "ALL"
-                if level != "ALL":
-                    if not log_level or log_level != level:
+                # Filter by level
+                if level_code != "ALL":
+                    if not log_level or log_level != level_code:
                         continue
-                    
-                # Check search text
+                
+                # Filter by search text
                 if search_text and search_text not in line.lower():
                     continue
                     
@@ -197,93 +221,114 @@ class LogViewer(QDialog):
             self.log_display.clear()
             self.log_display.setPlainText(''.join(self.filtered_content))
             
-            # Scroll to bottom
-            cursor = self.log_display.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self.log_display.setTextCursor(cursor)
-            
-            self.status_bar.setText(f"Showing {len(self.filtered_content)} of {len(self.log_content)} log entries")
+            # Update status bar
+            self.status_bar.setText(
+                self.tr("log_viewer.showing_entries", "Showing {filtered} of {total} entries")
+                .format(filtered=len(self.filtered_content), total=len(self.log_content))
+            )
             
         except Exception as e:
-            print(f"Error in filter_logs: {str(e)}")  # Debug
-            QMessageBox.critical(self, "Error", f"Failed to filter logs: {str(e)}")
+            QMessageBox.critical(
+                self,
+                self.tr("log_viewer.error", "Error"),
+                self.tr("log_viewer.filter_error", "Error filtering logs: {error}").format(error=str(e))
+            )
     
     def clear_logs(self):
         """Clear the log file after confirmation."""
-        try:
-            if not os.path.exists(self.log_file):
-                return
-                
-            reply = QMessageBox.question(
-                self,
-                'Clear Logs',
-                'Are you sure you want to clear all log files?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
-            
-            if reply == QMessageBox.StandardButton.Yes:
+        reply = QMessageBox.question(
+            self,
+            self.tr("log_viewer.confirm_clear", "Confirm Clear"),
+            self.tr("log_viewer.confirm_clear_message", "Are you sure you want to clear all log entries? This cannot be undone."),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
                 with open(self.log_file, 'w', encoding='utf-8') as f:
-                    f.write("")
-                self.load_log_file()
-                self.status_bar.setText("Logs cleared")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to clear logs: {str(e)}")
+                    f.write('')
+                self.log_content = []
+                self.filter_logs()
+                self.status_bar.setText(self.tr("log_viewer.logs_cleared", "Logs cleared"))
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    self.tr("log_viewer.error", "Error"),
+                    self.tr("log_viewer.clear_error", "Failed to clear log file: {error}").format(error=str(e))
+                )
     
     def save_logs(self):
-        """Save the currently displayed logs to a file."""
-        try:
-            if not self.filtered_content:
-                QMessageBox.information(self, "No Content", "No logs to save.")
-                return
-                
-            file_name, _ = QFileDialog.getSaveFileName(
+        """Save the filtered logs to a file."""
+        if not self.filtered_content:
+            QMessageBox.information(
                 self,
-                "Save Logs As",
-                f"pdf_finder_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
-                "Log Files (*.log);;Text Files (*.txt);;All Files (*)"
+                self.tr("log_viewer.no_entries", "No Entries"),
+                self.tr("log_viewer.no_entries_message", "No log entries to save.")
             )
-            
-            if file_name:
+            return
+        
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("log_viewer.save_logs", "Save Logs"),
+            f"pdf_finder_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+            self.tr("log_viewer.log_files", "Log Files (*.log);;All Files (*)")
+        )
+        
+        if file_name:
+            try:
                 with open(file_name, 'w', encoding='utf-8') as f:
                     f.writelines(self.filtered_content)
-                self.status_bar.setText(f"Logs saved to {os.path.basename(file_name)}")
                 
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to save logs: {str(e)}")
+                QMessageBox.information(
+                    self,
+                    self.tr("log_viewer.save_success", "Save Successful"),
+                    self.tr("log_viewer.save_success_message", "Logs saved to: {file}").format(file=file_name)
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    self.tr("log_viewer.error", "Error"),
+                    self.tr("log_viewer.save_error", "Failed to save log file: {error}").format(error=str(e))
+                )
 
 
-def show_log_viewer(log_file, parent=None):
+def show_log_viewer(log_file, language_manager: LanguageManager, parent=None):
     """
     Show the log viewer dialog.
     
     Args:
         log_file (str): Path to the log file
+        language_manager (LanguageManager): The application's language manager
         parent: Parent widget
     """
-    if not os.path.exists(log_file):
-        QMessageBox.warning(
-            parent,
-            "Log File Not Found",
-            f"Log file not found: {log_file}"
-        )
-        return
-    
-    viewer = LogViewer(log_file, parent)
+    viewer = LogViewer(log_file, language_manager, parent)
     viewer.exec()
-    
+
 
 if __name__ == "__main__":
     import sys
     
+    # For testing the log viewer
     app = QApplication(sys.argv)
     
-    if len(sys.argv) > 1:
-        log_file = sys.argv[1]
-    else:
-        log_file = "pdf_finder.log"
+    # Create a temporary log file for testing
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.log') as f:
+        log_file = f.name
     
-    viewer = LogViewer(log_file)
-    viewer.show()
+    # Create a simple language manager for testing
+    class TestLanguageManager:
+        def tr(self, key, default_text):
+            return default_text
+    
+    # Show the log viewer
+    show_log_viewer(log_file, TestLanguageManager())
+    
+    # Clean up
+    try:
+        os.unlink(log_file)
+    except:
+        pass
+    
     sys.exit(app.exec())

@@ -5,7 +5,11 @@ import os
 from pathlib import Path
 from typing import List, Optional, Callable
 from PyQt6.QtCore import QSettings, pyqtSignal as Signal, QObject
+from .language_manager import LanguageManager
 
+def _tr(key, default_text):
+    """Helper function to translate text using the language manager."""
+    return LanguageManager().tr(key, default_text)
 
 class RecentFoldersManager(QObject):
     """Manages the list of recently used folders."""
@@ -20,10 +24,15 @@ class RecentFoldersManager(QObject):
             settings_key: Key to use in QSettings for storing the recent folders
         """
         super().__init__()
+        self.language_manager = LanguageManager()
         self.max_recent = max_recent
         self.settings_key = settings_key
         self._recent_folders: List[str] = []
         self.load_recent_folders()
+    
+    def tr(self, key, default_text):
+        """Translate text using the language manager."""
+        return self.language_manager.tr(key, default_text)
     
     def add_recent_folder(self, folder_path: str) -> None:
         """Add a folder to the recent folders list.
@@ -93,14 +102,14 @@ class RecentFoldersManager(QObject):
         self, 
         menu, 
         on_triggered: Callable[[str], None],
-        clear_action_text: str = "Clear Recent Folders"
+        clear_action_text: Optional[str] = None
     ) -> None:
         """Create menu actions for recent folders.
         
         Args:
             menu: The QMenu to add the actions to
             on_triggered: Callback function when a recent folder is selected
-            clear_action_text: Text for the clear action
+            clear_action_text: Text for the clear action (if None, uses default translated text)
         """
         # Clear existing actions
         menu.clear()
@@ -116,10 +125,11 @@ class RecentFoldersManager(QObject):
         # Add separator and clear action if there are recent folders
         if self._recent_folders:
             menu.addSeparator()
-            clear_action = menu.addAction(clear_action_text)
+            clear_text = clear_action_text or self.tr("recent_folders.clear_recent", "Clear Recent Folders")
+            clear_action = menu.addAction(clear_text)
             clear_action.triggered.connect(self.clear_recent_folders)
         
         # Add disabled "No recent folders" item if list is empty
         if not self._recent_folders:
-            no_recent = menu.addAction("No recent folders")
+            no_recent = menu.addAction(self.tr("recent_folders.no_recent_folders", "No recent folders"))
             no_recent.setEnabled(False)

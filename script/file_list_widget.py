@@ -6,8 +6,13 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QModelIndex, QRect
 from PyQt6.QtGui import QColor, QBrush, QFont, QIcon, QPixmap, QPainter, QFontMetrics
 import logging
+from .language_manager import LanguageManager
 
 logger = logging.getLogger(__name__)
+
+def _tr(key, default_text):
+    """Helper function to translate text using the language manager."""
+    return LanguageManager().tr(key, default_text)
 
 class FileListWidget(QTreeWidget):
     """Widget for displaying duplicate PDF groups in a tree structure."""
@@ -19,8 +24,14 @@ class FileListWidget(QTreeWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.language_manager = LanguageManager()
+        
         self.setColumnCount(3)
-        self.setHeaderLabels(["Name", "Size", "Pages"])
+        self.setHeaderLabels([
+            _tr("file_list.column_name", "Name"),
+            _tr("file_list.column_size", "Size"),
+            _tr("file_list.column_pages", "Pages")
+        ])
         self.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setIndentation(15)
@@ -44,6 +55,10 @@ class FileListWidget(QTreeWidget):
         self.duplicate_groups = []
         self.current_group_index = -1
     
+    def tr(self, key, default_text):
+        """Translate text using the language manager."""
+        return self.language_manager.tr(key, default_text)
+    
     def set_duplicate_groups(self, groups):
         """Set the duplicate groups to display."""
         self.clear()
@@ -63,16 +78,37 @@ class FileListWidget(QTreeWidget):
             total_size = sum(doc.file_size for doc in group[1:]) if len(group) > 1 else 0
             space_savings = group_size * (len(group) - 1) if len(group) > 1 else 0
             
-            # Set group item text
-            group_item.setText(0, f"Duplicate Group {i + 1} ({len(group)} files)")
+            # Set group item text with translations
+            group_item.setText(0, self.tr(
+                "file_list.group_title",
+                "Duplicate Group {group_num} ({file_count} files)"
+            ).format(group_num=i + 1, file_count=len(group)))
+            
             group_item.setText(1, self.format_file_size(group_size))
-            group_item.setText(2, f"{group[0].page_count if hasattr(group[0], 'page_count') else '?'} pages")
+            
+            page_count = group[0].page_count if hasattr(group[0], 'page_count') else '?'
+            group_item.setText(2, self.tr(
+                "file_list.page_count",
+                "{count} pages"
+            ).format(count=page_count))
             
             # Add tooltip with more info
-            tooltip = f"<b>Group {i + 1}: {len(group)} duplicate files</b>"
-            tooltip += f"<br>Size: {self.format_file_size(group_size)}"
+            tooltip = self.tr(
+                "file_list.group_tooltip",
+                "<b>Group {group_num}: {file_count} duplicate files</b>"
+                "<br>Size: {size}"
+            ).format(
+                group_num=i + 1,
+                file_count=len(group),
+                size=self.format_file_size(group_size)
+            )
+            
             if len(group) > 1:
-                tooltip += f"<br>Space savings: {self.format_file_size(space_savings)}"
+                tooltip += self.tr(
+                    "file_list.group_tooltip_savings",
+                    "<br>Space savings: {savings}"
+                ).format(savings=self.format_file_size(space_savings))
+                
             group_item.setToolTip(0, tooltip)
             
             # Set group item appearance
@@ -94,7 +130,12 @@ class FileListWidget(QTreeWidget):
                 # Set document item text
                 doc_item.setText(0, doc.file_name)
                 doc_item.setText(1, self.format_file_size(doc.file_size))
-                doc_item.setText(2, f"{doc.page_count if hasattr(doc, 'page_count') else '?'} pages")
+                
+                doc_page_count = doc.page_count if hasattr(doc, 'page_count') else '?'
+                doc_item.setText(2, self.tr(
+                    "file_list.page_count",
+                    "{count} pages"
+                ).format(count=doc_page_count))
                 
                 # Add tooltip with file path
                 doc_item.setToolTip(0, doc.file_path)
@@ -145,11 +186,11 @@ class FileListWidget(QTreeWidget):
         menu = QMenu()
         
         if item.parent() is None:  # Group item
-            expand_all = menu.addAction("Expand All")
-            collapse_all = menu.addAction("Collapse All")
+            expand_all = menu.addAction(self.tr("file_list.action_expand_all", "Expand All"))
+            collapse_all = menu.addAction(self.tr("file_list.action_collapse_all", "Collapse All"))
             menu.addSeparator()
-            open_all = menu.addAction("Open All in Group")
-            show_all = menu.addAction("Show All in Explorer")
+            open_all = menu.addAction(self.tr("file_list.action_open_all", "Open All in Group"))
+            show_all = menu.addAction(self.tr("file_list.action_show_all", "Show All in Explorer"))
             
             action = menu.exec(self.viewport().mapToGlobal(position))
             
@@ -163,8 +204,8 @@ class FileListWidget(QTreeWidget):
                 self.show_all_in_explorer(item)
                 
         else:  # Document item
-            open_file = menu.addAction("Open File")
-            show_in_explorer = menu.addAction("Show in Explorer")
+            open_file = menu.addAction(self.tr("file_list.action_open_file", "Open File"))
+            show_in_explorer = menu.addAction(self.tr("file_list.action_show_in_explorer", "Show in Explorer"))
             
             action = menu.exec(self.viewport().mapToGlobal(position))
             

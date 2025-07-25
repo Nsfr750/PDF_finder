@@ -3,5 +3,10 @@ pip install -r requirements.txt
 pip install pyinstaller
 python build_simple.py
 makensis install-scripts/installer.nsi
-
 pyinstaller install-scripts/build.spec
+
+Versione: 2.8.0
+Data: 25/07/2025
+Autore: Nsfr750
+
+crea una documentazione markdown in Inglese e in Italano nelle cartelle docs/ENG e docs/ITA

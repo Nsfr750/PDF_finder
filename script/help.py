@@ -13,7 +13,13 @@ import os
 
 # Import application logger
 import logging
+from .language_manager import LanguageManager
+
 logger = logging.getLogger('PDFDuplicateFinder')
+
+def _tr(key, default_text):
+    """Helper function to translate text using the language manager."""
+    return LanguageManager().tr(key, default_text)
 
 class HelpDialog(QDialog):
     # Signal to notify language change
@@ -29,17 +35,28 @@ class HelpDialog(QDialog):
         """
         super().__init__(parent)
         self.current_lang = current_lang
+        self.language_manager = LanguageManager()
         self.setMinimumSize(800, 600)
-        self.setWindowTitle(self.tr("Help"))
+        self.setWindowTitle(self.tr("help.window_title", "Help"))
         
         try:
             # Set up UI
             self.init_ui()
             self.retranslate_ui()
-            logger.debug("Help dialog initialized successfully")
+            logger.debug(self.tr(
+                "help.init_success",
+                "Help dialog initialized successfully"
+            ))
         except Exception as e:
-            logger.error(f"Error initializing help dialog: {e}")
+            logger.error(self.tr(
+                "help.init_error",
+                "Error initializing help dialog: {error}"
+            ).format(error=str(e)))
             raise
+    
+    def tr(self, key, default_text):
+        """Translate text using the language manager."""
+        return self.language_manager.tr(key, default_text)
     
     def init_ui(self):
         """Initialize the user interface components."""
@@ -86,13 +103,13 @@ class HelpDialog(QDialog):
             """
             
             # English button
-            self.en_button = QPushButton("English")
+            self.en_button = QPushButton(self.tr("help.language.en", "English"))
             self.en_button.setCheckable(True)
             self.en_button.setStyleSheet(button_style)
             self.en_button.clicked.connect(lambda: self.on_language_changed('en'))
             
             # Italian button
-            self.it_button = QPushButton("Italiano")
+            self.it_button = QPushButton(self.tr("help.language.it", "Italiano"))
             self.it_button.setCheckable(True)
             self.it_button.setStyleSheet(button_style)
             self.it_button.clicked.connect(lambda: self.on_language_changed('it'))
@@ -119,7 +136,7 @@ class HelpDialog(QDialog):
             self.text_browser.anchorClicked.connect(self.open_link)
             
             # Close button
-            self.close_btn = QPushButton(self.tr("Close"))
+            self.close_btn = QPushButton(self.tr("common.close", "Close"))
             self.close_btn.clicked.connect(self.accept)
             
             # Add widgets to layout
@@ -128,7 +145,10 @@ class HelpDialog(QDialog):
             layout.addWidget(self.close_btn, alignment=Qt.AlignmentFlag.AlignRight)
             
         except Exception as e:
-            logger.error(f"Error initializing UI: {e}")
+            logger.error(self.tr(
+                "help.ui_init_error",
+                "Error initializing UI: {error}"
+            ).format(error=str(e)))
             raise
     
     def retranslate_ui(self):
@@ -145,17 +165,25 @@ class HelpDialog(QDialog):
                 help_text = self._get_english_help()
                 
             self.text_browser.setHtml(help_text)
-            logger.debug(f"UI retranslated to {self.current_lang}")
+            logger.debug(self.tr(
+                "help.language_changed",
+                "UI retranslated to {language}"
+            ).format(language=self.current_lang))
             
         except Exception as e:
-            logger.error(f"Error retranslating UI: {e}")
+            logger.error(self.tr(
+                "help.translation_error",
+                "Error retranslating UI: {error}"
+            ).format(error=str(e)))
             # Fallback to English if translation fails
             help_text = self._get_english_help()
             self.text_browser.setHtml(help_text)
     
     def _get_italian_help(self):
         """Return Italian help text."""
-        return """
+        return self.tr(
+            "help.content.it",
+            """
             <h1>PDF Duplicate Finder - Aiuto</h1>
             
             <h2>Introduzione</h2>
@@ -179,10 +207,13 @@ class HelpDialog(QDialog):
             <h2>Serve altro aiuto?</h2>
             <p>Visita la nostra <a href="https://github.com/Nsfr750/PDF_Finder">repository GitHub</a> per maggiori informazioni e documentazione.</p>
             """
+        )
     
     def _get_english_help(self):
         """Return English help text."""
-        return """
+        return self.tr(
+            "help.content.en",
+            """
             <h1>PDF Duplicate Finder - Help</h1>
             
             <h2>Getting Started</h2>
@@ -199,41 +230,58 @@ class HelpDialog(QDialog):
             <h2>Keyboard Shortcuts</h2>
             <ul>
                 <li><b>Ctrl+O</b>: Open folder to scan</li>
-                <li><b>Ctrl+Q</b>: Quit application</li>
+                <li><b>Ctrl+Q</b>: Quit the application</li>
                 <li><b>F1</b>: Show this help</li>
             </ul>
             
             <h2>Need More Help?</h2>
             <p>Visit our <a href="https://github.com/Nsfr750/PDF_Finder">GitHub repository</a> for more information and documentation.</p>
             """
+        )
     
-    def on_language_changed(self, lang):
+    def on_language_changed(self, lang_code):
         """
-        Handle language change.
+        Handle language change event.
         
         Args:
-            lang (str): New language code ('en' or 'it')
+            lang_code (str): New language code ('en' or 'it')
         """
         try:
-            if lang not in ['en', 'it']:
-                logger.warning(f"Unsupported language: {lang}")
-                return
-                
-            if lang != self.current_lang:
-                logger.debug(f"Language changed from {self.current_lang} to {lang}")
-                self.current_lang = lang
+            if lang_code != self.current_lang:
+                self.current_lang = lang_code
+                self.retranslate_ui()
+                self.language_changed.emit(lang_code)
                 
                 # Update button states
-                self.en_button.setChecked(lang == 'en')
-                self.it_button.setChecked(lang == 'it')
-                
-                # Update UI and emit signal
-                self.retranslate_ui()
-                self.language_changed.emit(lang)
+                if lang_code == 'it':
+                    self.it_button.setChecked(True)
+                    self.en_button.setChecked(False)
+                else:
+                    self.en_button.setChecked(True)
+                    self.it_button.setChecked(False)
+                    
+                logger.debug(self.tr(
+                    "help.language_switched",
+                    "Language switched to {language}"
+                ).format(language=lang_code))
                 
         except Exception as e:
-            logger.error(f"Error changing language: {e}")
+            logger.error(self.tr(
+                "help.language_switch_error",
+                "Error switching language: {error}"
+            ).format(error=str(e)))
     
     def open_link(self, url):
-        """Open links in default web browser."""
-        QDesktopServices.openUrl(url)
+        """
+        Open a link in the default web browser.
+        
+        Args:
+            url: QUrl of the link to open
+        """
+        try:
+            QDesktopServices.openUrl(url)
+        except Exception as e:
+            logger.error(self.tr(
+                "help.link_open_error",
+                "Error opening link {url}: {error}"
+            ).format(url=url.toString(), error=str(e)))
