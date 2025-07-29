@@ -42,22 +42,34 @@ TRANSLATIONS = {
             "save_results": "&Save Results...",
             "load_results": "&Load Results...",
             "settings": "&Settings...",
-            "exit": "E&xit"
+            "exit": "E&xit",
+            "recent_folders": "Recent Folders",
+            "clear_recent_folders": "Clear Recent Folders"
+        },
+        
+        # Edit Menu
+        "edit": {
+            "delete": "&Delete",
+            "select_all": "Select &All"
         },
         
         # View Menu
         "view": {
-            "view_log": "View &Log..."
+            "view_log": "View &Log...",
+            "toolbar": "&Toolbar",
+            "statusbar": "Status &Bar"
         },
         
         # Tools Menu
         "tools": {
-            "check_updates": "Check for &Updates..."
+            "check_updates": "Check for &Updates...",
+            "pdf_viewer": "PDF &Viewer..."
         },
         
         # Help Menu
         "help": {
             "documentation": "&Documentation",
+            "markdown_docs": "&Markdown Documentation",
             "sponsor": "&Sponsor...",
             "about": "&About..."
         },
@@ -72,8 +84,12 @@ TRANSLATIONS = {
             "view_log": "View the application log",
             "check_updates": "Check for application updates",
             "documentation": "Open the documentation in your web browser",
+            "markdown_docs": "View markdown documentation",
             "sponsor": "Support the development of this application",
-            "about": "Show information about this application"
+            "about": "Show information about this application",
+            "delete": "Delete selected files",
+            "select_all": "Select all files",
+            "pdf_viewer": "Open PDF viewer"
         },
         
         # Status messages
@@ -721,22 +737,34 @@ TRANSLATIONS = {
             "save_results": "&Salva risultati...",
             "load_results": "&Carica risultati...",
             "settings": "&Impostazioni...",
-            "exit": "E&sci"
+            "exit": "&Esci",
+            "recent_folders": "Cartelle Recenti",
+            "clear_recent_folders": "Cancella Cronologia"
+        },
+        
+        # Edit Menu
+        "edit": {
+            "delete": "&Elimina",
+            "select_all": "Seleziona &Tutto"
         },
         
         # View Menu
         "view": {
-            "view_log": "Visualizza &log..."
+            "view_log": "Visualizza &log...",
+            "toolbar": "Barra &Strumenti",
+            "statusbar": "Barra di &Stato"
         },
         
         # Tools Menu
         "tools": {
-            "check_updates": "Cerca &aggiornamenti..."
+            "check_updates": "Cerca &aggiornamenti...",
+            "pdf_viewer": "Visualizzatore &PDF..."
         },
         
         # Help Menu
         "help": {
             "documentation": "&Documentazione",
+            "markdown_docs": "&Documentazione Markdown",
             "sponsor": "&Sostienici...",
             "about": "&Informazioni su..."
         },
@@ -751,8 +779,12 @@ TRANSLATIONS = {
             "view_log": "Visualizza il registro dell'applicazione",
             "check_updates": "Controlla la presenza di aggiornamenti per l'applicazione",
             "documentation": "Apri la documentazione nel browser web predefinito",
+            "markdown_docs": "Visualizza la documentazione in formato markdown",
             "sponsor": "Supporta lo sviluppo di questa applicazione",
-            "about": "Mostra informazioni su questa applicazione"
+            "about": "Mostra informazioni su questa applicazione",
+            "delete": "Elimina i file selezionati",
+            "select_all": "Seleziona tutti i file",
+            "pdf_viewer": "Apri il visualizzatore PDF"
         },
         
         # Status messages
@@ -849,7 +881,7 @@ TRANSLATIONS = {
         
         # Main Window
         "main_window": {
-            "title": "Cerca Duplicati PDF",
+            "title": "PDF Duplicate Finder",
             "retranslate_error": "Errore nella ritraduzione dell'interfaccia: {error}",
             "scanning_folder": "Analisi della cartella: {folder}",
             "scan_complete": "Analisi completata. Trovati {count} file PDF.",

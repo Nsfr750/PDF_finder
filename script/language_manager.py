@@ -98,41 +98,57 @@ class LanguageManager(QObject):
         return self._current_lang
 
     @property
-    def available_languages(self) -> Dict[str, str]:
+    def available_languages(self) -> dict:
         """
-        Get a dictionary of available language codes and their display names.
+        Get a dictionary of available languages.
         
         Returns:
-            Dict[str, str]: Dictionary mapping language codes to display names
+            dict: Dictionary mapping language codes to language names
         """
-        return self._available_languages.copy()
+        return self._available_languages
 
     def _load_translations(self):
-        """Load translations from the translations module."""
-        try:
-            from .translation import TRANSLATIONS, HELP_TRANSLATIONS
-            
-            # Load main translations
-            self._translations = TRANSLATIONS
-            logger.debug(
-                "Loaded main translations for languages: %s",
-                ", ".join(TRANSLATIONS.keys()) if TRANSLATIONS else "none"
-            )
-            
-            # Merge help translations
-            for lang, translations in HELP_TRANSLATIONS.items():
-                if lang not in self._translations:
-                    self._translations[lang] = {}
-                self._update_dict_recursive(self._translations[lang], translations)
+        """Load translations from JSON files in the translations directory."""
+        translations_dir = Path(__file__).parent.parent / "translations"
+        
+        # Default English translations (built-in)
+        self._translations["en"] = {
+            "menu": {
+                "file": "&File",
+                "open": "&Open Folder...",
+                "save_results": "&Save Results",
+                "load_results": "&Load Results...",
+                "settings": "&Settings...",
+                "exit": "E&xit",
+                "view": "&View",
+                "view_log": "View &Log",
+                "pdf_viewer": "PDF Viewer",
+                "language": "&Language",
+                "tools": "&Tools",
+                "check_updates": "Check for &Updates",
+                "help": "&Help",
+                "documentation": "&Documentation",
+                "markdown_docs": "&Markdown Documentation",
+                "sponsor": "&Sponsor...",
+                "about": "&About"
+            },
+            "language": {
+                "english": "English",
+                "italian": "Italiano"
+            }
+        }
+        
+        # Load Italian translations from file if available
+        it_translation_file = translations_dir / "it.json"
+        if it_translation_file.exists():
+            try:
+                import json
+                with open(it_translation_file, 'r', encoding='utf-8') as f:
+                    self._translations["it"] = json.load(f)
+            except Exception as e:
+                logger.error("Error loading Italian translations: %s", str(e))
                 
-            logger.debug(
-                "Merged help translations for languages: %s",
-                ", ".join(HELP_TRANSLATIONS.keys()) if HELP_TRANSLATIONS else "none"
-            )
-            
-        except ImportError as e:
-            logger.error("Failed to load translations: %s", str(e))
-            self._translations = {"en": {}}  # Fallback to empty English translations
+        # Add more languages as needed
 
     def _update_dict_recursive(self, d: Dict, u: Dict) -> Dict:
         """Recursively update a dictionary."""
@@ -173,35 +189,29 @@ class LanguageManager(QObject):
         else:
             self.app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
-    def set_language(self, lang_code: str) -> bool:
+    def set_language(self, language_code: str) -> bool:
         """
         Set the application language.
-
+        
         Args:
-            lang_code: Language code to set (e.g., 'en', 'it')
-
+            language_code: Language code to set (e.g., 'en', 'it')
+            
         Returns:
-            bool: True if language was changed, False otherwise
+            bool: True if language was changed successfully, False otherwise
         """
-        if lang_code not in self._available_languages:
-            logger.warning("Attempted to set unsupported language: %s", lang_code)
+        if language_code not in self._available_languages:
+            logger.warning("Language '%s' is not available", language_code)
             return False
-
-        if lang_code != self._current_lang:
-            logger.info(
-                "Changing language from %s to %s",
-                self._current_lang, lang_code
-            )
             
-            self._current_lang = lang_code
-            self.settings.setValue("language", lang_code)
+        if language_code == self._current_lang:
+            return True  # Already using this language
             
-            # Load Qt translations
-            self._load_language(lang_code)
-            
-            # Notify the application that the language has changed
-            self.language_changed.emit(lang_code)
-            
+        # Load the new language
+        if self._load_language(language_code):
+            self._current_lang = language_code
+            self.settings.setValue("language", language_code)
+            self.language_changed.emit(language_code)
+            logger.info("Language changed to: %s", language_code)
             return True
             
         return False

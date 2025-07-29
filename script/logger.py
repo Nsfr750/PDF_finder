@@ -76,8 +76,10 @@ def setup_logging(app_name='PDFDuplicateFinder', log_level=logging.INFO, languag
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
     
-    # Base log file name without extension
+    # Generate log filename with date
+    current_date = datetime.now().strftime("%Y-%m-%d")
     log_base = app_name.lower().replace(" ", "_")
+    log_filename = f"{log_base}-{current_date}.log"
     
     # Create a custom formatter
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -88,7 +90,7 @@ def setup_logging(app_name='PDFDuplicateFinder', log_level=logging.INFO, languag
     logger.setLevel(logging.DEBUG)
     
     # Add file handler with daily rotation
-    log_file = log_dir / f'{log_base}.log'
+    log_file = log_dir / log_filename
     file_handler = TimedRotatingFileHandler(
         log_file,
         when='midnight',  # Rotate at midnight
@@ -100,12 +102,6 @@ def setup_logging(app_name='PDFDuplicateFinder', log_level=logging.INFO, languag
     file_handler.suffix = "%Y-%m-%d"  # Add date to rotated log files
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
-    
-    # Get current date in YYYY-MM-DD format
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    
-    # Create the log file with date in the name
-    log_file = log_dir / f"{log_base}-{date_str}.log"
     
     # Add console handler
     console_handler = logging.StreamHandler()

@@ -1,10 +1,42 @@
-# PDF_Finder Setup
-pip install -r requirements.txt
-pip install pyinstaller
-python build_simple.py
-makensis install-scripts/installer.nsi
-pyinstaller install-scripts/build.spec
-
 Versione: 2.8.0
 Data: 25/07/2025
 Autore: Nsfr750
+
+update README.md, CHANGELOG.md, CONTRIBUTING.md, TO_DO.md and create PREREQUISITES.md and a CODEOWNER 
+
+set a ivory title bar
+
+create a new main.py on root with following data
+The application have to have this layout: 
+A Dark gold Title Bar
+A menu bar at the top (script/menu.py), 
+A toolbar (script/toolbar.py), 
+A main content (script/UI.py) area with:
+- Left panel: Search box and duplicates list
+- Right panel: File details 
+- Status bar at the bottom
+
+
+
+---------------------------------
+python -m venv venv
+.\venv\Scripts\activate
+---------------------------------
+crea setup.py
+pip install -r requirements.txt
+pip install setuptools wheel
+pip install -e .
+pip install .
+pip install build
+Remove-Item -Recurse -Force build, dist, *.egg-info -ErrorAction SilentlyContinue
+python setup.py sdist
+python setup.py sdist bdist_wheel
+---------------------------------
+2.1.0-beta
+---------------------------------
+Publish to PyPI (when ready):
+pip install twine keyring
+python publish_to_pypi.py --save-token
+python publish_to_pypi.py
+python publish_to_pypi.py --delete-token
+----------------------------------------
