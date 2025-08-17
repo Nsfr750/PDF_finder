@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2025-08-17
+### Added
+- Added tqdm progress bar for better user feedback during file processing
+- Enhanced logging with more detailed progress information
+
+### Changed
+- Updated dependencies in requirements.txt
+- Improved error handling for file operations
+
+### Fixed
+- Fixed module import error by adding tqdm to requirements
+- Improved error handling for missing dependencies
+
 ## [2.7.3] - 2025-07-09
 ### Added
 - Migrated from PySide6 to PyQt6 for better compatibility and performance

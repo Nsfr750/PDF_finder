@@ -15,6 +15,7 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 📊 **Detailed Analysis**: View file details, previews, and comparison results
 - 🛠 **Advanced Tools**: Multiple selection modes, filtering, and sorting options
 - 🌍 **Multi-language Support**: Available in multiple languages
+- 📊 **Progress Tracking**: Real-time progress bar for file processing operations
 
 ## 📦 Installation
 
@@ -96,6 +97,6 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ---
 
-📅 **Last Updated**: July 2025  
+📅 **Last Updated**: August 2025  
 🐍 **Python Version**: 3.8+  
 📜 **License**: GPL-3.0

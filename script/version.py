@@ -27,11 +27,25 @@ __requires__ = [
     "PyQt6>=6.4.0",
     "PyMuPDF>=1.21.0",
     "Pillow>=9.0.0",
-    "python-dotenv>=0.19.0"
+    "python-dotenv>=0.19.0",
+    "tqdm>=4.64.0"
 ]
 
 # Changelog
 __changelog__ = """
+## [2.8.0] - 2025-08-17
+### Added
+- Added tqdm progress bar for better user feedback during file processing
+- Enhanced logging with more detailed progress information
+
+### Changed
+- Updated dependencies in requirements.txt
+- Improved error handling for file operations
+
+### Fixed
+- Fixed module import error by adding tqdm to requirements
+- Improved error handling for missing dependencies
+
 ## [2.7.3] - 2025-07-09
 ### Added
 - Migrated from PySide6 to PyQt6 for better compatibility and performance
