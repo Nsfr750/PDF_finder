@@ -1,0 +1,5 @@
+Version: .".join(map(str, VERSION))
+Build Date: 2025-08-17 09:18:31
+Author: Nsfr750
+License: GPL-3.0-or-later
+Website: https://github.com/Nsfr750/PDF_finder

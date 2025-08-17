@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-finder"
+version = "1.0.0"
+description = "A PDF search and management application with advanced features"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "Nsfr750", email = "nsfr750@yandex.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Office/Business",
+    "Topic :: Utilities"
+]
+dependencies = [
+    "PyPDF2>=3.0.0",
+    "pdf2image>=1.17.0",
+    "imagehash>=4.3.1",
+    "requests>=2.31.0",
+    "pillow>=10.0.0",
+    "numpy>=1.21.0",
+    "scikit-image>=0.19.0",
+    "PyQt6>=6.4.0",
+    "python-dotenv>=1.0.0",
+    "wand>=0.6.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "pytest",
+    "pytest-cov"
+]
+
+[project.urls]
+Homepage = "https://github.com/Nsfr750/PDF_finder"
+"Bug Tracker" = "https://github.com/Nsfr750/PDF_finder/issues"
+Documentation = "https://github.com/Nsfr750/PDF_finder#readme"
+
+[project.scripts]
+pdf-finder = "main:main"
+
+[project.gui-scripts]
+pdf-finder-gui = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["script"]
+
+[tool.setuptools.package-data]
+"*" = ["assets/*", "config/*", "lang/*", "docs/*"]

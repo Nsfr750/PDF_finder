@@ -1,0 +1,208 @@
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
+                             QHBoxLayout, QTextBrowser, QApplication)
+from PyQt6.QtCore import Qt, QSize, QUrl, QT_VERSION_STR, PYQT_VERSION_STR
+from PyQt6.QtGui import QPixmap, QIcon, QDesktopServices
+from .version import get_version
+# Import language manager
+from lang.language_manager import LanguageManager
+import os
+import sys
+import platform
+from pathlib import Path
+from wand.image import Image as WandImage
+import psutil
+import subprocess
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AboutDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.language_manager = LanguageManager()
+        self.setWindowTitle(self.tr("About PDF Duplicate Finder"))
+        self.setMinimumSize(500, 400)
+        
+        layout = QVBoxLayout(self)
+        
+        # App logo and title
+        header = QHBoxLayout()
+        
+        # Load application logo
+        logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
+        if logo_path.exists():
+            logo_label = QLabel()
+            pixmap = QPixmap(str(logo_path))
+            # Scale logo to a reasonable size while maintaining aspect ratio
+            scaled_pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            logo_label.setPixmap(scaled_pixmap)
+            # Add some spacing
+            logo_label.setContentsMargins(0, 0, 20, 0)
+            header.addWidget(logo_label)
+        else:
+            # Add placeholder if logo not found
+            print(f"Logo not found at: {logo_path}")
+            logo_label = QLabel("LOGO")
+            logo_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #666;")
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            logo_label.setFixedSize(128, 128)
+            header.addWidget(logo_label)
+        
+        # App info
+        app_info = QVBoxLayout()
+        
+        title = QLabel(self.tr("PDF Duplicate Finder"))
+        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        
+        version_text = self.tr("Version {version}").format(version=get_version())
+        version = QLabel(version_text)
+        version.setStyleSheet("color: white;")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        app_info.addWidget(title)
+        app_info.addWidget(version)
+        app_info.addStretch()
+        
+        header.addLayout(app_info)
+        header.addStretch()
+        
+        layout.addLayout(header)
+        
+        # Description
+        description = QLabel(
+            self.tr(
+                "A tool to find and manage duplicate PDF files on your computer.\n\n"
+                "PDF Duplicate Finder helps you save disk space by identifying and removing "
+                "duplicate PDF documents based on their content."
+            )
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+        
+        # System info
+        sys_info = QTextBrowser()
+        sys_info.setOpenLinks(True)
+        sys_info.setHtml(self.get_system_info())
+        sys_info.setMaximumHeight(150)
+        layout.addWidget(QLabel(self.tr("<b>System Information:</b>")))
+        layout.addWidget(sys_info)
+        
+        # Copyright and license
+        copyright = QLabel(
+            self.tr(
+                "© {year} Nsfr750\n"
+                "This software is licensed under the GPL3 License."
+            ).format(year="2025")
+        )
+        copyright.setStyleSheet("color: white; font-size: 11px;")
+        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(copyright)
+        
+        # Buttons
+        buttons = QHBoxLayout()
+        
+        # GitHub button
+        github_btn = QPushButton("GitHub")
+        github_btn.clicked.connect(lambda: QDesktopServices.openUrl(
+            QUrl("https://github.com/Nsfr750/PDF_Finder")))
+        
+        # Close button
+        close_btn = QPushButton(self.tr("Close"))
+        close_btn.clicked.connect(self.accept)
+        
+        buttons.addStretch()
+        buttons.addWidget(github_btn)
+        buttons.addWidget(close_btn)
+        
+        layout.addLayout(buttons)
+        
+        # Connect language change signal
+        self.language_manager.language_changed.connect(self.retranslate_ui)
+    
+    def retranslate_ui(self):
+        """Update the UI when the language changes."""
+        self.setWindowTitle(self.tr("About PDF Duplicate Finder"))
+        
+        # Update version text
+        for i in range(self.layout().count()):
+            widget = self.layout().itemAt(i).widget()
+            if isinstance(widget, QLabel) and "Version" in widget.text():
+                widget.setText(self.tr("Version {version}").format(version=get_version()))
+                break
+        
+        # Update description and other translatable text
+        for widget in self.findChildren(QLabel):
+            if widget.text() == "System Information:":
+                widget.setText(self.tr("<b>System Information:</b>"))
+            elif "This software is licensed" in widget.text():
+                widget.setText(
+                    self.tr(
+                        "© {year} Nsfr750\n"
+                        "This software is licensed under the GPL3 License."
+                    ).format(year="2025")
+                )
+        
+        # Update button text
+        for button in self.findChildren(QPushButton):
+            if button.text() == "Close":
+                button.setText(self.tr("Close"))
+    
+    def get_system_info(self):
+        import psutil
+
+        system = platform.system()
+        release = platform.release()
+        machine = platform.machine()
+        python_version = platform.python_version()
+
+        # Get CPU information
+        cpu_info = platform.processor()
+        if not cpu_info and system == "Windows":
+            cpu_info = platform.processor() or "Unknown"
+        elif not cpu_info and system == "Darwin":
+            cpu_info = (
+                subprocess.check_output(
+                    ["sysctl", "-n", "machdep.cpu.brand_string"]
+                )
+                .strip()
+                .decode()
+            )
+        elif not cpu_info and system == "Linux":
+            cpu_info = ""
+            with open("/proc/cpuinfo", "r") as f:
+                for line in f:
+                    if "model name" in line:
+                        cpu_info = line.split(":", 1)[1].strip()
+                        break
+
+        # Get core count
+        core_count = psutil.cpu_count(logical=True)
+        physical_cores = psutil.cpu_count(logical=False) or core_count
+
+        # Get RAM information
+        ram = psutil.virtual_memory()
+        total_ram = ram.total / (1024**3)  # Convert to GB
+        available_ram = ram.available / (1024**3)  # Convert to GB
+
+        # Get Wand version
+        try:
+            wand_version = getattr(WandImage, 'VERSION', 'Unknown')
+            # If VERSION is a callable (like in newer versions), call it
+            if callable(wand_version):
+                wand_version = wand_version()
+        except Exception as e:
+            logger.warning(f"Could not get Wand version: {e}")
+            wand_version = 'Unknown'
+            
+        info = [
+            f"<b>OS:</b> {platform.system()} {platform.release()} ({platform.version()})<br>",
+            f"<b>System:</b> ({machine})<br>",
+            f"<b>Processor:</b> {cpu_info}<br>",
+            f"<b>Core Count:</b> {core_count} ({physical_cores} physical cores)<br>",
+            f"<b>RAM:</b> {total_ram:.2f} GB ({available_ram:.2f} GB available)<br>",
+            f"<b>Python:</b> {platform.python_version()}<br>",
+            f"<b>Qt:</b> {QT_VERSION_STR}<br>",
+            f"<b>PyQt:</b> {PYQT_VERSION_STR}<br>",
+            f"<b>Wand:</b> {wand_version}<br>"
+        ]
+        return ''.join(info)
