@@ -79,16 +79,12 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
                     progress_callback("Extracting page with PyMuPDF...")
                 
                 page = doc.load_page(0)
-                pix = page.get_pixmap(dpi=150, alpha=False)
+                pix = page.get_pixmap(dpi=150, colorspace=fitz.csRGB, alpha=False)
                 
-                with WandImage(
-                    width=pix.width,
-                    height=pix.height,
-                    depth=8,
-                    colorspace='rgb',
-                    background='white'
-                ) as img:
-                    img.import_pixels(0, 0, pix.width, pix.height, 'RGB', pix.samples)
+                # Create a Wand image and import raw RGB bytes from PyMuPDF pixmap
+                with WandImage(width=pix.width, height=pix.height) as img:
+                    # import_pixels(left, top, width, height, channel_map, storage, data)
+                    img.import_pixels(0, 0, pix.width, pix.height, 'RGB', 'char', pix.samples)
                     return img.clone()
         except Exception as e:
             logger.debug(f"PyMuPDF extraction failed, trying pdf2image/Poppler: {e}")
