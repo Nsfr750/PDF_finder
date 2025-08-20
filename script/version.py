@@ -26,7 +26,10 @@ __description__ = "A tool to find and manage duplicate PDF files on your compute
 __requires__ = [
     "PyQt6>=6.4.0",
     "PyMuPDF>=1.21.0",
-    "Pillow>=9.0.0",
+    "wand>=0.6.10",
+    "PyPDF2>=3.0.0",
+    "pdf2image>=1.17.0",
+    "imagehash>=4.3.1",
     "python-dotenv>=0.19.0",
     "tqdm>=4.64.0"
 ]

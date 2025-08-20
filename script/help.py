@@ -191,7 +191,7 @@ class HelpDialog(QDialog):
             <h2>Introduzione</h2>
             <p>PDF Duplicate Finder ti aiuta a trovare e gestire i file PDF duplicati sul tuo computer.</p>
             
-            <h2>Come Usare</h2>
+            <h2>Come Usare il programma</h2>
             <ol>
                 <li>Clicca su <b>Scansiona Cartella</b> per selezionare una directory da analizzare</li>
                 <li>Esamina i gruppi di duplicati trovati</li>
@@ -205,9 +205,6 @@ class HelpDialog(QDialog):
                 <li><b>Ctrl+Q</b>: Esci dall'applicazione</li>
                 <li><b>F1</b>: Mostra questo aiuto</li>
             </ul>
-            
-            <h2>Serve altro aiuto?</h2>
-            <p>Visita la nostra <a href="https://github.com/Nsfr750/PDF_Finder">repository GitHub</a> per maggiori informazioni e documentazione.</p>
             """
         )
     
@@ -235,9 +232,6 @@ class HelpDialog(QDialog):
                 <li><b>Ctrl+Q</b>: Quit the application</li>
                 <li><b>F1</b>: Show this help</li>
             </ul>
-            
-            <h2>Need More Help?</h2>
-            <p>Visit our <a href="https://github.com/Nsfr750/PDF_Finder">GitHub repository</a> for more information and documentation.</p>
             """
         )
     

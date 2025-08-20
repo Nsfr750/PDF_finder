@@ -630,30 +630,76 @@ class MainWindow(QMainWindow):
         self.blockSignals(True)
         
         try:
+            # Save the new language to settings first
+            if hasattr(self, 'settings'):
+                self.settings.set('app.language', language_code)
+                self.settings._save_settings()
+            
             # Update window title
             self.setWindowTitle(lm.tr("app.name", "PDF Duplicate Finder"))
             
             # Update status bar
             if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(lm.tr("status.ready", "Ready"))
+                self.status_bar.showMessage(lm.tr("status.ready", "Ready"), 3000)
+            
+            # Force update the application's style to ensure all text is refreshed
+            QApplication.processEvents()
                 
-            # Update menu bar
-            if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
-                self.menu_bar.retranslate_ui()
+            # Recreate the menu bar to ensure all items are retranslated
+            if hasattr(self, 'menu_bar') and hasattr(self, 'menubar'):
+                # Store the current menu bar state
+                menu_bar_geometry = self.menubar.geometry()
+                
+                # Remove the old menu bar
+                self.menu_bar = None
+                
+                # Create a new menu bar
+                from script.menu import MenuBar
+                self.menu_bar = MenuBar(parent=self, language_manager=lm)
+                
+                # Add the new menu bar to the window
+                self.menubar = self.menu_bar.menubar
+                self.setMenuBar(self.menubar)
+                
+                # Restore geometry if we had a previous geometry
+                if menu_bar_geometry.isValid():
+                    self.menubar.setGeometry(menu_bar_geometry)
+                
+                # Force update
+                self.menubar.update()
                 
             # Update toolbar
             if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
                 self.toolbar.retranslate_ui()
+                self.toolbar.update()
                 
             # Update main UI
-            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'retranslate_ui'):
-                self.main_ui.retranslate_ui()
-                
-            # Save the new language to settings
-            if hasattr(self, 'settings') and hasattr(self.settings, 'set_language'):
-                self.settings.set_language(language_code)
-                
+            if hasattr(self, 'main_ui'):
+                if hasattr(self.main_ui, 'retranslate_ui'):
+                    self.main_ui.retranslate_ui()
+                # Force update the UI
+                self.main_ui.update()
+            
+            # Update any open dialogs
+            for widget in QApplication.topLevelWidgets():
+                if hasattr(widget, 'retranslate_ui'):
+                    widget.retranslate_ui()
+            
+            # Force a style refresh
+            self.style().unpolish(self)
+            self.style().polish(self)
+            
+            # Update the application's style to ensure all text is refreshed
+            QApplication.setStyle(QApplication.style().objectName())
+            
             logger.info("Language change completed successfully")
+            
+            # Show a message to the user
+            if hasattr(self, 'status_bar') and self.status_bar:
+                self.status_bar.showMessage(
+                    lm.tr("settings_dialog.language_changed", "Language changed successfully"),
+                    3000  # 3 seconds
+                )
             
         except Exception as e:
             logger.error(f"Error changing language: {e}", exc_info=True)
@@ -674,6 +720,10 @@ class MainWindow(QMainWindow):
         finally:
             # Restore signal blocking state
             self.blockSignals(was_blocked)
+            
+            # Force a UI update
+            self.update()
+            QApplication.processEvents()
     
     def apply_settings(self):
         """Apply application settings from the settings file."""

@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt, QRegularExpression, pyqtSlot
 from PyQt6.QtGui import QTextCharFormat, QColor, QTextCursor, QSyntaxHighlighter, QFont
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from .lang_mgr import LanguageManager
 
 class LogHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for log messages."""

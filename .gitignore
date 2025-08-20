@@ -127,3 +127,4 @@ Setup.txt
 installer.nsi
 /PDF-TEST
 get-pip.py
+PDF.code-workspace

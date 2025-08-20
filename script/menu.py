@@ -100,6 +100,7 @@ class MenuBar(QObject):
 
         # PDF Viewer action
         self.actions['pdf_viewer'] = QAction(self.tr("PDF Viewer"), self.parent)
+        self.actions['open_folder'].setShortcut("Ctrl+T")
         self.actions['pdf_viewer'].setStatusTip(self.tr("Open PDF Viewer"))
         self.actions['pdf_viewer'].triggered.connect(self.on_show_pdf_viewer)
         menu.addAction(self.actions['pdf_viewer'])

@@ -289,15 +289,6 @@
             "open_containing_folder": "Open Containing Folder",
             "file_properties": "File Properties"
         },
-        "menu": {
-            "file": "File",
-            "file_open": "Open Folder",
-            "file_exit": "Exit",
-            "tools": "Tools",
-            "language": "Language",
-            "help": "Help",
-            "help_about": "About"
-        },
         "dialog": {
             "select_folder": "Select Folder to Scan",
             "about_title": "About PDF Duplicate Finder",
@@ -568,6 +559,43 @@
             "deletion_complete": "Deletion complete",
             "deletion_error": "Error deleting files: {error}",
             "no_duplicates_found": "No duplicate files found"
+        },
+        "menu": {
+            "file": "File",
+            "edit": "Edit",
+            "view": "View",
+            "tools": "Tools",
+            "help": "Help",
+            "open_folder": "Open Folder",
+            "open_folder_tt": "Open a folder to scan for duplicate PDFs",
+            "pdf_viewer": "PDF Viewer",
+            "pdf_viewer_tt": "Open PDF Viewer",
+            "export_csv": "Export Results to CSV",
+            "export_csv_tt": "Export last scan results to a CSV file",
+            "exit": "Exit",
+            "exit_tt": "Exit the application",
+            "select_all": "Select All",
+            "select_all_tt": "Select all items",
+            "deselect_all": "Deselect All",
+            "deselect_all_tt": "Deselect all items",
+            "delete_selected": "Delete Selected",
+            "delete_selected_tt": "Move selected files to Recycle Bin",
+            "show_toolbar": "Show Toolbar",
+            "show_toolbar_tt": "Show or hide the toolbar",
+            "show_statusbar": "Show Status Bar",
+            "show_statusbar_tt": "Show or hide the status bar",
+            "settings": "Settings",
+            "settings_tt": "Configure application settings",
+            "log_viewer": "Log Viewer",
+            "log_viewer_tt": "View application logs",
+            "check_updates": "Check for Updates",
+            "check_updates_tt": "Check for application updates",
+            "documentation": "Documentation",
+            "documentation_tt": "View application documentation",
+            "about": "About",
+            "about_tt": "Show information about the application",
+            "sponsor": "Sponsor",
+            "sponsor_tt": "Support the development of this application"
         }
     }
 }

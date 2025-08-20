@@ -141,9 +141,9 @@ class LanguageManager(QObject):
             self.language_changed.emit(lang)
     
     def get_current_language(self) -> str:
-        """Get the current language code (for backward compatibility).
+        """Get the current language code.
         
         Returns:
-            str: Current language code
+            str: Current language code (e.g., 'en', 'it')
         """
-        return self.current_lang
+        return self._current_lang
