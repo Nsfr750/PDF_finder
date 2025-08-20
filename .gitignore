@@ -126,3 +126,4 @@ install-scripts/PDF_Finder Setup.txt
 Setup.txt
 installer.nsi
 /PDF-TEST
+get-pip.py
