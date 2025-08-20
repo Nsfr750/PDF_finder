@@ -23,16 +23,24 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 
 - Python 3.8 or higher
 - pip (Python package manager)
+- Optional backends for PDF rendering (Auto falls back safely):
+  - PyMuPDF (fitz) — default and bundled via requirements
+  - Poppler (for pdf2image) — install Poppler and set its path in Settings
+  - Ghostscript (for Wand) — install Ghostscript and set its executable path in Settings
+
+See [PREREQUISITES.md](PREREQUISITES.md) for platform-specific setup.
 
 ### Install from source
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/Nsfr750/PDF_finder.git
    cd PDF_finder
    ```
 
 2. Create and activate a virtual environment (recommended):
+
    ```bash
    python -m venv venv
    .\venv\Scripts\activate  # Windows
@@ -40,49 +48,62 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
    ```
 
 3. Install the required dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-## 🚀 Usage
+## Usage
 
 1. Launch the application:
+
    ```bash
    python main.py
    ```
 
-2. Click "Scan Folder" to select a directory to scan for duplicate PDFs
+2. Click "Scan Folder" to select a directory to scan for duplicate PDFs.
 
-3. Review the results in the main window
+3. Review the results in the main window. After a scan completes, the file list is automatically populated with the scanned PDFs and duplicate groups.
 
 4. Use the tools to manage duplicates:
    - Mark files to keep
    - Delete unwanted duplicates
    - Preview files before taking action
 
-## 🛠 Key Features in Detail
+## Key Features in Detail
 
 ### Smart PDF Comparison
+
 - Compares PDF content using advanced hashing algorithms
 - Detects similar documents even with different file names or metadata
 - Configurable similarity threshold for fine-tuned results
 
 ### Performance Optimizations
+
 - Multi-threaded scanning for faster processing
 - Memory-efficient handling of large PDF files
 - Progress tracking and cancellation support
 
 ### User Experience
+
 - Modern, responsive interface
 - Customizable view options
 - Comprehensive keyboard shortcuts
 - Detailed file information and previews
+- Toolbar with improved spacing and visual clarity
+- Settings dialog includes a "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript availability
 
-## 📝 Version History
+### PDF Backends and Fallback
+
+- Choose your preferred backend in Settings → PDF Rendering
+- Use "Test backends" to verify if Poppler/Ghostscript are correctly configured
+- If the selected backend fails, the app falls back to an available backend and shows a status-bar warning (localized)
+
+## Version History
 
 See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes in each version.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on how to contribute to this project.
 
