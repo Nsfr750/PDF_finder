@@ -35,12 +35,15 @@ from PyQt6.QtCore import (
     QLocale, QTranslator, QLibraryInfo
 )
 
+from datetime import datetime
+
 # Import our custom modules
 from script.main_window import MainWindow
 from script.settings import AppSettings
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 from script.logger import get_logger
 from script.pdf_utils import find_duplicates
+from script.settings_dialog import SettingsDialog
 
 # Set up logger
 logger = get_logger('main')
@@ -58,7 +61,6 @@ class PDFDuplicateFinder(MainWindow):
         # Initialize language manager with saved language
         language = self.settings.get_language()
         self.language_manager = LanguageManager(
-            app=QApplication.instance(),  # Pass the QApplication instance
             default_lang=language
         )
         
@@ -76,8 +78,10 @@ class PDFDuplicateFinder(MainWindow):
         """Override to ensure the settings dialog is shown correctly."""
         print("DEBUG: PDFDuplicateFinder.on_show_settings called")
         try:
-            # Call the parent's on_show_settings method
-            super().on_show_settings()
+            dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
+            dialog.settings_changed.connect(self.on_settings_changed)
+            dialog.language_changed.connect(lambda: self.change_language(dialog.language_combo.currentData()))
+            dialog.exec()
         except Exception as e:
             print(f"ERROR in PDFDuplicateFinder.on_show_settings: {e}")
             import traceback
@@ -131,13 +135,13 @@ class PDFDuplicateFinder(MainWindow):
             
             # Only save non-empty geometry/state
             if not geometry.isEmpty():
-                self.settings.set_window_geometry(bytes(geometry).hex())
+                self.settings.set_window_geometry(bytes(geometry))
             if not state.isEmpty():
-                self.settings.set_window_state(bytes(state).hex())
+                self.settings.set_window_state(bytes(state))
             
             # Save any other settings
             if hasattr(self, 'language_manager'):
-                self.settings.set_language(self.language_manager.current_language)
+                self.settings.set_language(self.language_manager.get_current_language())
             
             # Save settings to disk
             self.settings._save_settings()
@@ -194,6 +198,22 @@ class PDFDuplicateFinder(MainWindow):
         
         about_dialog = AboutDialog(self)
         about_dialog.exec()
+    
+    def on_show_log_viewer(self):
+        """Open the log viewer dialog for today's log file."""
+        try:
+            from script.view_log import show_log_viewer
+            # Build expected log file path (same pattern as logger.setup_logger)
+            logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+            today = datetime.now().strftime('%Y%m%d')
+            log_file = os.path.join(logs_dir, f"PDFDuplicateFinder_{today}.log")
+            show_log_viewer(log_file, parent=self)
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Could not open log viewer: %s") % str(e)
+            )
     
     def scan_folder(self, folder_path: str):
         """Scan a folder for duplicate PDF files.
@@ -266,7 +286,7 @@ class PDFDuplicateFinder(MainWindow):
                 min_file_size=1024,  # 1KB minimum file size
                 max_file_size=100 * 1024 * 1024,  # 100MB maximum file size
                 hash_size=8,
-                threshold=0.9,
+                threshold=0.80,
                 progress_callback=progress_callback
             )
             

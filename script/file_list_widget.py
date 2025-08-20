@@ -8,7 +8,7 @@ from PyQt6.QtGui import QColor, QBrush, QFont, QIcon, QPixmap, QPainter, QFontMe
 import logging
 
 logger = logging.getLogger(__name__)
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class FileListWidget(QTreeWidget):
     """Widget for displaying duplicate PDF groups in a tree structure."""

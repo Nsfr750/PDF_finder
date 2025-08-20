@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class DuplicateFileItem:
     """Represents a duplicate file item in the model."""

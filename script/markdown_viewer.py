@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QUrl
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 # Set up logger
 logger = logging.getLogger(__name__)

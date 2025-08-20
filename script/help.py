@@ -15,7 +15,7 @@ import os
 import logging
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 

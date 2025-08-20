@@ -9,7 +9,7 @@ from PyQt6.QtCore import QSettings, QObject, pyqtSignal as Signal
 logger = logging.getLogger('PDFDuplicateFinder')
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class RecentFilesManager(QObject):
     """Manages a list of recently used files with persistence."""

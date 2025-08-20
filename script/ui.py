@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class MainUI(QWidget):
     """Main UI components for the application."""

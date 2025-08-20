@@ -12,10 +12,10 @@ from PyQt6.QtWidgets import (
     QStatusBar, QApplication, QMenuBar, QFrame, QMessageBox, QDialog
 )
 from PyQt6.QtGui import QAction, QActionGroup, QIcon, QPixmap
-from PyQt6.QtCore import pyqtSignal as Signal, QObject, QLocale, Qt, QTranslator, QLibraryInfo
+from PyQt6.QtCore import pyqtSignal as Signal, QObject, QTimer, Qt
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 from script.settings import AppSettings
 
 # Set up logger
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 from .menu import MenuBar
 from .toolbar import MainToolBar
 from .ui import MainUI
+from .settings_dialog import SettingsDialog
 
 class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
@@ -44,7 +45,9 @@ class MainWindow(QMainWindow):
         self.settings = AppSettings()
         
         # Initialize language manager
-        self.language_manager = language_manager or LanguageManager()
+        self.language_manager = language_manager or LanguageManager(
+            default_lang=self.settings.get_language() or 'en'
+        )
         
         # Store a reference to the QApplication instance
         self.app = QApplication.instance()
@@ -53,12 +56,8 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         
         # Connect to language change signals
-        self.language_manager.language_changed.connect(self.on_language_changed)
-        
-        # Apply initial language if not already set
-        initial_language = self.settings.get_language()
-        if initial_language:
-            self.language_manager.set_language(initial_language)
+        if hasattr(self.language_manager, 'language_changed'):
+            self.language_manager.language_changed.connect(self.on_language_changed)
     
     def on_open_folder(self):
         """Handle the 'Open Folder' action from the menu."""
@@ -363,232 +362,151 @@ class MainWindow(QMainWindow):
             )
     
     def on_language_changed(self, language_code: str = None):
-        """Handle language change signal from the language manager.
+        """Handle language change signal from the language manager."""
+        logger.info("=== Language Change Started ===")
         
-        Args:
-            language_code: The new language code (e.g., 'en', 'it'). If None, uses current language from manager.
-        """
-        print("\n" + "="*50)
-        print(f"DEBUG: on_language_changed called with language_code={language_code}")
-        print(f"DEBUG: hasattr(self, 'language_manager') = {hasattr(self, 'language_manager')}")
+        # Get the language manager instance
+        lm = getattr(self, 'language_manager', None)
+        if not lm:
+            logger.error("No language manager found")
+            return
+            
+        # If no language code provided, use current language
+        if language_code is None:
+            language_code = lm.get_current_language()
+            
+        logger.info(f"Changing language to: {language_code}")
+        
+        # Block signals to prevent recursion
+        was_blocked = self.signalsBlocked()
+        self.blockSignals(True)
         
         try:
-            if language_code is None:
-                print("DEBUG: No language_code provided, getting from language_manager")
-                if hasattr(self, 'language_manager') and self.language_manager:
-                    language_code = self.language_manager.current_language
-                    print(f"DEBUG: Got language_code from language_manager: {language_code}")
-                else:
-                    print("WARNING: No language_manager available, using default 'en'")
-                    language_code = 'en'
+            # Update window title
+            self.setWindowTitle(lm.tr("app.name", "PDF Duplicate Finder"))
             
-            print(f"DEBUG: Language will be set to: {language_code}")
-            logger.debug(f"Language changed to {language_code}, retranslating UI")
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(lm.tr("status.ready", "Ready"))
+                
+            # Update menu bar
+            if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+                self.menu_bar.retranslate_ui()
+                
+            # Update toolbar
+            if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
+                self.toolbar.retranslate_ui()
+                
+            # Update main UI
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'retranslate_ui'):
+                self.main_ui.retranslate_ui()
+                
+            # Save the new language to settings
+            if hasattr(self, 'settings') and hasattr(self.settings, 'set_language'):
+                self.settings.set_language(language_code)
+                
+            logger.info("Language change completed successfully")
             
         except Exception as e:
-            print(f"ERROR in on_language_changed (initial setup): {e}")
-            import traceback
-            traceback.print_exc()
-            language_code = 'en'  # Fallback to English on error
-            logger.error(f"Error in on_language_changed (initial setup): {e}")
-            logger.error(traceback.format_exc())
-        
-        try:
-            print("DEBUG: Starting UI update process...")
-            # Use a try-finally to ensure we always log completion
-            try:
-                # Update the application's language
-                if not hasattr(self, 'app') or not self.app:
-                    logger.warning("No QApplication instance found")
-                    return
-                
-                # Process any pending events before starting
-                self.app.processEvents()
-                
-                # Update the main window title
-                self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
-                
-                # Update the status bar if it exists
-                if hasattr(self, 'status_bar') and self.status_bar and hasattr(self.status_bar, 'showMessage'):
-                    try:
-                        self.status_bar.showMessage(
-                            self.language_manager.tr("ui.status_ready", "Ready")
-                        )
-                    except Exception as e:
-                        logger.error(f"Error updating status bar: {e}")
-                
-                # Update menu bar if it exists
-                if hasattr(self, 'menu_bar') and self.menu_bar and hasattr(self.menu_bar, 'retranslate_ui'):
-                    try:
-                        self.menu_bar.retranslate_ui()
-                    except Exception as e:
-                        logger.error(f"Error updating menu bar: {e}")
-                
-                # Update toolbar if it exists
-                if hasattr(self, 'toolbar') and self.toolbar and hasattr(self.toolbar, 'retranslate_ui'):
-                    try:
-                        self.toolbar.retranslate_ui()
-                    except Exception as e:
-                        logger.error(f"Error updating toolbar: {e}")
-                
-                # Safely update all child widgets
-                try:
-                    self.retranslate_ui()
-                except Exception as e:
-                    logger.error(f"Error in retranslate_ui: {e}")
-                
-                # Process any pending events after updates
-                self.app.processEvents()
-                
-                logger.debug("UI retranslation completed successfully")
-                
-            except Exception as e:
-                logger.error(f"Error in on_language_changed: {e}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                
-                # Try to show an error message to the user if possible
-                try:
-                    QMessageBox.critical(
-                        self,
-                        self.tr("Error"),
-                        self.tr("An error occurred while changing the language. Please check the log for details.")
-                    )
-                except:
-                    pass  # If we can't show the error dialog, at least we logged it
-                    
-        except Exception as e:
-            # This is a last resort error handler
-            logger.critical(f"Critical error in language change handler: {e}")
-            logger.critical(f"Traceback: {traceback.format_exc()}")
-    
-    def on_show_about(self):
-        """Show the about dialog."""
-        from .about import AboutDialog
-        about_dialog = AboutDialog(self, self.language_manager)
-        about_dialog.exec()
-    
-    def on_show_settings(self):
-        """Show the settings dialog."""
-        print("\n" + "="*50)
-        print("DEBUG: MainWindow.on_show_settings called")
-        print(f"DEBUG: self = {self}")
-        print(f"DEBUG: self.language_manager = {self.language_manager}")
-        
-        try:
-            print("\nDEBUG: Attempting to import SettingsDialog")
-            from .settings_dialog import SettingsDialog
-            print("DEBUG: Successfully imported SettingsDialog")
+            logger.error(f"Error changing language: {e}", exc_info=True)
             
-            print("\nDEBUG: Creating SettingsDialog instance")
-            # Create the settings dialog with the main window as parent
-            settings_dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
-            print(f"DEBUG: SettingsDialog created: {settings_dialog}")
-            print(f"DEBUG: settings_dialog.isVisible() = {settings_dialog.isVisible()}")
+            # Show error message to the user
+            if hasattr(self, 'status_bar') and self.status_bar:
+                self.status_bar.showMessage(
+                    lm.tr("errors.language_change_failed", "Failed to change language"),
+                    5000  # 5 seconds
+                )
             
-            # Store the current language to detect changes
-            current_language = self.language_manager.current_language
-            
-            # Connect the settings_changed signal to handle any necessary updates
-            print("\nDEBUG: Connecting signals")
-            settings_dialog.settings_changed.connect(self.on_settings_changed)
-            settings_dialog.language_changed.connect(self.on_language_changed)
-            settings_dialog.requires_restart.connect(self.on_requires_restart)
-            
-            # Show the dialog as a modal dialog
-            print("\nDEBUG: About to show settings dialog")
-            print(f"DEBUG: Before exec(), isActiveWindow = {self.isActiveWindow()}")
-            print(f"DEBUG: Before exec(), isVisible = {self.isVisible()}")
-            
-            # Use exec() for modal dialog
-            result = settings_dialog.exec()
-            print(f"DEBUG: exec() returned with result: {result}")
-            
-            print("\nDEBUG: After showing dialog")
-            
-        except ImportError as e:
-            print(f"\nERROR: Failed to import SettingsDialog: {e}")
-            import traceback
-            traceback.print_exc()
             QMessageBox.critical(
                 self,
-                self.tr("Error"),
-                self.tr(f"Failed to load settings dialog: {e}")
+                lm.tr("dialog.error", "Error"),
+                lm.tr("errors.language_change_failed_details", "Failed to change language: {error}").format(error=str(e))
             )
-        except Exception as e:
-            print(f"\nERROR in on_show_settings: {e}")
-            import traceback
-            traceback.print_exc()
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr(f"Could not open settings: {e}")
-            )
-        
-        print("="*50 + "\n")
-    
-    def on_settings_changed(self):
-        """Handle settings changes."""
-        # Update the UI
-        self.retranslate_ui()
-        
-        # Apply new settings
-        self.apply_settings()
-    
-    def on_requires_restart(self):
-        """Handle application restart required."""
-        print("\nDEBUG: Application restart required")
-        reply = QMessageBox.information(
-            self,
-            self.language_manager.tr("settings_dialog.restart_required", "Restart Required"),
-            self.language_manager.tr("settings_dialog.restart_message", 
-                                   "The application needs to be restarted for all changes to take effect.\n"
-                                   "Do you want to restart now?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            # Restart the application
-            QApplication.quit()
-            QProcess.startDetached(sys.executable, sys.argv)
-    
-    def retranslate_ui(self):
-        """Retranslate the UI after language change."""
-        # Update window title
-        self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
-        
-        # Update menu bar
-        if hasattr(self, 'menu_bar'):
-            self.menu_bar.retranslate_ui()
-        
-        # Update toolbar
-        if hasattr(self, 'toolbar'):
-            self.toolbar.retranslate_ui()
-        
-        # Update status bar
-        if hasattr(self, 'status_bar'):
-            self.status_bar.showMessage(self.language_manager.tr("ui.status_ready", "Ready"))
-        
-        # Notify any registered callbacks
-        for callback in getattr(self, 'retranslate_callbacks', []):
-            try:
-                callback()
-            except Exception as e:
-                logger.error(f"Error in retranslate callback: {e}")
+            
+        finally:
+            # Restore signal blocking state
+            self.blockSignals(was_blocked)
     
     def apply_settings(self):
-        """Apply settings to the application."""
-        # Apply theme if needed
-        self.apply_theme()
-        
-        # Apply any other settings...
+        """Apply application settings from the settings file."""
+        try:
+            logger.info("Applying application settings...")
+            
+            # Apply theme
+            self.apply_theme()
+            
+            # Apply window state if available
+            geometry = self.settings.get_window_geometry()
+            state = self.settings.get_window_state()
+            
+            if geometry:
+                try:
+                    self.restoreGeometry(geometry)
+                except Exception as e:
+                    logger.error(f"Error restoring window geometry: {e}")
+            
+            if state:
+                try:
+                    self.restoreState(state)
+                except Exception as e:
+                    logger.error(f"Error restoring window state: {e}")
+            
+            # Apply toolbar visibility
+            toolbar_visible = self.settings.get('ui.toolbar_visible', True)
+            if hasattr(self, 'toolbar'):
+                self.toolbar.setVisible(toolbar_visible)
+                # Update the menu action if it exists
+                if hasattr(self, 'menu_bar') and 'toggle_toolbar' in self.menu_bar.actions:
+                    self.menu_bar.actions['toggle_toolbar'].setChecked(toolbar_visible)
+            
+            # Apply status bar visibility
+            statusbar_visible = self.settings.get('ui.statusbar_visible', True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.setVisible(statusbar_visible)
+                # Update the menu action if it exists
+                if hasattr(self, 'menu_bar') and 'toggle_statusbar' in self.menu_bar.actions:
+                    self.menu_bar.actions['toggle_statusbar'].setChecked(statusbar_visible)
+            
+            logger.info("Application settings applied successfully")
+            
+        except Exception as e:
+            logger.error(f"Error applying settings: {e}", exc_info=True)
     
     def apply_theme(self):
         """Apply the selected theme to the application."""
-        theme = self.settings.get('app.theme', 'system')
-        # Implement theme application logic here
-        # This is a placeholder - you'll need to implement the actual theming
-        print(f"Applying theme: {theme}")
+        try:
+            theme = self.settings.get('app.theme', 'system')
+            logger.debug(f"Applying theme: {theme}")
+            
+            # Default style sheet (can be overridden by theme)
+            style_sheet = """
+                QMainWindow, QDialog, QWidget {
+                    background-color: #f0f0f0;
+                    color: #333333;
+                }
+                QStatusBar {
+                    background-color: #e0e0e0;
+                    color: #333333;
+                }
+            """
+            
+            # Apply theme-specific styles
+            if theme == 'dark':
+                style_sheet = """
+                    QMainWindow, QDialog, QWidget {
+                        background-color: #2d2d2d;
+                        color: #f0f0f0;
+                    }
+                    QStatusBar {
+                        background-color: #1e1e1e;
+                        color: #f0f0f0;
+                    }
+                """
+            
+            self.setStyleSheet(style_sheet)
+            
+        except Exception as e:
+            logger.error(f"Error applying theme: {e}", exc_info=True)
     
     def closeEvent(self, event):
         """Handle window close event."""
@@ -597,13 +515,15 @@ class MainWindow(QMainWindow):
             geometry = self.saveGeometry()
             state = self.saveState()
             
-            # Convert QByteArray to hex string for storage
-            self.settings.set('window.geometry', bytes(geometry).hex() if not geometry.isEmpty() else '')
-            self.settings.set('window.state', bytes(state).hex() if not state.isEmpty() else '')
+            # Save using helper methods (convert QByteArray to bytes)
+            if not geometry.isEmpty():
+                self.settings.set_window_geometry(bytes(geometry))
+            if not state.isEmpty():
+                self.settings.set_window_state(bytes(state))
             
             # Save any other settings
             if hasattr(self, 'language_manager'):
-                self.settings.set_language(self.language_manager.current_language)
+                self.settings.set_language(self.language_manager.get_current_language())
             
             # Save settings to disk
             self.settings._save_settings()
@@ -613,3 +533,19 @@ class MainWindow(QMainWindow):
         
         # Accept the close event
         event.accept()
+
+    def on_show_settings(self):
+        """Open the settings dialog and wire its signals."""
+        try:
+            dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
+            dialog.settings_changed.connect(getattr(self, 'on_settings_changed', self.apply_settings))
+            dialog.language_changed.connect(lambda: self.change_language(dialog.language_combo.currentData()))
+            dialog.requires_restart.connect(lambda: None)  # Placeholder: can implement restart flow
+            dialog.exec()
+        except Exception as e:
+            logger.error(f"Error showing settings dialog: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.open_settings_failed", "Could not open settings: %s") % str(e)
+            )

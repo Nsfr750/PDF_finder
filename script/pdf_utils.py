@@ -11,22 +11,25 @@ import numpy as np
 from wand.image import Image as WandImage
 import fitz  # PyMuPDF
 from tqdm import tqdm
+from script.lang_mgr import LanguageManager
 
-# Set up logger
-logger = logging.getLogger(__name__)
+# Set up logger (child of the configured 'PDFDuplicateFinder' logger)
+logger = logging.getLogger(f"PDFDuplicateFinder.{__name__}")
 
 # For type hints
 if TYPE_CHECKING:
     from wand.image import Image as WandImageType
 
-# Global flag to track if Ghostscript is available
-GHOSTSCRIPT_AVAILABLE = False
+# Global flag to track if pdf2image (Poppler backend) is available
+PDF2IMAGE_AVAILABLE = False
 try:
     from pdf2image import convert_from_path
-    GHOSTSCRIPT_AVAILABLE = True
+    PDF2IMAGE_AVAILABLE = True
 except (ImportError, OSError) as e:
-    logger.warning("Ghostscript not available. Using fallback PDF processing. Some features may be limited.")
-    logger.debug(f"Error: {e}")
+    # Note: On Windows, pdf2image requires Poppler binaries. If not installed or not on PATH, import
+    # may fail or raise an OSError. Clarify the message for users.
+    logger.warning("pdf2image/Poppler backend not available. Continuing with PyMuPDF-only processing.")
+    logger.debug(f"pdf2image import error: {e}")
 
 class ProgressTracker:
     """Helper class to track and report progress."""
@@ -76,7 +79,7 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
                     progress_callback("Extracting page with PyMuPDF...")
                 
                 page = doc.load_page(0)
-                pix = page.get_pixmap(dpi=72, alpha=False)
+                pix = page.get_pixmap(dpi=150, alpha=False)
                 
                 with WandImage(
                     width=pix.width,
@@ -88,22 +91,27 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
                     img.import_pixels(0, 0, pix.width, pix.height, 'RGB', pix.samples)
                     return img.clone()
         except Exception as e:
-            logger.debug(f"PyMuPDF extraction failed, trying Ghostscript: {e}")
+            logger.debug(f"PyMuPDF extraction failed, trying pdf2image/Poppler: {e}")
             
-        # Fall back to Ghostscript if PyMuPDF fails
-        if GHOSTSCRIPT_AVAILABLE:
+        # Fall back to pdf2image (Poppler) if PyMuPDF fails and backend is available
+        if PDF2IMAGE_AVAILABLE:
             try:
                 if progress_callback:
-                    progress_callback("Extracting page with Ghostscript...")
+                    progress_callback("Extracting page with pdf2image/Poppler...")
                 
-                images = convert_from_path(
-                    pdf_path,
-                    first_page=1,
-                    last_page=1,
-                    dpi=72,
-                    fmt='jpeg',
-                    thread_safe=True
-                )
+                # Allow users to specify POPPLER_PATH via environment variable
+                poppler_path = os.environ.get('POPPLER_PATH')
+                kwargs = {
+                    'first_page': 1,
+                    'last_page': 1,
+                    'dpi': 150,
+                    'fmt': 'jpeg',
+                    'thread_safe': True,
+                }
+                if poppler_path:
+                    kwargs['poppler_path'] = poppler_path
+
+                images = convert_from_path(pdf_path, **kwargs)
                 
                 if images:
                     with io.BytesIO() as output:
@@ -112,7 +120,7 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
                         with WandImage(blob=output.read()) as img:
                             return img.clone()
             except Exception as e:
-                logger.debug(f"Ghostscript extraction failed: {e}")
+                logger.debug(f"pdf2image extraction failed: {e}")
         
         return None
     except Exception as e:
@@ -149,6 +157,9 @@ def process_pdf_file(file_path: str, min_size: int, max_size: int, hash_size: in
         if progress_callback:
             progress_callback(f"Processing {file_path.name}...")
             
+        # Compute file MD5 for exact duplicate detection (fast and reliable)
+        md5 = calculate_file_hash(str(file_path))
+        
         image = extract_first_page_pdf(str(file_path), progress_callback)
         if image is None:
             return None
@@ -159,7 +170,8 @@ def process_pdf_file(file_path: str, min_size: int, max_size: int, hash_size: in
             'path': str(file_path),
             'filename': file_path.name,
             'size': file_size,
-            'modified': file_path.stat().st_mtime
+            'modified': file_path.stat().st_mtime,
+            'md5': md5
         }))
     except Exception as e:
         logger.error(f"Error processing {file_path}: {e}")
@@ -209,10 +221,14 @@ def find_duplicates(
             return []
             
         path = Path(directory)
-        pattern = '**/*.pdf' if recursive else '*.pdf'
         
         try:
-            pdf_files = list(path.glob(pattern))
+            # Use case-insensitive suffix filtering to include .pdf, .PDF, etc.
+            if recursive:
+                iterator = path.rglob('*')
+            else:
+                iterator = path.glob('*')
+            pdf_files = [p for p in iterator if p.is_file() and p.suffix.lower() == '.pdf']
             if not pdf_files:
                 update_progress("No PDF files found")
                 return []
@@ -231,6 +247,7 @@ def find_duplicates(
     file_hashes = {}
     total_files = len(pdf_files)
     processed_count = 0
+    skipped_count = 0
     
     def process_file_wrapper(file_path, min_size, max_size, h_size):
         """Wrapper to process a single file and track progress."""
@@ -269,6 +286,8 @@ def find_duplicates(
                     if result is not None:
                         file_path, (phash, file_info) = result
                         file_hashes[file_path] = (phash, file_info)
+                    else:
+                        skipped_count += 1
                 except Exception as e:
                     logger.error(f"Error processing file: {e}", exc_info=True)
                 
@@ -277,62 +296,84 @@ def find_duplicates(
                     logger.info("Processing cancelled by user")
                     return []
         
+        logger.info(f"Discovery: {total_files} PDFs found. Processed OK: {len(file_hashes)}. Skipped/failed: {skipped_count}.")
+
         # Update progress for duplicate detection phase
         if not update_progress("Analyzing file similarities..."):
             return []
         
-        # Find duplicates by comparing hashes
+        # Find duplicates
         duplicates = []
         processed = set()
         total_files = len(file_hashes)
         
         if total_files == 0:
-            update_progress("No valid PDF files found to compare")
             return []
         
-        # Sort files by size (largest first) for better progress estimation
-        sorted_files = sorted(
-            file_hashes.items(),
-            key=lambda x: x[1][1]['size'],
-            reverse=True
-        )
+        # 1) Exact duplicate grouping by MD5
+        md5_map: Dict[str, list[Dict[str, Any]]] = {}
+        for fpath, (phash, info) in file_hashes.items():
+            md5 = info.get('md5')
+            if md5:
+                md5_map.setdefault(md5, []).append(info)
+        for md5, group in md5_map.items():
+            if len(group) > 1:
+                duplicates.append(group)
+                for fi in group:
+                    processed.add(fi['path'])
         
-        # Compare files to find duplicates
+        # 2) Perceptual hash grouping for remaining files
+        sorted_files = sorted(file_hashes.items(), key=lambda x: x[1][1]['size'])
+        
         for i, (file1, (hash1, file_info1)) in enumerate(sorted_files):
             if file1 in processed:
                 continue
-                
-            # Update progress every 5 files or for the last file
-            if i % 5 == 0 or i == len(sorted_files) - 1:
-                if not update_progress(
-                    f"Analyzing {i+1}/{total_files} files",
-                    current=i,
-                    total=total_files
-                ):
-                    return []
             
             duplicate_group = [file_info1]
             
-            # Compare with other files
-            for file2, (hash2, file_info2) in sorted_files[i+1:]:
+            for j in range(i + 1, len(sorted_files)):
+                file2, (hash2, file_info2) = sorted_files[j]
                 if file2 in processed:
                     continue
-                    
-                # Calculate similarity
-                similarity = np.mean(hash1 == hash2)
+                
+                # Quick size similarity check to skip obviously different files
+                size1 = file_info1.get('size', 0)
+                size2 = file_info2.get('size', 0)
+                if size2 > size1 * 1.5:  # More than 50% larger, skip further comparisons
+                    break
+                
+                # Compare perceptual hashes
+                similarity = float(np.mean(hash1 == hash2))
+                
                 if similarity >= threshold:
                     duplicate_group.append(file_info2)
                     processed.add(file2)
-            
+        
             if len(duplicate_group) > 1:
                 duplicates.append(duplicate_group)
             
             processed.add(file1)
         
         # Final update
-        update_progress(
-            f"Found {len(duplicates)} duplicate groups in {time.time() - start_time:.1f} seconds"
-        )
+        summary_msg = f"Found {len(duplicates)} duplicate groups in {time.time() - start_time:.1f} seconds"
+        update_progress(summary_msg)
+        logger.info(summary_msg)
+
+        # If none found, log top-5 most similar pairs to help tune threshold
+        if len(duplicates) == 0 and len(sorted_files) >= 2:
+            try:
+                top_pairs: list[tuple[float, str, str]] = []
+                # Sample at most first 100 files to avoid O(n^2) explosion
+                sample = sorted_files[:min(100, len(sorted_files))]
+                for i, (f1, (h1, info1)) in enumerate(sample):
+                    for f2, (h2, info2) in sample[i+1:]:
+                        sim = float(np.mean(h1 == h2))
+                        top_pairs.append((sim, info1['path'], info2['path']))
+                top_pairs.sort(reverse=True, key=lambda x: x[0])
+                for sim, a, b in top_pairs[:5]:
+                    logger.info(f"Top similarity {sim:.3f}:\n  {a}\n  {b}")
+            except Exception as dbg_e:
+                logger.debug(f"Failed computing top similarity diagnostics: {dbg_e}")
         
         return duplicates
         

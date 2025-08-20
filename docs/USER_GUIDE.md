@@ -131,4 +131,4 @@ A: Please open an issue on our GitHub repository with detailed steps to reproduc
 A: Feature requests can be submitted through GitHub issues or our community forum.
 
 ---
-*Last updated: July 25, 2025*
+*Last updated: August 20, 2025*

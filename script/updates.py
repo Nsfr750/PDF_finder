@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 logger = logging.getLogger(__name__)
 

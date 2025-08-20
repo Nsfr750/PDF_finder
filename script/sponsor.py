@@ -8,9 +8,12 @@ import os
 import io
 import qrcode
 import logging
+from wand.image import Image as WandImage
+from wand.drawing import Drawing
+from wand.color import Color
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 logger = logging.getLogger(__name__)
 
@@ -80,14 +83,34 @@ class SponsorDialog(QDialog):
         qr.add_data(f'monero:{monero_address}')
         qr.make(fit=True)
         
-        # Generate QR code as a PIL image
-        qr_img = qr.make_image(fill_color="black", back_color="white")
-        
-        # Convert PIL Image to QPixmap
-        buffer = io.BytesIO()
-        qr_img.save(buffer, format="PNG")
+        # Draw QR code with Wand (avoid PIL)
+        matrix = qr.get_matrix()
+        box_size = 10
+        border = 4
+        width = (len(matrix[0]) + border * 2) * box_size
+        height = (len(matrix) + border * 2) * box_size
+
+        with WandImage(width=width, height=height, background=Color('white')) as img:
+            with Drawing() as draw:
+                draw.fill_color = Color('black')
+                # Draw black squares where matrix cell is True
+                for r, row in enumerate(matrix):
+                    for c, cell in enumerate(row):
+                        if cell:
+                            x0 = (c + border) * box_size
+                            y0 = (r + border) * box_size
+                            x1 = x0 + box_size - 1
+                            y1 = y0 + box_size - 1
+                            draw.rectangle(left=x0, top=y0, right=x1, bottom=y1)
+                draw(img)
+            img.format = 'png'
+            buffer = io.BytesIO()
+            img.save(file=buffer)
+            data = buffer.getvalue()
+
+        # Load into QPixmap
         pixmap = QPixmap()
-        pixmap.loadFromData(buffer.getvalue(), "PNG")
+        pixmap.loadFromData(data, "PNG")
         
         # Scale the pixmap to a reasonable size
         pixmap = pixmap.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)

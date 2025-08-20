@@ -6,7 +6,7 @@ import tempfile
 import os
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class PDFPreviewWidget(QWidget):
     def __init__(self, parent=None):

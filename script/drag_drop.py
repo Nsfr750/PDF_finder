@@ -3,7 +3,7 @@ import logging
 from PyQt6.QtCore import QMimeData, Qt, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 from typing import List, Optional, Union, Callable
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 

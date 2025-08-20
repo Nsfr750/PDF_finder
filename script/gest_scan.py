@@ -15,7 +15,7 @@ from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 

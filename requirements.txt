@@ -12,7 +12,6 @@ markdown>=3.8.2
 pyyaml>=6.0.2
 pymdown-extensions>=9.0
 
-
 # GUI
 PyQt6>=6.4.0
 ttkthemes>=3.2.2

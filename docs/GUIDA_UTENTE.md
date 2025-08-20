@@ -132,4 +132,4 @@ R: Apri una segnalazione sul nostro repository GitHub con i passaggi dettagliati
 R: Le richieste di nuove funzionalità possono essere inviate tramite le issue di GitHub o il nostro forum della community.
 
 ---
-*Ultimo aggiornamento: 25 Luglio 2025*
+*Ultimo aggiornamento: 20 Agosto 2025*

@@ -13,7 +13,7 @@ from .pdf_utils import PDFDocument, PDFUtils
 logger = logging.getLogger('PDFDuplicateFinder')
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class PDFScanner:
     """Handles scanning for duplicate PDFs in directories."""

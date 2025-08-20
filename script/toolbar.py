@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, QCoreApplication
 from typing import Optional, Dict
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -37,7 +37,8 @@ class MainToolBar(QToolBar):
         
         # Add standard actions if needed
         self.setMovable(False)
-        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        # Improve usability by showing text beside icons
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         
         # Connect to language change signal
         self.language_manager.language_changed.connect(self.on_language_changed)
@@ -56,14 +57,32 @@ class MainToolBar(QToolBar):
         
         # Clear existing actions
         self.clear()
+        self._build_toolbar()
+
+    def _build_toolbar(self):
+        """Build the toolbar from stored menu actions with improved grouping."""
+        if not self.menu_actions:
+            return
         
-        # Add actions to the toolbar
-        action_keys = ['open_folder', 'settings', 'help']  # Add more action keys as needed
-        for key in action_keys:
-            if key in menu_actions:
-                self.addAction(menu_actions[key])
-                if key in ['open_folder']:  # Add separators after these actions
-                    self.addSeparator()
+        # Define toolbar groups (separators between groups)
+        groups = [
+            ['open_folder', 'pdf_viewer'],
+            ['select_all', 'deselect_all'],
+            ['settings', 'check_updates'],
+            ['help', 'documentation', 'about', 'sponsor'],
+        ]
+        
+        first_group_added = False
+        for group in groups:
+            # Collect existing actions in this group
+            existing = [self.menu_actions[k] for k in group if k in self.menu_actions and self.menu_actions[k] is not None]
+            if not existing:
+                continue
+            if first_group_added:
+                self.addSeparator()
+            for act in existing:
+                self.addAction(act)
+            first_group_added = True
     
     def retranslate_ui(self):
         """Retranslate all toolbar items when the language changes."""
@@ -78,40 +97,9 @@ class MainToolBar(QToolBar):
     
     def update_toolbar_actions(self):
         """Update the toolbar with the current actions and translations."""
-        # Clear existing actions
+        # Rebuild from stored actions to reflect latest translations
         self.clear()
-        
-        # Add Open action
-        if 'open_folder' in self.menu_actions and self.menu_actions['open_folder']:
-            action = self.menu_actions['open_folder']
-            action.setText(self.tr("Open Folder"))
-            action.setStatusTip(self.tr("Open a folder to scan for duplicate PDFs"))
-            self.addAction(action)
-        
-        # Add separator
-        self.addSeparator()
-        
-        # Add Select All action
-        if 'select_all' in self.menu_actions and self.menu_actions['select_all']:
-            action = self.menu_actions['select_all']
-            action.setText(self.tr("Select All"))
-            action.setStatusTip(self.tr("Select all items"))
-            self.addAction(action)
-        
-        # Add Deselect All action
-        if 'deselect_all' in self.menu_actions and self.menu_actions['deselect_all']:
-            action = self.menu_actions['deselect_all']
-            action.setText(self.tr("Deselect All"))
-            action.setStatusTip(self.tr("Deselect all items"))
-            self.addAction(action)
-
-        # Delete All action
-        if 'delete_all' in self.menu_actions and self.menu_actions['delete_all']:
-            action = self.menu_actions['delete_all']
-            action.setText(self.tr("Delete All"))
-            action.setStatusTip(self.tr("Delete all items"))
-            self.addAction(action)            
-        
+        self._build_toolbar()
         logger.debug(f"Toolbar actions after update: {[a.text() for a in self.actions()]}")
 
     def retranslate_ui(self):

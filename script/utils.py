@@ -3,7 +3,7 @@ import os
 from typing import Any, Dict, Union, Optional
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 def get_file_path(file_info: Union[Dict[str, Any], object], path_key: str = 'file_path') -> Optional[str]:
     """

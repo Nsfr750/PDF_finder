@@ -14,7 +14,7 @@ from PyQt6.QtGui import QPixmap, QImage, QAction, QPainter, QIcon, QKeySequence,
 import logging
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 class PDFViewer(QMainWindow):
     """Enhanced PDF viewer with navigation and zoom capabilities."""
@@ -145,6 +145,18 @@ class PDFViewer(QMainWindow):
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.fit_width_action)
         self.toolbar.addAction(self.fit_page_action)
+        
+        # Close action
+        self.toolbar.addSeparator()
+        self.close_action = QAction(
+            QIcon.fromTheme("window-close"),
+            self.tr("pdf_viewer.actions.close", "Close"),
+            self,
+            shortcut=QKeySequence.StandardKey.Close,
+            triggered=self.close,
+            statusTip=self.tr("pdf_viewer.tooltips.close", "Close the viewer")
+        )
+        self.toolbar.addAction(self.close_action)
     
     def create_page_controls(self):
         """Create the page navigation controls."""

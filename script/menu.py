@@ -13,7 +13,7 @@ import logging
 from typing import Optional, Dict, Any, List, Callable
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -218,6 +218,13 @@ class MenuBar(QObject):
         
         # Add separator
         menu.addSeparator()
+
+        #log viewer action
+        self.actions['log_viewer'] = QAction(self.tr("Log Viewer"), self.parent)
+        self.actions['log_viewer'].setStatusTip(self.tr("Open log viewer"))
+        if hasattr(self.parent, 'on_show_log_viewer'):
+            self.actions['log_viewer'].triggered.connect(self.parent.on_show_log_viewer)
+        menu.addAction(self.actions['log_viewer'])
         
         # Check for Updates action
         self.actions['check_updates'] = QAction(self.tr("Check for Updates"), self.parent)
@@ -301,7 +308,7 @@ class MenuBar(QObject):
                 self.menus['language'].addAction(action)
                 
                 # Check the current language
-                if hasattr(self, 'language_manager') and code == self.language_manager.current_language:
+                if hasattr(self, 'language_manager') and code == self.language_manager.get_current_language():
                     action.setChecked(True)
                 
             # Connect to language changed signal to update the menu
@@ -436,7 +443,7 @@ class MenuBar(QObject):
             # Create and show the help dialog
             help_dialog = HelpDialog(
                 parent=self.parent,
-                current_lang=self.language_manager.current_language
+                current_lang=self.language_manager.get_current_language()
             )
             help_dialog.exec()
             

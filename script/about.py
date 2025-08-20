@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QSize, QUrl, QT_VERSION_STR, PYQT_VERSION_STR
 from PyQt6.QtGui import QPixmap, QIcon, QDesktopServices
 from .version import get_version
 # Import language manager
-from lang.language_manager import LanguageManager
+from script.lang_mgr import LanguageManager
 import os
 import sys
 import platform
