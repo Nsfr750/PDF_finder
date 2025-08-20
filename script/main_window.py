@@ -430,30 +430,22 @@ class MainWindow(QMainWindow):
             # Save all settings to disk
             self.settings._save_settings()
             
-        except Exception as e:
-            logger.error(f"Error saving settings on close: {e}", exc_info=True)
-        
-        # Accept the close event
-        event.accept()
 
     def on_show_settings(self):
         """Open the settings dialog and wire its signals."""
         try:
-            # Create and show settings dialog
-            dialog = SettingsDialog(self)
-            if hasattr(self, 'language_manager'):
-                dialog.language_manager = self.language_manager
+            dialog = SettingsDialog(self)  # Pass parent directly
             
             # Connect settings changed signal
-            settings_callback = getattr(self, 'on_settings_changed', self.apply_settings)
-            dialog.settings_changed.connect(settings_callback)
+            callback = getattr(self, 'on_settings_changed', self.apply_settings)
+            dialog.settings_changed.connect(callback)
             
             # Connect language changed signal
-            def handle_language_change():
+            def lang_changed():
                 if hasattr(dialog, 'language_combo'):
                     self.change_language(dialog.language_combo.currentData())
             
-            dialog.language_changed.connect(handle_language_change)
+            dialog.language_changed.connect(lang_changed)
             dialog.requires_restart.connect(lambda: None)
             
             dialog.exec()
