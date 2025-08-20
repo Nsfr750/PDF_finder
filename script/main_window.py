@@ -5,11 +5,13 @@ import os
 import logging
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any
+import threading
 
 from PyQt6.QtWidgets import (
     QMainWindow, QFileDialog, QMenu, QWidget, QVBoxLayout, 
     QHBoxLayout, QSplitter, QListWidget, QLabel, QToolBar,
-    QStatusBar, QApplication, QMenuBar, QFrame, QMessageBox, QDialog
+    QStatusBar, QApplication, QMenuBar, QFrame, QMessageBox, QDialog,
+    QProgressBar, QListWidgetItem
 )
 from PyQt6.QtGui import QAction, QActionGroup, QIcon, QPixmap
 from PyQt6.QtCore import pyqtSignal as Signal, QObject, QTimer, Qt
@@ -25,12 +27,18 @@ from .menu import MenuBar
 from .toolbar import MainToolBar
 from .ui import MainUI
 from .settings_dialog import SettingsDialog
+from .PDF_viewer import show_pdf_viewer
+from .scanner import PDFScanner
 
 class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
     
     # Signal emitted when the language is changed
     language_changed = Signal()
+    # Scan-related signals (thread-safe updates)
+    scan_progress = Signal(int, int, str)  # current, total, path
+    scan_status = Signal(str, int, int)    # message, current, total
+    scan_finished = Signal()
     
     def __init__(self, parent: Optional[QObject] = None, language_manager: Optional[LanguageManager] = None):
         """Initialize the main window.
@@ -43,6 +51,11 @@ class MainWindow(QMainWindow):
         
         # Initialize settings
         self.settings = AppSettings()
+        # Keep references to open viewers
+        self._open_viewers = []
+        # Scanner/thread refs
+        self._scanner = None
+        self._scan_thread = None
         
         # Initialize language manager
         self.language_manager = language_manager or LanguageManager(
@@ -76,17 +89,18 @@ class MainWindow(QMainWindow):
                     self.language_manager.tr("ui.status_scanning", "Scanning folder: %s") % folder_path
                 )
                 
-                # Here you would typically scan the folder for PDFs
-                # For now, we'll just show a message
-                QMessageBox.information(
-                    self,
-                    self.language_manager.tr("dialog.folder_selected", "Folder Selected"),
-                    self.language_manager.tr("dialog.selected_folder", "Selected folder: %s") % folder_path
-                )
+                # Start scanning in background thread
+                self._start_scan(folder_path)
                 
                 # Reset status bar after a delay
                 QTimer.singleShot(3000, lambda: self.status_bar.showMessage(
                     self.language_manager.tr("ui.status_ready", "Ready"))
+                )
+                
+                QMessageBox.information(
+                    self,
+                    self.language_manager.tr("dialog.folder_selected", "Folder Selected"),
+                    self.language_manager.tr("dialog.selected_folder", "Selected folder: %s") % folder_path
                 )
                 
         except Exception as e:
@@ -234,6 +248,13 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage(self.language_manager.tr("ui.status_ready", "Ready"))
+        # Progress bar in status bar (hidden by default)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(100)
+        self.status_bar.addPermanentWidget(self.progress_bar, 1)
         
         # Connect signals
         self.setup_connections()
@@ -246,6 +267,9 @@ class MainWindow(QMainWindow):
         # Connect file list selection change if the UI has a file list
         if hasattr(self.main_ui, 'file_list'):
             self.main_ui.file_list.itemSelectionChanged.connect(self.on_file_selection_changed)
+            # Open in viewer on double-click or Enter/Activation
+            self.main_ui.file_list.itemDoubleClicked.connect(self.on_open_selected_in_viewer)
+            self.main_ui.file_list.itemActivated.connect(self.on_open_selected_in_viewer)
             
         # Connect menu actions to toolbar
         if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):
@@ -253,7 +277,8 @@ class MainWindow(QMainWindow):
             toolbar_actions = {
                 'open_folder': self.menu_bar.actions.get('open_folder'),
                 'select_all': self.menu_bar.actions.get('select_all'),
-                'deselect_all': self.menu_bar.actions.get('deselect_all')
+                'deselect_all': self.menu_bar.actions.get('deselect_all'),
+                'delete_selected': self.menu_bar.actions.get('delete_selected')
             }
             # Add actions to toolbar
             self.toolbar.add_actions_from_menu(toolbar_actions)
@@ -261,6 +286,169 @@ class MainWindow(QMainWindow):
         # Connect other signals
         if hasattr(self, 'language_changed'):
             self.language_changed.connect(self.retranslate_ui)
+        # Scan signals
+        self.scan_progress.connect(self._on_scan_progress)
+        self.scan_status.connect(self._on_scan_status)
+        self.scan_finished.connect(self._on_scan_finished)
+
+    def _start_scan(self, folder_path: str):
+        """Start scanning the given folder in a background thread."""
+        try:
+            # If a scan is already running, ignore
+            if self._scan_thread and self._scan_thread.is_alive():
+                return
+            # Create scanner and wire callbacks
+            self._scanner = PDFScanner()
+            self._scanner.progress_callback = lambda current, total, path: self.scan_progress.emit(current, total, path or "")
+            self._scanner.status_callback = lambda message, current, total: self.scan_status.emit(str(message or ""), int(current or 0), int(total or 0))
+            # Optional: capture found duplicates as they appear (no UI hookup yet)
+            self._scanner.found_callback = lambda group: None
+            
+            # Prepare progress bar UI
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(True)
+                self.progress_bar.setMinimum(0)
+                self.progress_bar.setMaximum(0)  # Indeterminate until we know total
+                self.progress_bar.setFormat(self.language_manager.tr("ui.progress_scanning", "Scanning..."))
+            
+            # Run scan in a background thread
+            self._scan_thread = threading.Thread(target=self._scan_worker, args=(folder_path,), daemon=True)
+            self._scan_thread.start()
+        except Exception as e:
+            logger.error(f"Failed to start scan: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: %s") % str(e)
+            )
+
+    def _scan_worker(self, folder_path: str):
+        """Worker function executed in a background thread."""
+        try:
+            self._scanner.scan_directory(folder_path, recursive=True)
+        except Exception as e:
+            logger.error(f"Scan errored: {e}", exc_info=True)
+        finally:
+            # Notify UI that scanning finished
+            self.scan_finished.emit()
+
+    def _on_scan_progress(self, current: int, total: int, path: str):
+        """UI thread: update progress bar based on progress callback."""
+        try:
+            if not hasattr(self, 'progress_bar'):
+                return
+            # Switch to determinate once total known
+            if total and self.progress_bar.maximum() != total:
+                self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(max(0, int(current)))
+            base = os.path.basename(path) if path else ""
+            fmt = self.language_manager.tr("ui.progress_format", "%d/%d %s")
+            self.progress_bar.setFormat(fmt % (current, total, base))
+            # Keep status message informative
+            if base:
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.status_processing", "Processing: %s") % base
+                )
+        except Exception as e:
+            logger.debug(f"Progress update failed: {e}")
+
+    def _on_scan_status(self, message: str, current: int, total: int):
+        """UI thread: update status text and optionally bar range/value."""
+        try:
+            if hasattr(self, 'status_bar') and message:
+                self.status_bar.showMessage(str(message))
+            if hasattr(self, 'progress_bar') and total:
+                if self.progress_bar.maximum() != total:
+                    self.progress_bar.setMaximum(int(total))
+                self.progress_bar.setValue(int(current))
+        except Exception as e:
+            logger.debug(f"Status update failed: {e}")
+
+    def _on_scan_finished(self):
+        """UI thread: finalize progress UI when scan completes."""
+        try:
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setValue(self.progress_bar.maximum())
+                # Hide after short delay to let user see completion
+                QTimer.singleShot(800, lambda: self.progress_bar.setVisible(False))
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.status_scan_complete", "Scan complete")
+                )
+            # Populate file list with results
+            self._populate_file_list_from_scanner()
+        except Exception as e:
+            logger.debug(f"Finalize scan UI failed: {e}")
+
+    def _populate_file_list_from_scanner(self):
+        """Populate the UI file list with scanned PDF results."""
+        try:
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                return
+            if not hasattr(self, 'main_ui') or not hasattr(self.main_ui, 'file_list'):
+                return
+            lw = self.main_ui.file_list
+            lw.clear()
+
+            # Flatten results preserving insertion order by scan
+            items = []
+            seen_paths = set()
+            for docs in self._scanner.scan_results.values():
+                for doc in docs:
+                    path = getattr(doc, 'path', None) or getattr(doc, 'file_path', None)
+                    if not path or path in seen_paths:
+                        continue
+                    seen_paths.add(path)
+                    name = os.path.basename(path)
+                    item = QListWidgetItem(name)
+                    item.setData(Qt.ItemDataRole.UserRole, path)
+                    items.append(item)
+
+            # Sort alphabetically for user friendliness
+            items.sort(key=lambda it: it.text().lower())
+            for it in items:
+                lw.addItem(it)
+
+            # Update status message with count
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.files_loaded", "{count} files loaded").format(count=len(items))
+                )
+
+            # Reset preview placeholder
+            if hasattr(self.main_ui, 'clear_preview'):
+                self.main_ui.clear_preview()
+        except Exception as e:
+            logger.debug(f"Populate file list failed: {e}")
+
+    def on_open_selected_in_viewer(self, item=None):
+        """Open the selected file(s) in the built-in PDF viewer."""
+        try:
+            if not hasattr(self.main_ui, 'file_list'):
+                return
+            selected = self.main_ui.file_list.selectedItems()
+            if not selected and item is not None:
+                selected = [item]
+            if not selected:
+                return
+            import os
+            from PyQt6.QtCore import Qt as _Qt
+            for it in selected:
+                # Prefer file path stored in UserRole; fallback to text
+                path = it.data(_Qt.ItemDataRole.UserRole) or it.text()
+                if not path:
+                    continue
+                path = os.fspath(path)
+                if not os.path.isfile(path):
+                    logger.warning(f"Selected item is not a file: {path}")
+                    continue
+                if not path.lower().endswith('.pdf'):
+                    logger.warning(f"Selected item is not a PDF: {path}")
+                    continue
+                viewer = show_pdf_viewer(path, parent=self, language_manager=self.language_manager)
+                self._open_viewers.append(viewer)
+        except Exception as e:
+            logger.error(f"Error opening selected files in viewer: {e}", exc_info=True)
     
     def on_file_selection_changed(self):
         """Handle file selection changes."""
@@ -271,6 +459,15 @@ class MainWindow(QMainWindow):
         if selected_items:
             # Update preview based on selected item
             self.main_ui.update_preview(selected_items[0].data(Qt.ItemDataRole.UserRole))
+        # Enable/disable delete action based on selection
+        try:
+            if hasattr(self, 'menu_bar') and 'delete_selected' in self.menu_bar.actions:
+                self.menu_bar.actions['delete_selected'].setEnabled(bool(selected_items))
+            if hasattr(self, 'toolbar'):
+                # Toolbar uses same QAction instance; nothing else needed
+                pass
+        except Exception as e:
+            logger.debug(f"Could not update delete action enabled state: {e}")
     
     def retranslate_ui(self):
         """Retranslate all UI elements."""
@@ -287,13 +484,14 @@ class MainWindow(QMainWindow):
             toolbar_actions = {
                 'open_folder': self.menu_bar.actions.get('open_folder'),
                 'select_all': self.menu_bar.actions.get('select_all'),
-                'deselect_all': self.menu_bar.actions.get('deselect_all')
+                'deselect_all': self.menu_bar.actions.get('deselect_all'),
+                'delete_selected': self.menu_bar.actions.get('delete_selected')
             }
             # Re-add actions to toolbar to refresh their text
             self.toolbar.add_actions_from_menu(toolbar_actions)
         
         # Update status bar
-        if hasattr(self, 'status_bar'):
+        if hasattr(self, 'status_bar') and self.status_bar:
             self.status_bar.showMessage(
                 self.language_manager.tr("ui.status_ready", "Ready")
             )
@@ -359,6 +557,56 @@ class MainWindow(QMainWindow):
                 self,
                 self.tr("Error"),
                 self.tr(f"Failed to change language: {e}")
+            )
+
+    def on_delete_selected(self):
+        """Delete selected files by moving them to the Recycle Bin (send2trash)."""
+        try:
+            if not hasattr(self.main_ui, 'file_list'):
+                return
+            selected_items = self.main_ui.file_list.selectedItems()
+            if not selected_items:
+                QMessageBox.information(
+                    self,
+                    self.language_manager.tr("dialog.no_selection", "No Selection"),
+                    self.language_manager.tr("dialog.select_items_to_delete", "Please select one or more files to delete.")
+                )
+                return
+            # Collect file paths
+            paths = []
+            for it in selected_items:
+                path = it.data(Qt.ItemDataRole.UserRole)
+                if path and isinstance(path, (str, bytes)):
+                    paths.append(str(path))
+            if not paths:
+                return
+            # Perform deletion with confirmation using helper
+            from script.delete import delete_files
+            success, failed = delete_files(paths, parent=self, use_recycle_bin=True)
+            # Remove items from list for files that no longer exist
+            removed = 0
+            import os as _os
+            for it in list(selected_items):
+                path = it.data(Qt.ItemDataRole.UserRole)
+                path_str = str(path) if isinstance(path, (str, bytes)) else None
+                if path_str and not _os.path.exists(path_str):
+                    row = self.main_ui.file_list.row(it)
+                    self.main_ui.file_list.takeItem(row)
+                    removed += 1
+            # Optionally clean up extra spacers without flags around removed items (best-effort)
+            self.status_bar.showMessage(
+                self.language_manager.tr(
+                    "ui.status_deleted_summary",
+                    "Deleted: %d, Failed: %d"
+                ) % (success, failed),
+                4000
+            )
+        except Exception as e:
+            logger.error(f"Error deleting selected files: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.delete_failed", "Failed to delete selected files: %s") % str(e)
             )
     
     def on_language_changed(self, language_code: str = None):

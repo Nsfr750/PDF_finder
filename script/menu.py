@@ -104,6 +104,13 @@ class MenuBar(QObject):
         self.actions['pdf_viewer'].triggered.connect(self.on_show_pdf_viewer)
         menu.addAction(self.actions['pdf_viewer'])
         
+        # Export Results to CSV
+        self.actions['export_csv'] = QAction(self.tr("Export Results to CSV"), self.parent)
+        self.actions['export_csv'].setStatusTip(self.tr("Export last scan results to a CSV file"))
+        if hasattr(self.parent, 'on_export_csv'):
+            self.actions['export_csv'].triggered.connect(self.parent.on_export_csv)
+        menu.addAction(self.actions['export_csv'])
+        
         # Add separator
         menu.addSeparator()
         
@@ -136,6 +143,14 @@ class MenuBar(QObject):
         self.actions['deselect_all'].setStatusTip(self.tr("Deselect all items"))
         self.actions['deselect_all'].triggered.connect(self.parent.on_deselect_all)
         menu.addAction(self.actions['deselect_all'])
+
+        # Delete Selected (to Recycle Bin) action
+        self.actions['delete_selected'] = QAction(self.tr("Delete Selected"), self.parent)
+        self.actions['delete_selected'].setShortcut("Del")
+        self.actions['delete_selected'].setStatusTip(self.tr("Move selected files to Recycle Bin"))
+        if hasattr(self.parent, 'on_delete_selected'):
+            self.actions['delete_selected'].triggered.connect(self.parent.on_delete_selected)
+        menu.addAction(self.actions['delete_selected'])
         
         return menu
     
@@ -358,23 +373,6 @@ class MenuBar(QObject):
             self.actions['deselect_all'].setText(self.tr("Deselect All"))
             self.actions['deselect_all'].setStatusTip(self.tr("Deselect all items"))
             
-            # Update view menu actions
-            self.actions['toggle_toolbar'].setText(self.tr("Show Toolbar"))
-            self.actions['toggle_toolbar'].setStatusTip(self.tr("Show or hide the toolbar"))
-            self.actions['toggle_statusbar'].setText(self.tr("Show Status Bar"))
-            self.actions['toggle_statusbar'].setStatusTip(self.tr("Show or hide the status bar"))
-            
-            # Update tools menu actions
-            self.actions['settings'].setText(self.tr("Settings"))
-            self.actions['settings'].setStatusTip(self.tr("Configure application settings"))
-            self.actions['check_updates'].setText(self.tr("Check for Updates"))
-            self.actions['check_updates'].setStatusTip(self.tr("Check for application updates"))
-            
-            # Update help menu actions
-            self.actions['help'].setText(self.tr("Help"))
-            self.actions['help'].setStatusTip(self.tr("Open help documentation"))
-            self.actions['documentation'].setText(self.tr("Documentation"))
-            self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
             self.actions['about'].setText(self.tr("About"))
             self.actions['about'].setStatusTip(self.tr("Show information about the application"))
             self.actions['sponsor'].setText(self.tr("Sponsor"))

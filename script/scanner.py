@@ -152,7 +152,16 @@ class PDFScanner:
             return None
             
         try:
-            return PDFDocument(file_path)
+            # Pass a lightweight progress callback so lower layers can surface
+            # user-facing status (e.g., PDF backend fallback warnings)
+            def _progress(msg: str):
+                try:
+                    if self.status_callback and isinstance(msg, str) and msg:
+                        # current/total best-effort; not altering scan counters here
+                        self.status_callback(msg, self.scanned_files, self.total_files)
+                except Exception:
+                    pass
+            return PDFDocument(file_path, progress_callback=_progress)
         except Exception as e:
             error_msg = self.tr("scanner.load_error", "Error loading PDF {file}: {error}").format(
                 file=file_path, error=str(e))

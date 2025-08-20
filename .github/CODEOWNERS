@@ -4,8 +4,14 @@
 # Default owner for the entire repository
 *       @Nsfr750
 
-# Specific file patterns can be assigned to specific owners
-# For example:
-# /docs/    @Nsfr750 @doc-team
-# /tests/   @Nsfr750 @test-team
-# /script/  @Nsfr750 @dev-team
+# Specific ownership
+/docs/      @Nsfr750
+/tests/     @Nsfr750
+/script/    @Nsfr750
+/lang/      @Nsfr750
+/config/    @Nsfr750
+/assets/    @Nsfr750
+/README.md  @Nsfr750
+/CHANGELOG.md @Nsfr750
+/CONTRIBUTING.md @Nsfr750
+/PREREQUISITES.md @Nsfr750

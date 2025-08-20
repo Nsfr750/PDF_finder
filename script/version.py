@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (2, 8, 0)
+VERSION = (2, 9, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
@@ -17,7 +17,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-08-17"
+__date__ = "2025-08-20"
 
 # Version description
 __description__ = "A tool to find and manage duplicate PDF files on your computer."
@@ -33,6 +33,13 @@ __requires__ = [
 
 # Changelog
 __changelog__ = """
+## [2.9.0] - 2025-08-20
+### Added
+- Export scan results to CSV from Tools menu
+
+### Fixed
+- Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors
+
 ## [2.8.0] - 2025-08-17
 ### Added
 - Added tqdm progress bar for better user feedback during file processing
@@ -74,6 +81,14 @@ def get_version_info():
 def get_version_history():
     """Return the version history."""
     return [
+        {
+            "version": "2.9.0",
+            "date": "2025-08-20",
+            "changes": [
+                "Export scan results to CSV from Tools menu",
+                "Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors"
+            ]
+        },
         {
             "version": "2.7.3",
             "date": "2025-07-09",

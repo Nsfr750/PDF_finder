@@ -320,14 +320,14 @@ class PDFViewer(QMainWindow):
             # Render the page to a pixmap
             pix = page.get_pixmap(matrix=zoom_matrix, alpha=False)
             
-            # Convert to QImage
-            img = QImage(
-                pix.samples, 
-                pix.width, 
-                pix.height, 
-                pix.stride, 
-                QImage.Format.Format_RGB888
-            )
+            # Copy buffer to ensure lifetime is not tied to local pix
+            buf = bytes(pix.samples)
+            fmt = QImage.Format.Format_RGBA8888 if pix.alpha else QImage.Format.Format_RGB888
+            img = QImage(buf, pix.width, pix.height, pix.stride, fmt)
+            # Detach to own memory to prevent referencing freed buffer
+            img = img.copy()
+            # Keep a reference to buffer to avoid GC before copy (paranoia for some Qt builds)
+            self._last_img_buf = buf
             
             # Convert to QPixmap and set it
             self.page_widget.setPixmap(QPixmap.fromImage(img))

@@ -70,6 +70,93 @@ class SettingsDialog(QDialog):
             import traceback
             traceback.print_exc()
             raise
+
+    def _set_status(self, label: QLabel, ok: bool, message: str):
+        """Set a colored status message on a QLabel."""
+        try:
+            label.setText(message)
+            color = "#2e7d32" if ok else "#c62828"
+            label.setStyleSheet(f"color: {color};")
+        except Exception:
+            pass
+
+    def test_backends(self, inline_only: bool = False):
+        """Validate availability of configured PDF rendering backends.
+
+        Args:
+            inline_only: If True, only update inline labels without showing a dialog.
+        """
+        logger.debug("Testing PDF backends availability")
+        results = []
+
+        # Read paths from widgets (not from persisted settings)
+        poppler_path = (self.poppler_path_edit.text() or "").strip()
+        gs_path = (self.ghostscript_path_edit.text() or "").strip()
+
+        # Check PyMuPDF
+        pymupdf_ok = False
+        try:
+            import importlib
+            importlib.import_module('fitz')
+            pymupdf_ok = True
+        except Exception as e:
+            results.append(("PyMuPDF", False, str(e)))
+        self._set_status(self.status_pymupdf, pymupdf_ok, self.tr("settings_dialog.backend_ok", "OK") if pymupdf_ok else self.tr("settings_dialog.backend_missing", "Missing"))
+        if pymupdf_ok:
+            results.append(("PyMuPDF", True, "OK"))
+
+        # Check pdf2image / Poppler
+        poppler_ok = False
+        try:
+            import importlib, os
+            importlib.import_module('pdf2image')
+            # Validate poppler path contains pdftoppm executable (Windows)
+            if poppler_path:
+                # Accept either .../bin or root containing bin
+                candidate_bins = [poppler_path, os.path.join(poppler_path, 'bin')]
+                exe_names = ['pdftoppm.exe', 'pdftoppm']
+                for c in candidate_bins:
+                    if os.path.isdir(c) and any(os.path.exists(os.path.join(c, ex)) for ex in exe_names):
+                        poppler_ok = True
+                        break
+        except Exception as e:
+            results.append(("pdf2image/Poppler", False, str(e)))
+        self._set_status(self.status_poppler, poppler_ok, self.tr("settings_dialog.backend_ok", "OK") if poppler_ok else self.tr("settings_dialog.backend_missing", "Missing or invalid path"))
+        if poppler_ok:
+            results.append(("pdf2image/Poppler", True, "OK"))
+
+        # Check Wand / Ghostscript
+        wand_ok = False
+        try:
+            import importlib, os
+            importlib.import_module('wand.image')
+            if gs_path and os.path.isfile(gs_path):
+                wand_ok = True
+        except Exception as e:
+            results.append(("Wand/Ghostscript", False, str(e)))
+        self._set_status(self.status_wand, wand_ok, self.tr("settings_dialog.backend_ok", "OK") if wand_ok else self.tr("settings_dialog.backend_missing", "Missing or invalid path"))
+        if wand_ok:
+            results.append(("Wand/Ghostscript", True, "OK"))
+
+        if inline_only:
+            return
+
+        # Compose message
+        lines = []
+        for name, ok, detail in results:
+            status = self.tr("settings_dialog.backend_ok", "OK") if ok else self.tr("settings_dialog.backend_missing", "Missing")
+            lines.append(f"{name}: {status}")
+        msg = "\n".join(lines) if lines else self.tr("settings_dialog.no_backends_tested", "No backends tested")
+
+        # Show dialog
+        try:
+            QMessageBox.information(
+                self,
+                self.tr("settings_dialog.test_results_title", "Backend Test Results"),
+                msg
+            )
+        except Exception:
+            pass
     
     def setup_ui(self):
         """Set up the user interface."""
@@ -166,10 +253,65 @@ class SettingsDialog(QDialog):
             app_layout.addRow(self.auto_save)
             
             app_group.setLayout(app_layout)
-            
+
             # Add groups to layout
             layout.addWidget(appearance_group)
             layout.addWidget(app_group)
+
+            # PDF rendering backend group
+            pdf_group = QGroupBox(self.tr("settings_dialog.pdf", "PDF Rendering"))
+            pdf_layout = QFormLayout()
+
+            # Backend selection
+            self.backend_combo = QComboBox()
+            self.backend_combo.addItem(self.tr("settings_dialog.backend_auto", "Auto (recommended)"), "auto")
+            self.backend_combo.addItem("PyMuPDF", "pymupdf")
+            self.backend_combo.addItem("pdf2image / Poppler", "pdf2image_poppler")
+            self.backend_combo.addItem("Wand / Ghostscript", "wand_ghostscript")
+            pdf_layout.addRow(QLabel(self.tr("settings_dialog.backend", "Backend:")), self.backend_combo)
+
+            # Poppler path (Windows)
+            poppler_row = QHBoxLayout()
+            self.poppler_path_edit = QLineEdit()
+            self.poppler_browse_btn = QPushButton(self.tr("settings_dialog.browse", "Browse"))
+            def _browse_poppler():
+                d = QFileDialog.getExistingDirectory(self, self.tr("settings_dialog.select_poppler", "Select Poppler bin folder"))
+                if d:
+                    self.poppler_path_edit.setText(d)
+            self.poppler_browse_btn.clicked.connect(_browse_poppler)
+            poppler_row.addWidget(self.poppler_path_edit)
+            poppler_row.addWidget(self.poppler_browse_btn)
+            pdf_layout.addRow(QLabel(self.tr("settings_dialog.poppler_path", "Poppler path:")), poppler_row)
+
+            # Ghostscript path
+            gs_row = QHBoxLayout()
+            self.ghostscript_path_edit = QLineEdit()
+            self.ghostscript_browse_btn = QPushButton(self.tr("settings_dialog.browse", "Browse"))
+            def _browse_gs():
+                f, _ = QFileDialog.getOpenFileName(self, self.tr("settings_dialog.select_gs", "Select Ghostscript executable"))
+                if f:
+                    self.ghostscript_path_edit.setText(f)
+            self.ghostscript_browse_btn.clicked.connect(_browse_gs)
+            gs_row.addWidget(self.ghostscript_path_edit)
+            gs_row.addWidget(self.ghostscript_browse_btn)
+            pdf_layout.addRow(QLabel(self.tr("settings_dialog.ghostscript_path", "Ghostscript path:")), gs_row)
+
+            # Inline status labels for backends
+            self.status_pymupdf = QLabel("")
+            self.status_poppler = QLabel("")
+            self.status_wand = QLabel("")
+            pdf_layout.addRow(QLabel(self.tr("settings_dialog.backend_status", "Backend status:")))
+            pdf_layout.addRow(QLabel("PyMuPDF:"), self.status_pymupdf)
+            pdf_layout.addRow(QLabel("pdf2image / Poppler:"), self.status_poppler)
+            pdf_layout.addRow(QLabel("Wand / Ghostscript:"), self.status_wand)
+
+            # Test backends button
+            self.test_backends_btn = QPushButton(self.tr("settings_dialog.test_backends", "Test backends"))
+            self.test_backends_btn.clicked.connect(self.test_backends)
+            pdf_layout.addRow(self.test_backends_btn)
+
+            pdf_group.setLayout(pdf_layout)
+            layout.addWidget(pdf_group)
             layout.addStretch()
             
             logger.debug("General tab setup complete")
@@ -200,6 +342,19 @@ class SettingsDialog(QDialog):
             self.check_updates.setChecked(settings.get('app.check_updates', True))
             self.auto_save.setChecked(settings.get('app.auto_save', True))
             
+            # Load PDF backend settings
+            current_backend = settings.get('pdf.backend', 'auto')
+            idx = self.backend_combo.findData(current_backend)
+            if idx >= 0:
+                self.backend_combo.setCurrentIndex(idx)
+            self.poppler_path_edit.setText(settings.get('pdf.poppler_path', '') or '')
+            self.ghostscript_path_edit.setText(settings.get('pdf.ghostscript_path', '') or '')
+            # Pre-fill backend status on load (best-effort, non-blocking)
+            try:
+                self.test_backends(inline_only=True)
+            except Exception:
+                pass
+            
             logger.debug("Settings loaded")
             
         except Exception as e:
@@ -224,6 +379,11 @@ class SettingsDialog(QDialog):
             # Save other settings
             settings.set('app.check_updates', self.check_updates.isChecked())
             settings.set('app.auto_save', self.auto_save.isChecked())
+            
+            # Save PDF backend settings
+            settings.set('pdf.backend', self.backend_combo.currentData())
+            settings.set('pdf.poppler_path', self.poppler_path_edit.text().strip())
+            settings.set('pdf.ghostscript_path', self.ghostscript_path_edit.text().strip())
             
             # Emit signal that settings have changed
             self.settings_changed.emit()

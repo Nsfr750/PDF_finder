@@ -36,13 +36,13 @@ from PyQt6.QtCore import (
 )
 
 from datetime import datetime
+import csv
 
 # Import our custom modules
 from script.main_window import MainWindow
 from script.settings import AppSettings
 from script.lang_mgr import LanguageManager
 from script.logger import get_logger
-from script.pdf_utils import find_duplicates
 from script.settings_dialog import SettingsDialog
 
 # Set up logger
@@ -73,6 +73,8 @@ class PDFDuplicateFinder(MainWindow):
         
         # Show the window
         self.show()
+        # Storage for last scan results
+        self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
     
     def on_show_settings(self):
         """Override to ensure the settings dialog is shown correctly."""
@@ -153,16 +155,9 @@ class PDFDuplicateFinder(MainWindow):
         super().closeEvent(event)
 
     def on_open_folder(self):
-        """Handle the 'Open Folder' action."""
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            self.tr("Select Folder to Scan"),
-            "",
-            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
-        )
-        
-        if folder:
-            self.scan_folder(folder)
+        """Use MainWindow's scanning flow (status-bar progress bar)."""
+        # Delegate to base class which starts PDFScanner and updates the status-bar QProgressBar
+        return super().on_open_folder()
     
     def on_toggle_toolbar(self, checked: bool):
         """Show or hide the toolbar.
@@ -289,6 +284,8 @@ class PDFDuplicateFinder(MainWindow):
                 threshold=0.80,
                 progress_callback=progress_callback
             )
+            # Save for export
+            self.last_scan_duplicates = duplicates or []
             
             # Check if operation was cancelled
             if cancelled[0]:
@@ -331,7 +328,13 @@ class PDFDuplicateFinder(MainWindow):
                             file_size = file_info.get('size', 0)
                             size_kb = file_size / 1024.0
                             file_item.setText(f"  • {file_name} ({size_kb:.1f} KB)")
-                            file_item.setData(Qt.ItemDataRole.UserRole, file_info)
+                            # Store path for activation/double-click handlers
+                            file_item.setData(Qt.ItemDataRole.UserRole, file_info.get('path'))
+                            # Store full info in another role for future features
+                            try:
+                                file_item.setData(Qt.ItemDataRole.UserRole + 1, file_info)
+                            except Exception:
+                                pass
                             self.main_ui.file_list.addItem(file_item)
                     
                     # Add a small space between groups
@@ -349,6 +352,8 @@ class PDFDuplicateFinder(MainWindow):
                 msg = self.tr("No duplicate files found")
                 self.main_ui.status_bar.showMessage(msg)
                 progress.setLabelText(msg)
+                # Save empty results for export clarity
+                self.last_scan_duplicates = []
                 
                 # Add a message to the file list
                 no_duplicates_item = QListWidgetItem(self.tr("No duplicate files found in the selected folder."))
@@ -376,6 +381,54 @@ class PDFDuplicateFinder(MainWindow):
             # Make sure to close the progress dialog if it's still open
             if progress.isVisible():
                 progress.close()
+
+    def on_export_csv(self):
+        """Export the latest scan results to a CSV file."""
+        try:
+            results = getattr(self, 'last_scan_duplicates', [])
+            if not results:
+                QMessageBox.information(
+                    self,
+                    self.tr("Export CSV"),
+                    self.tr("No results to export. Please run a scan first.")
+                )
+                return
+            # Ask for destination file
+            dest_path, _ = QFileDialog.getSaveFileName(
+                self,
+                self.tr("Save Scan Results as CSV"),
+                "duplicates.csv",
+                self.tr("CSV Files (*.csv)")
+            )
+            if not dest_path:
+                return
+            # Write CSV
+            with open(dest_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(["group", "path", "filename", "size_bytes", "size_kb", "modified_epoch", "md5"]) 
+                for group_idx, group in enumerate(results, start=1):
+                    for info in group or []:
+                        if not isinstance(info, dict):
+                            continue
+                        path = info.get('path', '')
+                        filename = info.get('filename', os.path.basename(path))
+                        size = int(info.get('size', 0) or 0)
+                        size_kb = f"{size/1024:.1f}"
+                        modified = info.get('modified', 0)
+                        md5 = info.get('md5', '')
+                        writer.writerow([group_idx, path, filename, size, size_kb, modified, md5])
+            QMessageBox.information(
+                self,
+                self.tr("Export CSV"),
+                self.tr("Export completed: %s") % dest_path
+            )
+        except Exception as e:
+            logger.error(f"Error exporting CSV: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to export CSV: %s") % str(e)
+            )
     
 def main():
     """Main entry point for the application."""
