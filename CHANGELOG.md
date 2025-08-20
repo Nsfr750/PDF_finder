@@ -5,37 +5,71 @@ All notable changes to PDF Duplicate Finder will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.9.0] - 2025-08-20
+
+### Added
+
+- Settings dialog: Pre-flight backend checks with inline status labels
+- Settings dialog: "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript
+- UI: File list automatically populates with scanned PDFs on scan completion
+- Internationalization: Localized status-bar warning when selected backend fails and app falls back
+- Export scan results to CSV from Tools menu
+- Added settings to toggle permanent delete
+- Added settings to toggle recycle bin
+- Added settings to toggle language
+- Added settings to toggle dark mode
+- Added settings to toggle file info
+
+### Changed
+
+- Toolbar visual improvements: spacing, padding, right-aligned help actions, consistent stylesheet
+
+### Fixed
+
+- Propagated backend fallback messages from PDF processing to the UI status bar
+- Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors
+- fixed language manager
+- fixed delete selected files
+- fixed toggle permanent delete
+- fixed progress bar appearance
 
 ## [2.8.0] - 2025-08-17
-### Added
+
+### Added (2.8.0)
+
 - Added tqdm progress bar for better user feedback during file processing
 - Enhanced logging with more detailed progress information
 
-### Changed
+### Changed (2.8.0)
+
 - Updated dependencies in requirements.txt
 - Improved error handling for file operations
 
-### Fixed
+### Fixed (2.8.0)
+
 - Fixed module import error by adding tqdm to requirements
 - Improved error handling for missing dependencies
 
 ## [2.7.3] - 2025-07-09
-### Added
+
+### Added (2.7.3)
+
 - Migrated from PySide6 to PyQt6 for better compatibility and performance
 - Added utility functions for consistent file path handling
 - Improved error handling and logging
 - Added more detailed error messages for file operations
 - Added better handling of files in use by other applications
 
-### Changed
+### Changed (2.7.3)
+
 - Updated all UI components to use PyQt6 APIs
 - Refactored file info handling to be more robust
 - Updated dependencies to latest stable versions
 - Improved file deletion with better error handling
 - Enhanced recycle bin fallback mechanism
 
-### Fixed
+### Fixed (2.7.3)
+
 - Fixed QPainter warnings and rendering issues
 - Resolved file path handling inconsistencies
 - Fixed log viewer filtering
@@ -44,13 +78,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.7.2] - 2025-07-09
 
-### Added in 2.7.2
+### Added in v2.7.2
 
 - Enhanced error handling for file operations
 - Improved logging for better debugging
 - Added more detailed progress feedback during scans
 
-### Fixed in 2.7.2
+### Fixed in v2.7.2
 
 - Fixed memory leaks in PDF processing
 - Resolved issues with special characters in file paths
@@ -131,8 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simple preview functionality
 - Light/dark theme support
 
-[Unreleased]: https://github.com/Nsfr750/PDF_finder/compare/v1.3.0...HEAD
-[1.3.0]: https://github.com/Nsfr750/PDF_finder/compare/v2.7.2...v1.3.0
+[2.8.0]: https://github.com/Nsfr750/PDF_finder/compare/v2.9.0...HEAD
 [2.7.2]: https://github.com/Nsfr750/PDF_finder/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/Nsfr750/PDF_finder/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/Nsfr750/PDF_finder/releases/tag/v2.7.0

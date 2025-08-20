@@ -276,20 +276,20 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # Documentation action
-        self.actions['documentation'] = QAction(self.tr("Documentation"), self.parent) 
-        self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
-        self.actions['documentation'].triggered.connect(self.on_show_documentation)
-        menu.addAction(self.actions['documentation'])
-        
-        # Add separator
-        menu.addSeparator()
-        
         # About action
         self.actions['about'] = QAction(self.tr("About"), self.parent)
         self.actions['about'].setStatusTip(self.tr("Show information about the application"))
         self.actions['about'].triggered.connect(self.parent.on_show_about)
         menu.addAction(self.actions['about'])
+        
+        # Add separator
+        menu.addSeparator()
+
+        # Documentation action
+        self.actions['documentation'] = QAction(self.tr("Documentation"), self.parent) 
+        self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
+        self.actions['documentation'].triggered.connect(self.on_show_documentation)
+        menu.addAction(self.actions['documentation'])
         
         # Add separator
         menu.addSeparator()

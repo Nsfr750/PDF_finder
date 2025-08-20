@@ -13,10 +13,5 @@
   },
   "application": {
     "language": "it"
-  },
-  "pdf": {
-    "backend": "wand_ghostscript",
-    "poppler_path": "C:/Program Files/poppler-25.07.0/Library/bin",
-    "ghostscript_path": ""
   }
 }

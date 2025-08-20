@@ -28,32 +28,41 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.8 or higher
 - pip (Python package manager)
 - Git
 
 ### Setting Up the Development Environment
 
 1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
+1. **Clone your fork** locally:
+
    ```bash
    git clone https://github.com/Nsfr750/PDF_finder.git
    cd PDF_finder
    ```
-3. **Set up a virtual environment** (recommended):
+
+1. **Set up a virtual environment** (recommended):
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
    ```
-4. **Install dependencies**:
+
+1. **Install dependencies**:
+
    ```bash
    pip install -r requirements.txt
    ```
-5. **Install development dependencies**:
+
+1. (Optional) **Install development tools**:
+
    ```bash
-   pip install -r requirements-dev.txt
+   pip install black flake8 mypy pytest pytest-cov
    ```
-6. **Set up pre-commit hooks** (optional but recommended):
+
+1. **Set up pre-commit hooks** (optional but recommended):
+
    ```bash
    pre-commit install
    ```
@@ -61,47 +70,54 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ## Making Changes
 
 1. **Create a new branch** for your changes:
+
    ```bash
    git checkout -b feature/your-feature-name
    # or
    git checkout -b fix/issue-number-description
    ```
 
-2. **Make your changes** following the coding standards below.
+1. **Make your changes** following the coding standards below.
+1. **Test your changes** (see [Testing](#testing)).
+1. **Commit your changes** following the [commit message guidelines](#commit-message-guidelines).
+1. **Push your changes** to your fork:
 
-3. **Test your changes** (see [Testing](#testing)).
-
-4. **Commit your changes** following the [commit message guidelines](#commit-message-guidelines).
-
-5. **Push your changes** to your fork:
    ```bash
    git push origin your-branch-name
    ```
 
-6. **Open a Pull Request** from your fork to the main repository.
+1. **Open a Pull Request** from your fork to the main repository.
 
 ### Coding Standards
 
-- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide.
-- Use **black** for code formatting:
-  ```bash
-  black .
-  ```
-- Use **flake8** for linting:
-  ```bash
-  flake8 .
-  ```
-- Use **mypy** for type checking:
-  ```bash
-  mypy .
-  ```
-- Keep lines under 100 characters.
-- Use docstrings for all public modules, functions, classes, and methods following [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+1. Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide.
+
+1. Use **black** for code formatting:
+
+   ```bash
+   black .
+   ```
+
+1. Use **flake8** for linting:
+
+   ```bash
+   flake8 .
+   ```
+
+1. Use **mypy** for type checking:
+
+   ```bash
+   mypy .
+   ```
+
+1. Keep lines under 100 characters.
+1. Use docstrings for all public modules, functions, classes, and methods following [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
 
 ### Type Hints
 
-- Use Python type hints for all function signatures and variables where the type is not obvious.
-- Run mypy to check type consistency:
+1. Use Python type hints for all function signatures and variables where the type is not obvious.
+1. Run mypy to check type consistency:
+
   ```bash
   mypy .
   ```
@@ -116,16 +132,19 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ## Testing
 
 1. **Run the tests**:
+
    ```bash
    pytest
    ```
 
-2. **Generate a coverage report**:
+1. **Generate a coverage report**:
+
    ```bash
    pytest --cov=.
    ```
 
-3. **Run UI tests** (if applicable):
+1. **Run UI tests** (if applicable):
+
    ```bash
    # Add UI test commands here
    ```
@@ -136,14 +155,14 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 1. Ensure any install or build dependencies are removed before the end of the layer when doing a build.
 2. Update the README.md with details of changes to the interface, this includes new environment variables, exposed ports, useful file locations, and container parameters.
-3. Increase the version number in any examples files and the README.md to the new version that this Pull Request would represent. The versioning scheme we use is [SemVer](http://semver.org/).
+3. Update the version in `script/version.py` following [SemVer](http://semver.org/). Update README.md/examples as needed.
 4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you do not have permission to do that, you may request the second reviewer to merge it for you.
 
 ### Commit Message Guidelines
 
 We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages:
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -152,6 +171,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 ```
 
 **Types**:
+
 - `feat`: A new feature
 - `fix`: A bug fix
 - `docs`: Documentation only changes
@@ -161,8 +181,9 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 - `test`: Adding missing tests or correcting existing tests
 - `chore`: Changes to the build process or auxiliary tools and libraries
 
-**Example**:
-```
+### Example Commit Message
+
+```text
 feat: add dark mode support
 
 Add a new dark theme option that can be toggled in the settings menu.
@@ -194,4 +215,12 @@ We welcome feature requests! Please open an issue with:
 
 ## License
 
-By contributing to PDF Duplicate Finder, you agree that your contributions will be licensed under its [MIT License](LICENSE).
+By contributing to PDF Duplicate Finder, you agree that your contributions will be licensed under its [GPLv3 License](LICENSE).
+
+---
+
+Note: When changing PDF backend logic or settings, ensure documentation is updated:
+
+- README: PDF Backends and Fallback section
+- PREREQUISITES.md: Poppler/Ghostscript install instructions
+- Add/update tests in `tests/` accordingly
