@@ -67,6 +67,16 @@ class ProgressTracker:
             'total': self.total_steps
         }
 
+def get_pdf_backend_name(backend_func) -> str:
+    """Get the name of the PDF backend function."""
+    if backend_func.__name__ == 'try_pymupdf':
+        return 'PyMuPDF'
+    elif backend_func.__name__ == 'try_pdf2image':
+        return 'Poppler (via pdf2image)'
+    elif backend_func.__name__ == 'try_wand':
+        return 'Ghostscript (via Wand)'
+    return 'Unknown'
+
 def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) -> Optional['WandImageType']:
     """Extract the first page of a PDF as an image honoring the configured backend.
 
@@ -110,8 +120,9 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
                     size_str = f", size={file_size/1024:.1f} KB" if isinstance(file_size, (int, float)) else ""
                     logger.warning(f"PDF has zero pages, skipping: {pdf_path} (pdf_version={pdf_version}{size_str})")
                     return None
+                backend_name = get_pdf_backend_name(try_pymupdf)
                 if progress_callback:
-                    progress_callback("Extracting page with PyMuPDF...")
+                    progress_callback(f"Extracting page with {backend_name}...")
                 page = doc.load_page(0)
                 try:
                     has_text = bool(page.get_text().strip()) or len(page.get_text("blocks")) > 0
@@ -129,8 +140,9 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
         def try_pdf2image() -> Optional['WandImageType']:
             if not PDF2IMAGE_AVAILABLE:
                 return None
+            backend_name = get_pdf_backend_name(try_pdf2image)
             if progress_callback:
-                progress_callback("Extracting page with pdf2image/Poppler...")
+                progress_callback(f"Extracting page with {backend_name}...")
             poppler_path = os.environ.get('POPPLER_PATH')
             kwargs = {
                 'first_page': 1,
@@ -151,8 +163,9 @@ def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) ->
             return None
 
         def try_wand() -> Optional['WandImageType']:
+            backend_name = get_pdf_backend_name(try_wand)
             if progress_callback:
-                progress_callback("Extracting page with Wand/Ghostscript...")
+                progress_callback(f"Extracting page with {backend_name}...")
             with WandImage(filename=f"{pdf_path}[0]", resolution=150) as img:
                 return img.clone()
 

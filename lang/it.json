@@ -40,7 +40,13 @@
             "restart_required": "Riavvio necessario",
             "restart_message": "L'applicazione deve essere riavviata affinché le modifiche della lingua abbiano effetto.\nVuoi riavviare ora?",
             "language_changed": "Lingua cambiata con successo",
-            "language_change_failed": "Impossibile cambiare lingua"
+            "language_change_failed": "Impossibile cambiare lingua",
+            "backend_ok": "OK",
+            "backend_missing": "Mancante o percorso non valido",
+            "no_backends_tested": "Nessun backend testato",
+            "test_results_title": "Risultati test backend",
+            "backend_status": "Stato backend:",
+            "test_backends": "Testa backend"
         },
         "file": {
             "open": "&Apri cartella...",
@@ -255,6 +261,7 @@
         "scanner": {
             "status": {
                 "scanning": "Analisi dei file PDF in corso...",
+                "using_backend": "In uso backend: {}",
                 "finding_duplicates": "Ricerca di duplicati...",
                 "complete": "Scansione completata!",
                 "cancelled": "Scansione annullata",

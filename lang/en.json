@@ -41,7 +41,13 @@
             "restart_required": "Restart Required",
             "restart_message": "The application needs to be restarted for language changes to take effect.\nDo you want to restart now?",
             "language_changed": "Language changed successfully",
-            "language_change_failed": "Failed to change language"
+            "language_change_failed": "Failed to change language",
+            "backend_ok": "OK",
+            "backend_missing": "Missing or invalid path",
+            "no_backends_tested": "No backends tested",
+            "test_results_title": "Backend Test Results",
+            "backend_status": "Backend status:",
+            "test_backends": "Test backends"
         },
         "file": {
             "open": "&Open Folder...",
@@ -365,6 +371,7 @@
         "scanner": {
             "status": {
                 "scanning": "Scanning PDF files...",
+                "using_backend": "Using backend: {}",
                 "finding_duplicates": "Finding duplicates...",
                 "complete": "Scan complete!",
                 "cancelled": "Scan cancelled",

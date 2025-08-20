@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings dialog: "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript
 - UI: File list automatically populates with scanned PDFs on scan completion
 - Internationalization: Localized status-bar warning when selected backend fails and app falls back
+- Implemented image-based comparison for scanned PDFs
+- Implemented text diff for text-based PDFs
+- Implemented backend status display in the status bar
 - Export scan results to CSV from Tools menu
 - Added settings to toggle permanent delete
 - Added settings to toggle recycle bin
@@ -23,12 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Toolbar visual improvements: spacing, padding, right-aligned help actions, consistent stylesheet
+- Scanner.py: Added Callable to typing imports
 
 ### Fixed
 
 - Propagated backend fallback messages from PDF processing to the UI status bar
 - Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors
 - fixed language manager
+    - fixed en.json
+    - fixed it.json
 - fixed delete selected files
 - fixed toggle permanent delete
 - fixed progress bar appearance

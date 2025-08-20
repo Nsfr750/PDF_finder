@@ -231,7 +231,8 @@ class MainWindow(QMainWindow):
         
         # Create and set up the menu bar
         self.menu_bar = MenuBar(parent=self, language_manager=self.language_manager)
-        self.setMenuBar(self.menu_bar.menubar)
+        self.menubar = self.menu_bar.menubar  # Store the QMenuBar instance
+        self.setMenuBar(self.menubar)
         
         # Create and set up the toolbar
         self.toolbar = MainToolBar(self, self.language_manager)
@@ -355,14 +356,22 @@ class MainWindow(QMainWindow):
     def _on_scan_status(self, message: str, current: int, total: int):
         """UI thread: update status text and optionally bar range/value."""
         try:
-            if hasattr(self, 'status_bar') and message:
-                self.status_bar.showMessage(str(message))
+            if hasattr(self, 'status_bar'):
+                # Show the status message in the status bar
+                if message:
+                    self.status_bar.showMessage(str(message))
+                
+                # If we have a status label for backend info, update it when we detect backend messages
+                if hasattr(self, 'backend_status_label') and 'using backend' in str(message).lower():
+                    self.backend_status_label.setText(str(message).strip())
+                    
+            # Update progress bar if available
             if hasattr(self, 'progress_bar') and total:
                 if self.progress_bar.maximum() != total:
                     self.progress_bar.setMaximum(int(total))
                 self.progress_bar.setValue(int(current))
         except Exception as e:
-            logger.debug(f"Status update failed: {e}")
+            logger.debug(f"Status update failed: {e}", exc_info=True)
 
     def _on_scan_finished(self):
         """UI thread: finalize progress UI when scan completes."""
@@ -813,6 +822,11 @@ class MainWindow(QMainWindow):
             geometry = self.saveGeometry()
             state = self.saveState()
             
+            # Get current settings to preserve them
+            current_settings = {}
+            if hasattr(self, 'settings') and hasattr(self.settings, '_data'):
+                current_settings = self.settings._data.copy()
+            
             # Save using helper methods (convert QByteArray to bytes)
             if not geometry.isEmpty():
                 self.settings.set_window_geometry(bytes(geometry))
@@ -823,7 +837,11 @@ class MainWindow(QMainWindow):
             if hasattr(self, 'language_manager'):
                 self.settings.set_language(self.language_manager.get_current_language())
             
-            # Save settings to disk
+            # Restore PDF settings if they exist in current settings
+            if 'pdf' in current_settings:
+                self.settings._data['pdf'] = current_settings['pdf']
+            
+            # Save all settings to disk
             self.settings._save_settings()
             
         except Exception as e:

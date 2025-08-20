@@ -58,6 +58,14 @@ class MainUI(QWidget):
         
         # Create status bar
         self.status_bar = QStatusBar()
+        
+        # Add a permanent widget for backend status
+        self.backend_status_label = QLabel("")
+        self.backend_status_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.backend_status_label.setStyleSheet("color: #666666; font-style: italic; padding: 0 8px;")
+        self.status_bar.addPermanentWidget(self.backend_status_label)
+        
+        # Show initial status
         self.status_bar.showMessage(self.tr("ui.status_ready", "Ready"))
     
     def update_preview(self, file_path):
