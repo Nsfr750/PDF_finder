@@ -90,10 +90,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# PyCharm
-.idea/
-*.iml
-
 # VS Code
 .vscode/
 !.vscode/settings.json
@@ -118,8 +114,6 @@ $RECYCLE.BIN/
 /venv_new
 
 Compila.bat
-logs/pdf_finder.log
-logs/pdf_finder.log
 /main.dist
 /logs
 install-scripts/PDF_Finder Setup.txt
@@ -128,3 +122,5 @@ installer.nsi
 /PDF-TEST
 get-pip.py
 PDF.code-workspace
+PDF.code-workspace
+*.code-workspace

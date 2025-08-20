@@ -49,6 +49,10 @@ class MainWindow(QMainWindow):
         """
         super().__init__(parent)
         
+        # PDF comparison settings
+        self.comparison_threshold = 0.95  # Default similarity threshold (95%)
+        self.comparison_dpi = 200  # Default DPI for image comparison
+        
         # Initialize settings
         self.settings = AppSettings()
         # Keep references to open viewers
@@ -281,16 +285,6 @@ class MainWindow(QMainWindow):
                 'deselect_all': self.menu_bar.actions.get('deselect_all'),
                 'delete_selected': self.menu_bar.actions.get('delete_selected')
             }
-            # Add actions to toolbar
-            self.toolbar.add_actions_from_menu(toolbar_actions)
-            
-        # Connect other signals
-        if hasattr(self, 'language_changed'):
-            self.language_changed.connect(self.retranslate_ui)
-        # Scan signals
-        self.scan_progress.connect(self._on_scan_progress)
-        self.scan_status.connect(self._on_scan_status)
-        self.scan_finished.connect(self._on_scan_finished)
 
     def _start_scan(self, folder_path: str):
         """Start scanning the given folder in a background thread."""
@@ -299,12 +293,7 @@ class MainWindow(QMainWindow):
             if self._scan_thread and self._scan_thread.is_alive():
                 return
             # Create scanner and wire callbacks
-            self._scanner = PDFScanner()
-            self._scanner.progress_callback = lambda current, total, path: self.scan_progress.emit(current, total, path or "")
-            self._scanner.status_callback = lambda message, current, total: self.scan_status.emit(str(message or ""), int(current or 0), int(total or 0))
-            # Optional: capture found duplicates as they appear (no UI hookup yet)
-            self._scanner.found_callback = lambda group: None
-            
+            self._init_scanner()
             # Prepare progress bar UI
             if hasattr(self, 'progress_bar'):
                 self.progress_bar.setVisible(True)
@@ -322,72 +311,6 @@ class MainWindow(QMainWindow):
                 self.language_manager.tr("dialog.error", "Error"),
                 self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: %s") % str(e)
             )
-
-    def _scan_worker(self, folder_path: str):
-        """Worker function executed in a background thread."""
-        try:
-            self._scanner.scan_directory(folder_path, recursive=True)
-        except Exception as e:
-            logger.error(f"Scan errored: {e}", exc_info=True)
-        finally:
-            # Notify UI that scanning finished
-            self.scan_finished.emit()
-
-    def _on_scan_progress(self, current: int, total: int, path: str):
-        """UI thread: update progress bar based on progress callback."""
-        try:
-            if not hasattr(self, 'progress_bar'):
-                return
-            # Switch to determinate once total known
-            if total and self.progress_bar.maximum() != total:
-                self.progress_bar.setMaximum(total)
-            self.progress_bar.setValue(max(0, int(current)))
-            base = os.path.basename(path) if path else ""
-            fmt = self.language_manager.tr("ui.progress_format", "%d/%d %s")
-            self.progress_bar.setFormat(fmt % (current, total, base))
-            # Keep status message informative
-            if base:
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.status_processing", "Processing: %s") % base
-                )
-        except Exception as e:
-            logger.debug(f"Progress update failed: {e}")
-
-    def _on_scan_status(self, message: str, current: int, total: int):
-        """UI thread: update status text and optionally bar range/value."""
-        try:
-            if hasattr(self, 'status_bar'):
-                # Show the status message in the status bar
-                if message:
-                    self.status_bar.showMessage(str(message))
-                
-                # If we have a status label for backend info, update it when we detect backend messages
-                if hasattr(self, 'backend_status_label') and 'using backend' in str(message).lower():
-                    self.backend_status_label.setText(str(message).strip())
-                    
-            # Update progress bar if available
-            if hasattr(self, 'progress_bar') and total:
-                if self.progress_bar.maximum() != total:
-                    self.progress_bar.setMaximum(int(total))
-                self.progress_bar.setValue(int(current))
-        except Exception as e:
-            logger.debug(f"Status update failed: {e}", exc_info=True)
-
-    def _on_scan_finished(self):
-        """UI thread: finalize progress UI when scan completes."""
-        try:
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setValue(self.progress_bar.maximum())
-                # Hide after short delay to let user see completion
-                QTimer.singleShot(800, lambda: self.progress_bar.setVisible(False))
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.status_scan_complete", "Scan complete")
-                )
-            # Populate file list with results
-            self._populate_file_list_from_scanner()
-        except Exception as e:
-            logger.debug(f"Finalize scan UI failed: {e}")
 
     def _populate_file_list_from_scanner(self):
         """Populate the UI file list with scanned PDF results."""
@@ -430,417 +353,80 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.debug(f"Populate file list failed: {e}")
 
-    def on_open_selected_in_viewer(self, item=None):
-        """Open the selected file(s) in the built-in PDF viewer."""
-        try:
-            if not hasattr(self.main_ui, 'file_list'):
-                return
-            selected = self.main_ui.file_list.selectedItems()
-            if not selected and item is not None:
-                selected = [item]
-            if not selected:
-                return
-            import os
-            from PyQt6.QtCore import Qt as _Qt
-            for it in selected:
-                # Prefer file path stored in UserRole; fallback to text
-                path = it.data(_Qt.ItemDataRole.UserRole) or it.text()
-                if not path:
-                    continue
-                path = os.fspath(path)
-                if not os.path.isfile(path):
-                    logger.warning(f"Selected item is not a file: {path}")
-                    continue
-                if not path.lower().endswith('.pdf'):
-                    logger.warning(f"Selected item is not a PDF: {path}")
-                    continue
-                viewer = show_pdf_viewer(path, parent=self, language_manager=self.language_manager)
-                self._open_viewers.append(viewer)
-        except Exception as e:
-            logger.error(f"Error opening selected files in viewer: {e}", exc_info=True)
-    
-    def on_file_selection_changed(self):
-        """Handle file selection changes."""
-        if not hasattr(self.main_ui, 'file_list'):
+    def _update_duplicates_list(self) -> None:
+        """Update the duplicates list widget with the current duplicate groups."""
+        if not hasattr(self, 'duplicates_list'):
             return
             
-        selected_items = self.main_ui.file_list.selectedItems()
-        if selected_items:
-            # Update preview based on selected item
-            self.main_ui.update_preview(selected_items[0].data(Qt.ItemDataRole.UserRole))
-        # Enable/disable delete action based on selection
-        try:
-            if hasattr(self, 'menu_bar') and 'delete_selected' in self.menu_bar.actions:
-                self.menu_bar.actions['delete_selected'].setEnabled(bool(selected_items))
-            if hasattr(self, 'toolbar'):
-                # Toolbar uses same QAction instance; nothing else needed
-                pass
-        except Exception as e:
-            logger.debug(f"Could not update delete action enabled state: {e}")
-    
-    def retranslate_ui(self):
-        """Retranslate all UI elements."""
-        # Update window title
-        self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
+        self.duplicates_list.clear()
         
-        # Update menu bar
-        if hasattr(self, 'menu_bar'):
-            self.menu_bar.retranslate_ui()
-        
-        # Update toolbar by re-adding the menu actions
-        if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):
-            # Get menu actions that should be in the toolbar
-            toolbar_actions = {
-                'open_folder': self.menu_bar.actions.get('open_folder'),
-                'select_all': self.menu_bar.actions.get('select_all'),
-                'deselect_all': self.menu_bar.actions.get('deselect_all'),
-                'delete_selected': self.menu_bar.actions.get('delete_selected')
-            }
-            # Re-add actions to toolbar to refresh their text
-            self.toolbar.add_actions_from_menu(toolbar_actions)
-        
-        # Update status bar
-        if hasattr(self, 'status_bar') and self.status_bar:
-            self.status_bar.showMessage(
-                self.language_manager.tr("ui.status_ready", "Ready")
-            )
-        
-        # Update preview message if preview_widget exists and is valid
-        if hasattr(self.main_ui, 'preview_widget') and self.main_ui.preview_widget is not None:
-            if self.main_ui.preview_widget.text() == self.language_manager.tr("ui.preview_placeholder", "Preview will be shown here"):
-                self.main_ui.preview_widget.setText(
-                    self.language_manager.tr("ui.preview_placeholder", "Preview will be shown here")
-                )
-    
-    def change_language(self, language_code: str):
-        """Change the application language.
-        
-        Args:
-            language_code: The language code to change to (e.g., 'en', 'it')
-        """
-        logger.debug(f"Changing language to: {language_code}")
-        
-        try:
-            # Save the new language setting
-            self.settings.set('app.language', language_code)
+        for i, group in enumerate(self.duplicate_groups, 1):
+            # Create a group item
+            group_item = QListWidgetItem()
+            group_item.setData(Qt.ItemDataRole.UserRole, group)
             
-            # Change the language in the language manager
-            if hasattr(self, 'language_manager') and self.language_manager:
-                # This will trigger the on_language_changed signal
-                success = self.language_manager.set_language(language_code)
-                
-                if success:
-                    # Show a message to the user
-                    if hasattr(self, 'status_bar') and self.status_bar:
-                        self.status_bar.showMessage(
-                            self.language_manager.tr("settings_dialog.language_changed", 
-                                                  "Language changed successfully"),
-                            3000  # 3 seconds
-                        )
-                    logger.info(f"Language changed to: {language_code}")
-                else:
-                    logger.error(f"Failed to change language to: {language_code}")
-                    if hasattr(self, 'status_bar') and self.status_bar:
-                        self.status_bar.showMessage(
-                            self.language_manager.tr("settings_dialog.language_change_failed",
-                                                  "Failed to change language"),
-                            3000
-                        )
+            # Format the group header with enhanced information
+            group_type = group.get('type', 'unknown')
+            files_count = len(group['files'])
+            
+            # Create a more informative header
+            header_parts = [f"Group {i}: {files_count} "]
+            
+            # Add type-specific information
+            if group_type == 'content':
+                header_parts.append(self.tr("main.duplicate_content", "duplicate files (exact content match)"))
+            elif group_type == 'image':
+                header_parts.append(self.tr("main.duplicate_images", "similar files (image comparison)"))
+            elif group_type == 'searchable':
+                header_parts.append(self.tr("main.duplicate_text", "similar text documents"))
             else:
-                logger.warning("No language manager found")
+                header_parts.append(self.tr("main.duplicate_files", "similar files"))
+            
+            # Add comparison method if available
+            method = group.get('method', '')
+            if method:
+                method_display = {
+                    'content_hash': self.tr("main.method_content_hash", "content hash"),
+                    'image_hash': self.tr("main.method_image_hash", "image hash"),
+                    'direct_comparison': self.tr("main.method_direct", "direct comparison")
+                }.get(method, method)
+                header_parts.append(f" ({method_display})")
+            
+            # Add similarity if available
+            if 'similarity' in group:
+                similarity = group['similarity']
+                similarity_text = f" - {similarity*100:.1f}% {self.tr('main.similarity', 'similar')}"
                 
-        except Exception as e:
-            logger.error(f"Error changing language: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
-            
-            # Show error message to user
-            if hasattr(self, 'status_bar') and self.status_bar:
-                self.status_bar.showMessage(
-                    self.tr(f"Error changing language: {e}"),
-                    5000  # 5 seconds for error messages
-                )
-            
-            # Show error message to the user
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr(f"Failed to change language: {e}")
-            )
-
-    def on_delete_selected(self):
-        """Delete selected files by moving them to the Recycle Bin (send2trash)."""
-        try:
-            if not hasattr(self.main_ui, 'file_list'):
-                return
-            selected_items = self.main_ui.file_list.selectedItems()
-            if not selected_items:
-                QMessageBox.information(
-                    self,
-                    self.language_manager.tr("dialog.no_selection", "No Selection"),
-                    self.language_manager.tr("dialog.select_items_to_delete", "Please select one or more files to delete.")
-                )
-                return
-            # Collect file paths
-            paths = []
-            for it in selected_items:
-                path = it.data(Qt.ItemDataRole.UserRole)
-                if path and isinstance(path, (str, bytes)):
-                    paths.append(str(path))
-            if not paths:
-                return
-            # Perform deletion with confirmation using helper
-            from script.delete import delete_files
-            success, failed = delete_files(paths, parent=self, use_recycle_bin=True)
-            # Remove items from list for files that no longer exist
-            removed = 0
-            import os as _os
-            for it in list(selected_items):
-                path = it.data(Qt.ItemDataRole.UserRole)
-                path_str = str(path) if isinstance(path, (str, bytes)) else None
-                if path_str and not _os.path.exists(path_str):
-                    row = self.main_ui.file_list.row(it)
-                    self.main_ui.file_list.takeItem(row)
-                    removed += 1
-            # Optionally clean up extra spacers without flags around removed items (best-effort)
-            self.status_bar.showMessage(
-                self.language_manager.tr(
-                    "ui.status_deleted_summary",
-                    "Deleted: %d, Failed: %d"
-                ) % (success, failed),
-                4000
-            )
-        except Exception as e:
-            logger.error(f"Error deleting selected files: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr("errors.delete_failed", "Failed to delete selected files: %s") % str(e)
-            )
-    
-    def on_language_changed(self, language_code: str = None):
-        """Handle language change signal from the language manager."""
-        logger.info("=== Language Change Started ===")
-        
-        # Get the language manager instance
-        lm = getattr(self, 'language_manager', None)
-        if not lm:
-            logger.error("No language manager found")
-            return
-            
-        # If no language code provided, use current language
-        if language_code is None:
-            language_code = lm.get_current_language()
-            
-        logger.info(f"Changing language to: {language_code}")
-        
-        # Block signals to prevent recursion
-        was_blocked = self.signalsBlocked()
-        self.blockSignals(True)
-        
-        try:
-            # Save the new language to settings first
-            if hasattr(self, 'settings'):
-                self.settings.set('app.language', language_code)
-                self.settings._save_settings()
-            
-            # Update window title
-            self.setWindowTitle(lm.tr("app.name", "PDF Duplicate Finder"))
-            
-            # Update status bar
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(lm.tr("status.ready", "Ready"), 3000)
-            
-            # Force update the application's style to ensure all text is refreshed
-            QApplication.processEvents()
+                # Color code based on similarity
+                if similarity > 0.9:
+                    similarity_text = f"<span style='color: #2ecc71;'>{similarity_text}</span>"
+                elif similarity > 0.7:
+                    similarity_text = f"<span style='color: #f39c12;'>{similarity_text}</span>"
+                else:
+                    similarity_text = f"<span style='color: #e74c3c;'>{similarity_text}</span>"
                 
-            # Recreate the menu bar to ensure all items are retranslated
-            if hasattr(self, 'menu_bar') and hasattr(self, 'menubar'):
-                # Store the current menu bar state
-                menu_bar_geometry = self.menubar.geometry()
-                
-                # Remove the old menu bar
-                self.menu_bar = None
-                
-                # Create a new menu bar
-                from script.menu import MenuBar
-                self.menu_bar = MenuBar(parent=self, language_manager=lm)
-                
-                # Add the new menu bar to the window
-                self.menubar = self.menu_bar.menubar
-                self.setMenuBar(self.menubar)
-                
-                # Restore geometry if we had a previous geometry
-                if menu_bar_geometry.isValid():
-                    self.menubar.setGeometry(menu_bar_geometry)
-                
-                # Force update
-                self.menubar.update()
-                
-            # Update toolbar
-            if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
-                self.toolbar.retranslate_ui()
-                self.toolbar.update()
-                
-            # Update main UI
-            if hasattr(self, 'main_ui'):
-                if hasattr(self.main_ui, 'retranslate_ui'):
-                    self.main_ui.retranslate_ui()
-                # Force update the UI
-                self.main_ui.update()
+                header_parts.append(similarity_text)
             
-            # Update any open dialogs
-            for widget in QApplication.topLevelWidgets():
-                if hasattr(widget, 'retranslate_ui'):
-                    widget.retranslate_ui()
+            # Set the formatted text
+            group_item.setText("".join(header_parts))
             
-            # Force a style refresh
-            self.style().unpolish(self)
-            self.style().polish(self)
+            # Add tooltip with more details
+            tooltip_parts = [
+                f"<b>{self.tr('main.group', 'Group')} {i}: {files_count} {self.tr('main.files', 'files')}</b>",
+                f"<b>{self.tr('main.type', 'Type')}:</b> {group_type}",
+                f"<b>{self.tr('main.method', 'Method')}:</b> {method}"
+            ]
             
-            # Update the application's style to ensure all text is refreshed
-            QApplication.setStyle(QApplication.style().objectName())
+            if 'similarity' in group:
+                tooltip_parts.append(f"<b>{self.tr('main.similarity', 'Similarity')}:</b> {group['similarity']*100:.1f}%")
             
-            logger.info("Language change completed successfully")
+            if 'details' in group and 'message' in group['details']:
+                tooltip_parts.append(f"<b>{self.tr('main.notes', 'Notes')}:</b> {group['details']['message']}")
             
-            # Show a message to the user
-            if hasattr(self, 'status_bar') and self.status_bar:
-                self.status_bar.showMessage(
-                    lm.tr("settings_dialog.language_changed", "Language changed successfully"),
-                    3000  # 3 seconds
-                )
+            group_item.setToolTip("<br>".join(tooltip_parts))
             
-        except Exception as e:
-            logger.error(f"Error changing language: {e}", exc_info=True)
-            
-            # Show error message to the user
-            if hasattr(self, 'status_bar') and self.status_bar:
-                self.status_bar.showMessage(
-                    lm.tr("errors.language_change_failed", "Failed to change language"),
-                    5000  # 5 seconds
-                )
-            
-            QMessageBox.critical(
-                self,
-                lm.tr("dialog.error", "Error"),
-                lm.tr("errors.language_change_failed_details", "Failed to change language: {error}").format(error=str(e))
-            )
-            
-        finally:
-            # Restore signal blocking state
-            self.blockSignals(was_blocked)
-            
-            # Force a UI update
-            self.update()
-            QApplication.processEvents()
-    
-    def apply_settings(self):
-        """Apply application settings from the settings file."""
-        try:
-            logger.info("Applying application settings...")
-            
-            # Apply theme
-            self.apply_theme()
-            
-            # Apply window state if available
-            geometry = self.settings.get_window_geometry()
-            state = self.settings.get_window_state()
-            
-            if geometry:
-                try:
-                    self.restoreGeometry(geometry)
-                except Exception as e:
-                    logger.error(f"Error restoring window geometry: {e}")
-            
-            if state:
-                try:
-                    self.restoreState(state)
-                except Exception as e:
-                    logger.error(f"Error restoring window state: {e}")
-            
-            # Apply toolbar visibility
-            toolbar_visible = self.settings.get('ui.toolbar_visible', True)
-            if hasattr(self, 'toolbar'):
-                self.toolbar.setVisible(toolbar_visible)
-                # Update the menu action if it exists
-                if hasattr(self, 'menu_bar') and 'toggle_toolbar' in self.menu_bar.actions:
-                    self.menu_bar.actions['toggle_toolbar'].setChecked(toolbar_visible)
-            
-            # Apply status bar visibility
-            statusbar_visible = self.settings.get('ui.statusbar_visible', True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.setVisible(statusbar_visible)
-                # Update the menu action if it exists
-                if hasattr(self, 'menu_bar') and 'toggle_statusbar' in self.menu_bar.actions:
-                    self.menu_bar.actions['toggle_statusbar'].setChecked(statusbar_visible)
-            
-            logger.info("Application settings applied successfully")
-            
-        except Exception as e:
-            logger.error(f"Error applying settings: {e}", exc_info=True)
-    
-    def apply_theme(self):
-        """Apply the selected theme to the application."""
-        try:
-            theme = self.settings.get('app.theme', 'system')
-            logger.debug(f"Applying theme: {theme}")
-            
-            # Default style sheet (can be overridden by theme)
-            style_sheet = """
-                QMainWindow, QDialog, QWidget {
-                    background-color: #f0f0f0;
-                    color: #333333;
-                }
-                QStatusBar {
-                    background-color: #e0e0e0;
-                    color: #333333;
-                }
-            """
-            
-            # Apply theme-specific styles
-            if theme == 'dark':
-                style_sheet = """
-                    QMainWindow, QDialog, QWidget {
-                        background-color: #2d2d2d;
-                        color: #f0f0f0;
-                    }
-                    QStatusBar {
-                        background-color: #1e1e1e;
-                        color: #f0f0f0;
-                    }
-                """
-            
-            self.setStyleSheet(style_sheet)
-            
-        except Exception as e:
-            logger.error(f"Error applying theme: {e}", exc_info=True)
-    
-    def closeEvent(self, event):
-        """Handle window close event."""
-        try:
-            # Save window geometry and state
-            geometry = self.saveGeometry()
-            state = self.saveState()
-            
-            # Get current settings to preserve them
-            current_settings = {}
-            if hasattr(self, 'settings') and hasattr(self.settings, '_data'):
-                current_settings = self.settings._data.copy()
-            
-            # Save using helper methods (convert QByteArray to bytes)
-            if not geometry.isEmpty():
-                self.settings.set_window_geometry(bytes(geometry))
-            if not state.isEmpty():
-                self.settings.set_window_state(bytes(state))
-            
-            # Save any other settings
-            if hasattr(self, 'language_manager'):
-                self.settings.set_language(self.language_manager.get_current_language())
-            
-            # Restore PDF settings if they exist in current settings
-            if 'pdf' in current_settings:
-                self.settings._data['pdf'] = current_settings['pdf']
-            
+            # Add the item to the list
+            self.duplicates_list.addItem(group_item)
             # Save all settings to disk
             self.settings._save_settings()
             
@@ -853,15 +439,29 @@ class MainWindow(QMainWindow):
     def on_show_settings(self):
         """Open the settings dialog and wire its signals."""
         try:
-            dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
-            dialog.settings_changed.connect(getattr(self, 'on_settings_changed', self.apply_settings))
-            dialog.language_changed.connect(lambda: self.change_language(dialog.language_combo.currentData()))
-            dialog.requires_restart.connect(lambda: None)  # Placeholder: can implement restart flow
+            # Create and show settings dialog
+            dialog = SettingsDialog(self)
+            if hasattr(self, 'language_manager'):
+                dialog.language_manager = self.language_manager
+            
+            # Connect settings changed signal
+            settings_callback = getattr(self, 'on_settings_changed', self.apply_settings)
+            dialog.settings_changed.connect(settings_callback)
+            
+            # Connect language changed signal
+            def handle_language_change():
+                if hasattr(dialog, 'language_combo'):
+                    self.change_language(dialog.language_combo.currentData())
+            
+            dialog.language_changed.connect(handle_language_change)
+            dialog.requires_restart.connect(lambda: None)
+            
             dialog.exec()
+            
         except Exception as e:
-            logger.error(f"Error showing settings dialog: {e}", exc_info=True)
+            logger.error("Error in settings dialog: %s", e, exc_info=True)
             QMessageBox.critical(
                 self,
-                self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr("errors.open_settings_failed", "Could not open settings: %s") % str(e)
+                self.tr("Error"),
+                f"Could not open settings: {e}"
             )
