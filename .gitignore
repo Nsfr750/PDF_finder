@@ -122,3 +122,5 @@ installer.nsi
 /PDF-TEST
 get-pip.py
 *.code-workspace
+build_nuitka.py
+nuitka.config.toml
