@@ -81,6 +81,9 @@ class LogViewer(QDialog):
         self.filtered_content = []
         self.current_level = "ALL"
         
+        # Set window size
+        self.resize(600, 400)
+        
         self.init_ui()
         self.retranslate_ui()
         self.load_log_file()
@@ -109,6 +112,7 @@ class LogViewer(QDialog):
         toolbar.addWidget(self.search_label)
         
         self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(self.tr("Search in logs..."))
         self.search_edit.textChanged.connect(self.filter_logs)
         toolbar.addWidget(self.search_edit)
         
@@ -133,11 +137,21 @@ class LogViewer(QDialog):
         self.log_display.setFont(QFont("Courier New", 10))
         self.highlighter = LogHighlighter(self.log_document())
         
-        layout.addWidget(self.log_display)
+        layout.addWidget(self.log_display, 1)  # Add stretch factor to make it expandable
+        
+        # Status bar and close button
+        bottom_layout = QHBoxLayout()
         
         # Status bar
         self.status_bar = QLabel()
-        layout.addWidget(self.status_bar)
+        bottom_layout.addWidget(self.status_bar, 1)  # Add stretch to push close button to right
+        
+        # Close button
+        self.close_btn = QPushButton(self.tr("Close"))
+        self.close_btn.clicked.connect(self.accept)
+        bottom_layout.addWidget(self.close_btn)
+        
+        layout.addLayout(bottom_layout)
     
     def retranslate_ui(self):
         """Update the UI when the language changes."""
@@ -182,48 +196,62 @@ class LogViewer(QDialog):
             
             self.filtered_content = []
             
-            for i, line in enumerate(self.log_content):
-                # Skip empty lines
-                if not line.strip():
-                    continue
-                    
-                # Extract log level from format: YYYY-MM-DD HH:MM:SS,SSS - PDFDuplicateFinder - LEVEL - message
-                log_level = None
-                level_match = re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - [^-]+ - (\w+) -', line)
-                if level_match:
-                    log_level = level_match.group(1)
+            # Buffer for multi-line entries
+            current_entry = []
+            
+            for line in self.log_content:
+                line = line.rstrip('\n')
                 
-                # If we can't determine the level, include the line only if level is "ALL"
-                if level != "ALL":
-                    if not log_level or log_level != level:
-                        continue
-                    
-                # Check search text
-                if search_text and search_text not in line.lower():
-                    continue
-                    
-                self.filtered_content.append(line)
+                # Check if line starts with a timestamp (new log entry)
+                is_new_entry = bool(re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', line))
+                
+                if is_new_entry and current_entry:
+                    # Process the previous entry
+                    entry_text = '\n'.join(current_entry)
+                    if self._should_include_entry(entry_text, level, search_text):
+                        self.filtered_content.append(entry_text)
+                    current_entry = []
+                
+                if line.strip():  # Only add non-empty lines
+                    current_entry.append(line)
+            
+            # Process the last entry
+            if current_entry:
+                entry_text = '\n'.join(current_entry)
+                if self._should_include_entry(entry_text, level, search_text):
+                    self.filtered_content.append(entry_text)
             
             # Update display
             self.log_display.clear()
-            self.log_display.setPlainText(''.join(self.filtered_content))
-            
-            # Scroll to bottom
-            cursor = self.log_display.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self.log_display.setTextCursor(cursor)
+            self.log_display.setPlainText('\n\n'.join(self.filtered_content))
             
             # Update status
-            self.status_bar.setText(
-                self.tr("Showing {filtered} of {total} log entries").format(
-                    filtered=len(self.filtered_content),
-                    total=len(self.log_content)
-                )
+            self.status_bar.setText(self.tr("Showing {count} of {total} log entries").format(
+                count=len(self.filtered_content),
+                total=len([l for l in self.log_content if l.strip()])
+            ))
+            
+            # Scroll to bottom
+            self.log_display.verticalScrollBar().setValue(
+                self.log_display.verticalScrollBar().maximum()
             )
             
         except Exception as e:
-            QMessageBox.critical(self, self.tr("Error"), 
-                               self.tr("Failed to filter logs: {error}").format(error=str(e)))
+            self.log_display.setPlainText(self.tr("Error filtering logs: {}").format(str(e)))
+    
+    def _should_include_entry(self, entry_text, level, search_text):
+        """Check if a log entry should be included based on filters."""
+        # Check level filter
+        if level != "ALL":
+            level_match = re.search(r' - ' + re.escape(level) + r' - ', entry_text)
+            if not level_match:
+                return False
+        
+        # Check search text
+        if search_text and search_text.lower() not in entry_text.lower():
+            return False
+            
+        return True
     
     def clear_logs(self):
         """Clear the log file after confirmation."""

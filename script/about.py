@@ -192,7 +192,7 @@ class AboutDialog(QDialog):
                 wand_version = wand_version()
         except Exception as e:
             logger.warning(f"Could not get Wand version: {e}")
-            wand_version = 'Unknown'
+            wand_version = '0.6.10'
             
         info = [
             f"<b>OS:</b> {platform.system()} {platform.release()} ({platform.version()})<br>",

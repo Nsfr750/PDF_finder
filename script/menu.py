@@ -179,6 +179,16 @@ class MenuBar(QObject):
         self.actions['toggle_statusbar'].triggered.connect(self.parent.on_toggle_statusbar)
         menu.addAction(self.actions['toggle_statusbar'])
         
+        # Add separator
+        menu.addSeparator()
+        
+        # Log viewer action
+        self.actions['log_viewer'] = QAction(self.tr("Log Viewer"), self.parent)
+        self.actions['log_viewer'].setStatusTip(self.tr("View application logs"))
+        if hasattr(self.parent, 'on_show_log_viewer'):
+            self.actions['log_viewer'].triggered.connect(self.parent.on_show_log_viewer)
+        menu.addAction(self.actions['log_viewer'])
+        
         return menu
     
     def create_tools_menu(self) -> QMenu:
@@ -234,13 +244,14 @@ class MenuBar(QObject):
         
         # Add separator
         menu.addSeparator()
-
-        #log viewer action
-        self.actions['log_viewer'] = QAction(self.tr("Log Viewer"), self.parent)
-        self.actions['log_viewer'].setStatusTip(self.tr("Open log viewer"))
-        if hasattr(self.parent, 'on_show_log_viewer'):
-            self.actions['log_viewer'].triggered.connect(self.parent.on_show_log_viewer)
-        menu.addAction(self.actions['log_viewer'])
+        
+        # Language submenu
+        self.menus['language'] = QMenu(self.tr("Language"), self.parent)
+        self.setup_language_menu()
+        menu.addMenu(self.menus['language'])
+        
+        # Add separator
+        menu.addSeparator()
         
         # Check for Updates action
         self.actions['check_updates'] = QAction(self.tr("Check for Updates"), self.parent)
@@ -248,14 +259,6 @@ class MenuBar(QObject):
         if hasattr(self.parent, 'check_for_updates'):
             self.actions['check_updates'].triggered.connect(self.parent.check_for_updates)
         menu.addAction(self.actions['check_updates'])
-        
-        # Add separator
-        menu.addSeparator()
-        
-        # Language submenu
-        self.menus['language'] = QMenu(self.tr("Language"), self.parent)
-        self.setup_language_menu()
-        menu.addMenu(self.menus['language'])
         
         return menu
     
@@ -398,13 +401,12 @@ class MenuBar(QObject):
     def on_show_documentation(self):
         """Open the documentation in the markdown viewer."""
         try:
-            from .markdown_viewer import MarkdownViewer
-            # Pass None as file_path to let the viewer load the default documentation
-            viewer = MarkdownViewer(
-                file_path=None,
-                language_manager=self.language_manager,
-                parent=self.parent
+            from .docs import DocsDialog
+            viewer = DocsDialog(
+                parent=self.parent,
+                current_lang=self.language_manager.current_lang
             )
+            viewer.language_manager = self.language_manager
             viewer.exec()
         except Exception as e:
             QMessageBox.critical(
