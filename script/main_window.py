@@ -53,6 +53,17 @@ class MainWindow(QMainWindow):
         self.comparison_threshold = 0.95  # Default similarity threshold (95%)
         self.comparison_dpi = 200  # Default DPI for image comparison
         
+        # Initialize filter settings
+        self.current_filters = {
+            'min_size': 0,  # in bytes
+            'max_size': 100 * 1024 * 1024,  # 100MB in bytes
+            'date_from': None,
+            'date_to': None,
+            'name_pattern': '',
+            'enable_text_compare': True,
+            'min_similarity': 0.8
+        }
+        
         # Initialize settings
         self.settings = AppSettings()
         # Keep references to open viewers
@@ -337,86 +348,18 @@ class MainWindow(QMainWindow):
                     path = current.data(Qt.ItemDataRole.UserRole)
             if not path:
                 return
+                
             show_pdf_viewer(path, parent=self)
+                
         except Exception as e:
             logger.error(f"Error opening viewer: {e}", exc_info=True)
-            try:
-                QMessageBox.critical(
-                    self,
-                    self.language_manager.tr("dialog.error", "Error"),
-                    self.language_manager.tr("errors.viewer_open_failed", "Could not open viewer: %s") % str(e)
-                )
-            except Exception:
-                pass
-
-    def _start_scan(self, folder_path: str):
-        """Start scanning the given folder in a background thread."""
-        try:
-            # If a scan is already running, ignore
-            if self._scan_thread and self._scan_thread.is_alive():
-                return
-            # Create scanner and wire callbacks
-            self._init_scanner()
-            # Prepare progress bar UI
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setVisible(True)
-                self.progress_bar.setMinimum(0)
-                self.progress_bar.setMaximum(0)  # Indeterminate until we know total
-                self.progress_bar.setFormat(self.language_manager.tr("ui.progress_scanning", "Scanning..."))
-            
-            # Run scan in a background thread
-            self._scan_thread = threading.Thread(target=self._scan_worker, args=(folder_path,), daemon=True)
-            self._scan_thread.start()
-        except Exception as e:
-            logger.error(f"Failed to start scan: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
                 self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: %s") % str(e)
+                self.language_manager.tr("errors.viewer_open_failed", "Could not open viewer: %s") % str(e)
             )
-
-    def _populate_file_list_from_scanner(self):
-        """Populate the UI file list with scanned PDF results."""
-        try:
-            if not hasattr(self, '_scanner') or self._scanner is None:
-                return
-            if not hasattr(self, 'main_ui') or not hasattr(self.main_ui, 'file_list'):
-                return
-            lw = self.main_ui.file_list
-            lw.clear()
-
-            # Flatten results preserving insertion order by scan
-            items = []
-            seen_paths = set()
-            for docs in self._scanner.scan_results.values():
-                for doc in docs:
-                    path = getattr(doc, 'path', None) or getattr(doc, 'file_path', None)
-                    if not path or path in seen_paths:
-                        continue
-                    seen_paths.add(path)
-                    name = os.path.basename(path)
-                    item = QListWidgetItem(name)
-                    item.setData(Qt.ItemDataRole.UserRole, path)
-                    items.append(item)
-
-            # Sort alphabetically for user friendliness
-            items.sort(key=lambda it: it.text().lower())
-            for it in items:
-                lw.addItem(it)
-
-            # Update status message with count
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.files_loaded", "{count} files loaded").format(count=len(items))
-                )
-
-            # Reset preview placeholder
-            if hasattr(self.main_ui, 'clear_preview'):
-                self.main_ui.clear_preview()
-        except Exception as e:
-            logger.debug(f"Populate file list failed: {e}")
-
-    def _update_duplicates_list(self) -> None:
+            
+    def _update_duplicates_list(self):
         """Update the duplicates list widget with the current duplicate groups."""
         if not hasattr(self, 'duplicates_list'):
             return
@@ -494,6 +437,36 @@ class MainWindow(QMainWindow):
             self.settings._save_settings()
             
 
+    def on_show_filter_dialog(self):
+        """Show the filter dialog and apply selected filters."""
+        try:
+            from script.filter_dialog import FilterDialog
+            
+            dialog = FilterDialog(self)
+            dialog.set_filters(self.current_filters)
+            
+            def on_filters_changed():
+                # Update current filters when they change
+                self.current_filters.update(dialog.get_filters())
+                
+            dialog.filters_changed.connect(on_filters_changed)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Update current filters with the final values
+                self.current_filters.update(dialog.get_filters())
+                self.status_bar.showMessage(
+                    self.language_manager.tr("filters.applied", "Filters applied"), 
+                    3000
+                )
+                
+        except Exception as e:
+            logger.error(f"Error showing filter dialog: {e}")
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("error.title", "Error"),
+                self.language_manager.tr("error.filter_dialog", "Failed to open filter dialog: {error}").format(error=str(e))
+            )
+    
     def on_show_settings(self):
         """Open the settings dialog and wire its signals."""
         try:

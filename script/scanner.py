@@ -7,6 +7,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 from queue import Queue
+from PyQt6.QtCore import QObject, pyqtSignal
 
 from .pdf_utils import PDFDocument, PDFUtils
 from .pdf_comparison import PDFComparator, PDFType
@@ -16,8 +17,13 @@ logger = logging.getLogger('PDFDuplicateFinder')
 # Import language manager
 from script.lang_mgr import LanguageManager
 
-class PDFScanner:
+class PDFScanner(QObject):
     """Handles scanning for duplicate PDFs in directories."""
+    
+    # Define signals
+    progress_updated = pyqtSignal(int, int, str)  # current, total, path
+    status_updated = pyqtSignal(str, int, int)    # message, current, total
+    finished = pyqtSignal(list)  # Emit list of duplicate groups
     
     def __init__(self, comparison_threshold: float = 0.95, dpi: int = 200):
         """Initialize the PDF scanner.
@@ -26,10 +32,8 @@ class PDFScanner:
             comparison_threshold: Similarity threshold (0-1) for considering PDFs as duplicates
             dpi: DPI to use for image-based comparison
         """
+        super().__init__()
         self.stop_event = threading.Event()
-        self.progress_callback = None
-        self.status_callback = None
-        self.found_callback = None
         self.scan_complete = False
         self.scan_results = {}
         self.duplicate_groups = []
@@ -62,25 +66,46 @@ class PDFScanner:
         
         try:
             # First, collect all PDF files
+            self.status_updated.emit(
+                self.tr("scanner.scanning_pdfs", "Scanning for PDF files..."), 
+                0, 0
+            )
+            
             pdf_files = self._collect_pdf_files(directory, recursive, min_file_size, max_file_size)
             self.total_files = len(pdf_files)
             
-            if self.status_callback:
-                self.status_callback(self.tr("scanner.scanning_pdfs", "Scanning PDF files..."), 0, self.total_files)
+            if self.total_files == 0:
+                self.status_updated.emit(
+                    self.tr("scanner.no_pdfs_found", "No PDF files found in the selected directory."),
+                    0, 0
+                )
+                self.finished.emit()
+                return
+                
+            self.status_updated.emit(
+                self.tr("scanner.processing_pdfs", "Processing {count} PDF files...").format(count=self.total_files),
+                0, self.total_files
+            )
             
             # Process files in parallel
             self._process_files(pdf_files)
             
-            # Group similar PDFs
+            # Group similar PDFs if not stopped
             if not self.stop_event.is_set():
-                if self.status_callback:
-                    self.status_callback(self.tr("scanner.finding_duplicates", "Finding duplicates..."), 0, 0)
+                self.status_updated.emit(
+                    self.tr("scanner.finding_duplicates", "Finding duplicates..."),
+                    0, 0
+                )
                 self._find_duplicates()
             
+            # Emit final status
             self.scan_complete = True
-            if self.status_callback:
-                self.status_callback(self.tr("scanner.scan_complete", "Scan complete!"), 
-                                  self.scanned_files, self.total_files)
+            self.status_updated.emit(
+                self.tr("scanner.scan_complete", "Scan complete! Found {groups} duplicate groups.").format(
+                    groups=len(self.duplicate_groups)
+                ),
+                self.scanned_files, self.total_files
+            )
                 
         except Exception as e:
             error_msg = self.tr("scanner.scan_error", "Error during scanning: {error}").format(error=str(e))
@@ -123,35 +148,33 @@ class PDFScanner:
         scan_dir(directory)
         return pdf_files
     
-    def _process_files(self, file_paths: List[str], max_workers: int = 4):
+    def _process_files(self, file_paths: List[str]) -> None:
         """Process PDF files in parallel."""
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_path = {
-                executor.submit(self._process_file, path): path 
-                for path in file_paths
-            }
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(self._process_single_file, path): path for path in file_paths}
             
-            for future in as_completed(future_to_path):
+            for future in as_completed(futures):
                 if self.stop_event.is_set():
-                    executor.shutdown(wait=False)
                     break
                     
-                path = future_to_path[future]
+                path = futures[future]
                 try:
-                    file_info = future.result()
-                    if file_info:
+                    result = future.result()
+                    if result and not self.stop_event.is_set():
                         with self.lock:
                             self.scanned_files += 1
-                            if self.progress_callback:
-                                self.progress_callback(self.scanned_files, self.total_files, path)
                             
-                            # Group by content hash
-                            if file_info['hash'] not in self.scan_results:
-                                self.scan_results[file_info['hash']] = []
-                            self.scan_results[file_info['hash']].append(file_info)
+                        # Emit progress update
+                        self.progress_updated.emit(
+                            self.scanned_files, 
+                            self.total_files, 
+                            path
+                        )
+                            
                 except Exception as e:
-                    error_msg = self.tr("scanner.processing_error", "Error processing {path}: {error}").format(
-                        path=path, error=str(e))
+                    error_msg = self.tr("scanner.file_error", "Error processing {file}: {error}").format(
+                        file=os.path.basename(path), error=str(e)
+                    )
                     logger.error(error_msg)
     
     def _update_status(self, message: str):
@@ -314,38 +337,71 @@ class PDFScanner:
     
     def _find_duplicates(self) -> None:
         """Find duplicate PDFs using content hash, image hash, and direct comparison."""
-        # First pass: Group by content hash (exact matches)
-        content_hash_groups = {}
-        
-        # Ensure scan_results is a dictionary
-        if not isinstance(self.scan_results, dict):
-            logger.error(f"scan_results is not a dictionary: {type(self.scan_results)}")
-            return
+        try:
+            # First pass: Group by content hash (exact matches)
+            content_hash_groups = {}
+            all_files = []
             
-        # Flatten the scan_results into a single list of files
-        all_files = []
-        for key, value in self.scan_results.items():
-            if isinstance(value, list):
-                # Handle case where value is a list of file info dicts
-                all_files.extend([f for f in value if isinstance(f, dict) and 'path' in f])
-            elif isinstance(value, dict) and 'path' in value:
-                # Handle case where value is a single file info dict
-                all_files.append(value)
-            else:
-                logger.warning(f"Unexpected item in scan_results: {value}")
-        
-        # Group files by content hash
-        for file_info in all_files:
-            if not isinstance(file_info, dict) or 'hash' not in file_info:
-                continue
+            # Update status
+            self.status_updated.emit(
+                self.tr("scanner.status.analyzing_files", "Analyzing files..."),
+                0, 0
+            )
+            
+            # Ensure scan_results is a dictionary
+            if not isinstance(self.scan_results, dict):
+                error_msg = self.tr("scanner.error.invalid_scan_results", "Invalid scan results format")
+                logger.error(f"{error_msg}: {type(self.scan_results)}")
+                self.status_updated.emit(error_msg, 0, 0)
+                return
+            
+            # Flatten the scan_results into a single list of files
+            for key, value in self.scan_results.items():
+                if self.stop_event.is_set():
+                    return
+                    
+                if isinstance(value, list):
+                    all_files.extend([f for f in value if isinstance(f, dict) and 'path' in f])
+                elif isinstance(value, dict) and 'path' in value:
+                    all_files.append(value)
+                else:
+                    logger.warning(f"Unexpected item in scan_results: {value}")
+            
+            total_files = len(all_files)
+            if total_files == 0:
+                self.status_updated.emit(
+                    self.tr("scanner.status.no_files_found", "No PDF files found to analyze"),
+                    0, 0
+                )
+                return
                 
-            content_hash = file_info['hash']
-            if content_hash not in content_hash_groups:
-                content_hash_groups[content_hash] = []
-            content_hash_groups[content_hash].append(file_info)
-        
-        # Add content hash groups as duplicate groups
-        for file_list in content_hash_groups.values():
+            # Group files by content hash
+            for file_info in all_files:
+                if not isinstance(file_info, dict) or 'hash' not in file_info:
+                    continue
+                    
+                content_hash = file_info['hash']
+                if content_hash not in content_hash_groups:
+                    content_hash_groups[content_hash] = []
+                content_hash_groups[content_hash].append(file_info)
+            
+            # Add content hash groups as duplicate groups
+            for file_list in content_hash_groups.values():
+                if len(file_list) > 1:
+                    self.duplicate_groups.append({
+                        'type': 'content',
+                        'files': file_list,
+                        'similarity': 1.0,
+                        'method': 'content_hash',
+                        'details': {'message': 'Exact content match'}
+                    })
+                    
+        except Exception as e:
+            error_msg = self.tr("scanner.error.duplicate_find_error", "Error finding duplicates: {error}").format(
+                error=str(e)
+            )
+            logger.error(error_msg, exc_info=True)
+            self.status_updated.emit(error_msg, 0, 0)
             if len(file_list) > 1:
                 self.duplicate_groups.append({
                     'type': 'content',
@@ -356,41 +412,82 @@ class PDFScanner:
                 })
         
         # Second pass: For files with unique content hashes, group by image hash
-        unique_files = []
-        for file_info in all_files:
-            if not isinstance(file_info, dict) or 'hash' not in file_info:
-                continue
+        try:
+            # Get files that weren't already matched by content hash
+            unmatched_files = []
+            for file_list in content_hash_groups.values():
+                if len(file_list) == 1:
+                    unmatched_files.append(file_list[0])
+            
+            if len(unmatched_files) > 1:
+                self.status_updated.emit(
+                    self.tr("scanner.status.comparing_images", "Comparing images for {count} files...").format(
+                        count=len(unmatched_files)
+                    ),
+                    0, 0
+                )
                 
-            content_hash = file_info['hash']
-            if content_hash in content_hash_groups and len(content_hash_groups[content_hash]) == 1:
-                unique_files.append(file_info)
-        
-        # Group unique files by image hash
-        image_hash_groups = {}
-        for file_info in unique_files:
-            if not isinstance(file_info, dict) or 'image_hash' not in file_info:
-                continue
+                # Group by image hash
+                image_hash_groups = {}
+                for i, file_info in enumerate(unmatched_files):
+                    if self.stop_event.is_set():
+                        return
+                        
+                    # Update progress
+                    if i % 10 == 0:  # Update progress every 10 files
+                        progress = int((i / len(unmatched_files)) * 100)
+                        self.progress_updated.emit(i, len(unmatched_files))
+                    
+                    if 'image_hash' not in file_info:
+                        continue
+                        
+                    img_hash = file_info['image_hash']
+                    if img_hash not in image_hash_groups:
+                        image_hash_groups[img_hash] = []
+                    image_hash_groups[img_hash].append(file_info)
                 
-            image_hash = file_info['image_hash']
-            if image_hash not in image_hash_groups:
-                image_hash_groups[image_hash] = []
-            image_hash_groups[image_hash].append(file_info)
+                # Add image hash groups as duplicate groups
+                for file_list in image_hash_groups.values():
+                    if len(file_list) > 1:
+                        self.duplicate_groups.append({
+                            'type': 'image',
+                            'files': file_list,
+                            'similarity': 0.95,  # High confidence for exact image hash match
+                            'method': 'image_hash',
+                            'details': {'message': 'Similar image content'}
+                        })
+        except Exception as e:
+            error_msg = self.tr("scanner.error.image_comparison_error", "Error during image comparison: {error}").format(
+                error=str(e)
+            )
+            logger.error(error_msg, exc_info=True)
+            self.status_updated.emit(error_msg, 0, 0)
+        # Final cleanup and emit completion
+        try:
+            # Emit final status
+            self.status_updated.emit(
+                self.tr("scanner.status.completed", "Scan completed. Found {count} duplicate groups").format(
+                    count=len(self.duplicate_groups)
+                ),
+                100, 100  # 100% progress
+            )
+            
+            # Log completion
+            logger.info(f"Scan completed. Found {len(self.duplicate_groups)} duplicate groups")
+            
+            # Emit finished signal with results
+            self.finished.emit(self.duplicate_groups)
+            
+        except Exception as e:
+            error_msg = self.tr("scanner.error.finalize_error", "Error finalizing scan: {error}").format(
+                error=str(e)
+            )
+            logger.error(error_msg, exc_info=True)
+            self.status_updated.emit(error_msg, 0, 0)
+            self.finished.emit([])  # Emit empty results on error
         
-        # Add image hash groups as potential duplicates
-        for file_list in image_hash_groups.values():
-            if len(file_list) > 1:
-                # For small groups, do direct comparison
-                if len(file_list) <= 5:
-                    self._compare_and_group_files(file_list)
-                else:
-                    # For larger groups, use image hash as initial filter
-                    self.duplicate_groups.append({
-                        'type': 'image',
-                        'files': file_list,
-                        'similarity': 0.95,  # Approximate for image hash
-                        'method': 'image_hash',
-                        'details': {'message': 'Potential image match (needs verification)'}
-                    })
+        # All done - the finished signal has been emitted
+        return
     
     def _compare_and_group_files(self, file_list: List[Dict[str, Any]]) -> None:
         """Compare files in a group and create duplicate groups based on similarity.

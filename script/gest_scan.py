@@ -133,13 +133,36 @@ class ScanWorker(QRunnable):
             if self._is_cancelled:
                 return
             
-            # Step 3: Find duplicates
+            # Step 3: Prepare data for find_duplicates
             logger.info(self.tr("scan.finding_duplicates", "Finding duplicate PDFs..."))
+            
+            # Create a list of file info dictionaries with the structure expected by find_duplicates
+            files_for_duplicate_check = []
+            for file_info in processed_files:
+                # Convert the file info to the format expected by find_duplicates
+                file_data = {
+                    'path': file_info.get('path', ''),
+                    'size': file_info.get('size', 0),
+                    'md5': file_info.get('md5', ''),
+                    'modified': file_info.get('modified', 0),
+                    'filename': file_info.get('filename', '')
+                }
+                
+                # If we have an image hash, include it in the file data
+                if 'image_hash' in file_info:
+                    file_data['phash'] = file_info['image_hash']
+                    
+                files_for_duplicate_check.append(file_data)
+            
+            # Call find_duplicates with the processed files
             duplicate_groups = find_duplicates(
-                directory='',  # We're passing processed files directly, not scanning a directory
+                directory='',  # We're passing processed files directly
                 recursive=False,
+                min_file_size=1024,  # 1KB minimum file size
+                max_file_size=100 * 1024 * 1024,  # 100MB maximum file size
+                hash_size=8,  # Standard hash size
                 threshold=self.min_similarity,
-                processed_files=processed_files  # This parameter needs to be supported in find_duplicates
+                processed_files=files_for_duplicate_check
             )
             
             logger.info(self.tr("scan.found_duplicate_groups", "Found {count} groups of duplicates").format(count=len(duplicate_groups)))

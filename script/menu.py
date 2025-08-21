@@ -239,6 +239,20 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("Tools"), self.parent)
         
+        # Filter Options action with icon
+        self.actions['filter_options'] = QAction(
+            QIcon.fromTheme("view-filter", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogListView)),
+            self.tr("Filter Options"),
+            self.parent
+        )
+        self.actions['filter_options'].setStatusTip(self.tr("Set PDF search filters"))
+        if hasattr(self.parent, 'on_show_filter_dialog'):
+            self.actions['filter_options'].triggered.connect(self.parent.on_show_filter_dialog)
+        menu.addAction(self.actions['filter_options'])
+        
+        # Add separator
+        menu.addSeparator()
+        
         # Settings action with icon
         self.actions['settings'] = QAction(
             QIcon.fromTheme("preferences-system", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)),

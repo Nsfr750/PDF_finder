@@ -14,7 +14,6 @@
   },
   "pdf": {
     "backend": "wand_ghostscript",
-    "poppler_path": "C:/Progra~1/poppler/pdftoppm.exe",
     "ghostscript_path": "C:/Progra~1/gs/gs10.05.0/bin/gswin64.exe"
   }
 }

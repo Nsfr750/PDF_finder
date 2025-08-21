@@ -21,17 +21,6 @@ logger = logging.getLogger(f"PDFDuplicateFinder.{__name__}")
 if TYPE_CHECKING:
     from wand.image import Image as WandImageType
 
-# Global flag to track if pdf2image (Poppler backend) is available
-PDF2IMAGE_AVAILABLE = False
-try:
-    from pdf2image import convert_from_path
-    PDF2IMAGE_AVAILABLE = True
-except (ImportError, OSError) as e:
-    # Note: On Windows, pdf2image requires Poppler binaries. If not installed or not on PATH, import
-    # may fail or raise an OSError. Clarify the message for users.
-    logger.warning("pdf2image/Poppler backend not available. Continuing with PyMuPDF-only processing.")
-    logger.debug(f"pdf2image import error: {e}")
-
 class ProgressTracker:
     """Helper class to track and report progress."""
     def __init__(self, total_steps: int = 100):
@@ -71,185 +60,103 @@ def get_pdf_backend_name(backend_func) -> str:
     """Get the name of the PDF backend function."""
     if backend_func.__name__ == 'try_pymupdf':
         return 'PyMuPDF'
-    elif backend_func.__name__ == 'try_pdf2image':
-        return 'Poppler (via pdf2image)'
     elif backend_func.__name__ == 'try_wand':
         return 'Ghostscript (via Wand)'
     return 'Unknown'
 
 def extract_first_page_pdf(pdf_path: str, progress_callback: callable = None) -> Optional['WandImageType']:
-    """Extract the first page of a PDF as an image honoring the configured backend.
+    """Extract the first page of a PDF as an image using PyMuPDF or Wand/Ghostscript.
 
     Backends supported via settings key 'pdf.backend':
-      - 'auto' (default): try PyMuPDF, then pdf2image/Poppler (if available), then Wand/Ghostscript
+      - 'auto' (default): try PyMuPDF first, then Wand/Ghostscript
       - 'pymupdf': force PyMuPDF
-      - 'pdf2image_poppler': force pdf2image/Poppler
       - 'wand_ghostscript': force Wand/Ghostscript
 
     Optional paths in settings:
-      - 'pdf.poppler_path': directory to Poppler binaries (Windows)
       - 'pdf.ghostscript_path': path to Ghostscript executable (if needed)
     """
+    def try_pymupdf() -> Optional[WandImageType]:
+        """Try to extract first page using PyMuPDF."""
+        try:
+            # Open the PDF document
+            doc = fitz.open(pdf_path)
+            if len(doc) == 0:
+                return None
+                
+            # Get the first page
+            page = doc[0]
+            
+            # Calculate zoom factor for better quality (2x resolution)
+            zoom = 2.0
+            mat = fitz.Matrix(zoom, zoom)
+            
+            # Render page to a pixmap
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            
+            # Create a new Wand image with the same dimensions
+            with WandImage(width=pix.width, height=pix.height) as img:
+                # Import the pixel data directly
+                img.import_pixels(0, 0, pix.width, pix.height, 'RGB', 'char', pix.samples)
+                return img.clone()
+                
+        except Exception as e:
+            logger.debug(f"PyMuPDF extraction failed: {e}")
+            return None
+        finally:
+            if 'doc' in locals():
+                doc.close()
+    
+    def try_wand() -> Optional[WandImageType]:
+        """Try to extract first page using Wand/Ghostscript."""
+        try:
+            # Use Wand to read the first page of the PDF
+            if progress_callback:
+                progress_callback("Extracting page with Wand/Ghostscript...")
+                
+            with WandImage(filename=f"{pdf_path}[0]", resolution=200) as img:
+                # Convert to RGB if needed
+                if img.colorspace != 'rgb':
+                    img.transform_colorspace('rgb')
+                return img.clone()
+        except Exception as e:
+            logger.debug(f"Wand/Ghostscript extraction failed: {e}")
+            return None
+    
     try:
         backend = str(settings.get('pdf.backend', 'auto') or 'auto').lower()
-
-        # Ensure optional tool paths are applied
-        try:
-            poppler_cfg = settings.get('pdf.poppler_path')
-            if poppler_cfg:
-                os.environ['POPPLER_PATH'] = str(poppler_cfg)
-        except Exception:
-            pass
-        try:
-            gs_cfg = settings.get('pdf.ghostscript_path')
-            if gs_cfg:
-                # Some libs honor GS_PROG; harmless if ignored
-                os.environ['GS_PROG'] = str(gs_cfg)
-        except Exception:
-            pass
-
-        def try_pymupdf() -> Optional['WandImageType']:
-            with fitz.open(pdf_path) as doc:
-                file_size = None
-                try:
-                    file_size = os.path.getsize(pdf_path)
-                except Exception:
-                    pass
-                pdf_version = getattr(doc, 'pdf_version', 'unknown')
-                if doc.page_count == 0:
-                    size_str = f", size={file_size/1024:.1f} KB" if isinstance(file_size, (int, float)) else ""
-                    logger.warning(f"PDF has zero pages, skipping: {pdf_path} (pdf_version={pdf_version}{size_str})")
-                    return None
-                backend_name = get_pdf_backend_name(try_pymupdf)
-                if progress_callback:
-                    progress_callback(f"Extracting page with {backend_name}...")
-                page = doc.load_page(0)
-                try:
-                    has_text = bool(page.get_text().strip()) or len(page.get_text("blocks")) > 0
-                except Exception:
-                    has_text = None
-                try:
-                    has_graphics = len(page.get_drawings()) > 0
-                except Exception:
-                    has_graphics = None
-                pix = page.get_pixmap(dpi=150, colorspace=fitz.csRGB, alpha=False)
-                with WandImage(width=pix.width, height=pix.height) as img:
-                    img.import_pixels(0, 0, pix.width, pix.height, 'RGB', 'char', pix.samples)
-                    return img.clone()
-
-        def try_pdf2image() -> Optional['WandImageType']:
-            if not PDF2IMAGE_AVAILABLE:
-                return None
-            backend_name = get_pdf_backend_name(try_pdf2image)
+        
+        # Apply Ghostscript path if configured
+        gs_cfg = settings.get('pdf.ghostscript_path')
+        if gs_cfg:
+            # Set environment variables for Wand/ImageMagick to find Ghostscript
+            gs_path = str(gs_cfg)
+            os.environ['MAGICK_HOME'] = gs_path
+            os.environ['PATH'] = f"{gs_path}{os.pathsep}{os.environ.get('PATH', '')}"
+            
+            # On Windows, we might need to set the GS_PROG environment variable
+            if os.name == 'nt':
+                gs_exe = os.path.join(gs_path, 'gswin64c.exe' if os.path.exists(os.path.join(gs_path, 'gswin64c.exe')) else 'gswin32c.exe')
+                if os.path.exists(gs_exe):
+                    os.environ['GS_PROG'] = gs_exe
+        
+        # Try the appropriate backend(s) based on settings
+        if backend in ('auto', 'pymupdf'):
             if progress_callback:
-                progress_callback(f"Extracting page with {backend_name}...")
-            poppler_path = os.environ.get('POPPLER_PATH')
-            kwargs = {
-                'first_page': 1,
-                'last_page': 1,
-                'dpi': 150,
-                'fmt': 'jpeg',
-                'thread_safe': True,
-            }
-            if poppler_path:
-                kwargs['poppler_path'] = poppler_path
-            images = convert_from_path(pdf_path, **kwargs)
-            if images:
-                with io.BytesIO() as output:
-                    images[0].save(output, format='JPEG', quality=85, optimize=True)
-                    output.seek(0)
-                    with WandImage(blob=output.read()) as img:
-                        return img.clone()
-            return None
-
-        def try_wand() -> Optional['WandImageType']:
-            backend_name = get_pdf_backend_name(try_wand)
-            if progress_callback:
-                progress_callback(f"Extracting page with {backend_name}...")
-            with WandImage(filename=f"{pdf_path}[0]", resolution=150) as img:
-                return img.clone()
-
-        # Decide order based on backend setting
-        backend_map = {
-            'pymupdf': try_pymupdf,
-            'pdf2image_poppler': try_pdf2image,
-            'wand_ghostscript': try_wand,
-        }
-        ordered_all = [try_pymupdf, try_pdf2image, try_wand]
-        attempts = []
-        selected_backend_name = backend if backend in backend_map else 'auto'
-        if selected_backend_name == 'auto':
-            attempts = ordered_all
-        else:
-            # Try the selected first, then fall back to others (design decision)
-            primary = backend_map[selected_backend_name]
-            attempts = [primary] + [fn for fn in ordered_all if fn is not primary]
-
-        last_err = None
-        used_fn = None
-        for fn in attempts:
-            try:
-                result = fn()
-                if result is not None:
-                    used_fn = fn
-                    # If a specific backend was selected and we did not succeed with it,
-                    # but succeeded with a fallback, notify via progress callback.
-                    if selected_backend_name != 'auto':
-                        selected_fn = backend_map.get(selected_backend_name)
-                        if selected_fn is not None and selected_fn is not used_fn:
-                            try:
-                                lm = LanguageManager()
-                                msg = lm.tr(
-                                    "ui.pdf_backend_fallback_message",
-                                    "Selected PDF backend '{selected}' failed. Falling back to '{used}'."
-                                ).format(
-                                    selected=selected_backend_name,
-                                    used=(
-                                        'pymupdf' if used_fn is try_pymupdf else
-                                        'pdf2image_poppler' if used_fn is try_pdf2image else
-                                        'wand_ghostscript'
-                                    )
-                                )
-                                if progress_callback:
-                                    progress_callback(msg)
-                            except Exception:
-                                pass
-                    return result
-            except Exception as e:
-                last_err = e
-                logger.debug(f"Backend {fn.__name__} failed: {e}")
-                continue
-
-        # Best-effort file context for diagnostics
-        try:
-            size_bytes = os.path.getsize(pdf_path)
-            size_part = f", size={size_bytes/1024:.1f} KB"
-        except Exception:
-            size_part = ""
-        pdf_version = "unknown"
-        try:
-            with fitz.open(pdf_path) as dtmp:
-                pdf_version = getattr(dtmp, 'pdf_version', 'unknown')
-        except Exception:
-            pass
-        # Note: has_text / has_graphics only available when PyMuPDF got to first page
-        diag_parts = []
-        try:
-            # If we are still in scope of 'page' variables, include them; otherwise they'll be undefined
-            if 'has_text' in locals() and has_text is not None:
-                diag_parts.append(f"text={'yes' if has_text else 'no'}")
-            if 'has_graphics' in locals() and has_graphics is not None:
-                diag_parts.append(f"graphics={'yes' if has_graphics else 'no'}")
-        except Exception:
-            pass
-        diag_suffix = (", " + ", ".join(diag_parts)) if diag_parts else ""
-        if last_err:
-            logger.warning(f"Failed to extract first page image after selected methods: {pdf_path} (pdf_version={pdf_version}{size_part}, page=1{diag_suffix}) - last error: {last_err}")
-        else:
-            logger.warning(f"Failed to extract first page image after all methods: {pdf_path} (pdf_version={pdf_version}{size_part}, page=1{diag_suffix})")
+                progress_callback("Extracting page with PyMuPDF...")
+            result = try_pymupdf()
+            if result is not None or backend == 'pymupdf':
+                return result
+                
+        if backend in ('auto', 'wand_ghostscript'):
+            result = try_wand()
+            if result is not None or backend == 'wand_ghostscript':
+                return result
+                
+        logger.warning(f"Failed to extract first page from {pdf_path} with backend={backend}")
         return None
+        
     except Exception as e:
-        logger.error(f"Error extracting first page: {e}")
+        logger.error(f"Error in extract_first_page_pdf: {e}", exc_info=True)
         return None
 
 def calculate_hash(image: 'WandImageType', hash_size: int = 8) -> np.ndarray:

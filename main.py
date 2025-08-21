@@ -32,7 +32,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtCore import (
     Qt, QSize, QTimer, QThread, pyqtSignal, pyqtSlot,
     QObject, QEvent, QPoint, QRect, QRectF, QUrl,
-    QLocale, QTranslator, QLibraryInfo
+    QLocale, QTranslator, QLibraryInfo, QMetaObject, Q_ARG
 )
 
 from datetime import datetime
@@ -74,11 +74,616 @@ class PDFDuplicateFinder(MainWindow):
         
         # Show the window
         self.show()
+        
+        # Initialize filter settings
+        self.current_filters = {
+            'min_size': 0,  # in bytes
+            'max_size': 100 * 1024 * 1024,  # 100MB in bytes
+            'name_pattern': '',
+            'enable_text_compare': True,
+            'min_similarity': 0.8
+        }
+        
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
         
         # Initialize the scanner
         self._init_scanner()
+    
+    def _init_scanner(self):
+        """Initialize the PDF scanner with default settings and connect signals."""
+        # Clean up any existing scanner
+        if hasattr(self, '_scanner'):
+            try:
+                if hasattr(self._scanner, 'deleteLater'):
+                    self._scanner.deleteLater()
+            except Exception as e:
+                logger.warning(f"Error cleaning up previous scanner: {e}")
+        
+        # Clean up any existing thread
+        if hasattr(self, 'scan_thread'):
+            try:
+                if self.scan_thread.isRunning():
+                    self.scan_thread.quit()
+                    self.scan_thread.wait()
+            except Exception as e:
+                logger.warning(f"Error cleaning up previous scan thread: {e}")
+        
+        # Create new scanner and thread
+        self._scanner = PDFScanner()
+        self.scan_thread = QThread()
+        self._scanner.moveToThread(self.scan_thread)
+        
+        # Connect scanner signals to our handlers
+        self._scanner.progress_updated.connect(self._on_scan_progress)
+        self._scanner.status_updated.connect(self._on_scan_status)
+        self._scanner.duplicates_found.connect(self._on_duplicates_found)
+        self._scanner.finished.connect(self._on_scan_finished)
+        
+        # Connect thread signals
+        self.scan_thread.started.connect(self._scanner.start_scan)
+        self._scanner.finished.connect(self.scan_thread.quit)
+        self._scanner.finished.connect(self._scanner.deleteLater)
+        self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+        
+        # Set up progress bar in status bar if not exists
+        if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
+            self.progress_bar = QProgressBar()
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(100)
+            self.progress_bar.setTextVisible(True)
+            self.progress_bar.setVisible(False)
+            self.status_bar.addPermanentWidget(self.progress_bar)
+            
+        logger.info("Scanner initialized with signal connections")
+    
+    def _start_scan(self, folder_path: str):
+        """Start scanning the given folder with current filter settings.
+        
+        Args:
+            folder_path: Path to the folder to scan
+        """
+        try:
+            if not folder_path or not os.path.isdir(folder_path):
+                QMessageBox.warning(
+                    self,
+                    self.language_manager.tr("dialog.warning", "Warning"),
+                    self.language_manager.tr("errors.invalid_folder", "Please select a valid folder to scan.")
+                )
+                return
+                
+            # Update status
+            self.status_bar.showMessage(
+                self.language_manager.tr("status.scanning", "Scanning folder: {folder}").format(
+                    folder=os.path.basename(folder_path)
+                )
+            )
+            
+            # Initialize the scanner if not already done
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                self._init_scanner()
+            
+            # Configure scan parameters
+            self._scanner.scan_directory = folder_path
+            self._scanner.recursive = True
+            self._scanner.min_file_size = self.current_filters['min_size']
+            self._scanner.max_file_size = self.current_filters['max_size']
+            self._scanner.min_similarity = self.current_filters['min_similarity']
+            self._scanner.enable_text_compare = self.current_filters['enable_text_compare']
+            
+            # Clear previous results
+            self.last_scan_duplicates = []
+            if hasattr(self, 'duplicates_tree'):
+                self.duplicates_tree.clear()
+            
+            # Show progress bar
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setValue(0)
+                self.progress_bar.setVisible(True)
+            
+            # Start the scan in the background thread
+            self.scan_thread.start()
+            
+            logger.info(f"Started scanning folder: {folder_path}")
+            
+        except Exception as e:
+            logger.error(f"Error starting scan: {e}", exc_info=True)
+            
+            # Update UI
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(False)
+                
+            # Show error message
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr(
+                    "errors.scan_failed", 
+                    "Failed to start scan: {error}"
+                ).format(error=str(e))
+            )
+            
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("status.scan_failed", "Scan failed: {error}").format(error=str(e)),
+                    5000  # Show for 5 seconds
+                )
+    
+    def _on_scan_progress(self, current: int, total: int, path: str):
+        """Handle scan progress updates."""
+        try:
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setMaximum(total)
+                self.progress_bar.setValue(current)
+                self.progress_bar.setVisible(True)
+                
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr(
+                        "status.scan_progress", 
+                        "Scanning: {current}/{total} - {filename}"
+                    ).format(
+                        current=current,
+                        total=total,
+                        filename=os.path.basename(path)
+                    )
+                )
+        except Exception as e:
+            logger.error(f"Error updating scan progress: {e}", exc_info=True)
+    
+    def _on_scan_status(self, message: str, current: int, total: int):
+        """Handle scan status updates."""
+        try:
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(message)
+                
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setMaximum(total if total > 0 else 1)
+                self.progress_bar.setValue(current)
+                self.progress_bar.setVisible(True)
+        except Exception as e:
+            logger.error(f"Error updating scan status: {e}", exc_info=True)
+    
+    def _on_scan_progress(self, current: int, total: int, current_file: str):
+        """Handle scan progress updates.
+        
+        Args:
+            current: Current file number being processed
+            total: Total number of files to process
+            current_file: Path to the current file being processed
+        """
+        try:
+            # Update progress bar if it exists
+            if hasattr(self, 'progress_bar'):
+                if not self.progress_bar.isVisible():
+                    self.progress_bar.setVisible(True)
+                self.progress_bar.setMaximum(total)
+                self.progress_bar.setValue(current)
+            
+            # Update status message
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr(
+                        "status.scan_progress",
+                        "Scanning: {current}/{total} - {file}"
+                    ).format(
+                        current=current,
+                        total=total,
+                        file=os.path.basename(current_file)
+                    )
+                )
+                
+        except Exception as e:
+            logger.error(f"Error updating scan progress: {e}", exc_info=True)
+    
+    def _on_scan_status(self, message: str, current: int, total: int):
+        """Handle scan status updates.
+        
+        Args:
+            message: Status message to display
+            current: Current progress value
+            total: Maximum progress value
+        """
+        try:
+            # Update progress bar if it exists
+            if hasattr(self, 'progress_bar'):
+                if not self.progress_bar.isVisible():
+                    self.progress_bar.setVisible(True)
+                self.progress_bar.setMaximum(total if total > 0 else 1)
+                self.progress_bar.setValue(current)
+            
+            # Update status message
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(message)
+                
+        except Exception as e:
+            logger.error(f"Error updating scan status: {e}", exc_info=True)
+    
+    def _on_duplicates_found(self, duplicate_groups):
+        """Handle when duplicates are found during scanning.
+        
+        Args:
+            duplicate_groups: List of duplicate file groups found
+        """
+        try:
+            logger.info(f"Found {len(duplicate_groups)} duplicate groups")
+            self.last_scan_duplicates = duplicate_groups
+            
+            # Update the UI with the found duplicates
+            self._update_scan_results_ui()
+            
+            # Update status message
+            if hasattr(self, 'status_bar'):
+                status_msg = self.language_manager.tr(
+                    "status.duplicates_found",
+                    "Found {count} duplicate groups"
+                ).format(count=len(duplicate_groups))
+                self.status_bar.showMessage(status_msg, 5000)  # Show for 5 seconds
+                
+        except Exception as e:
+            logger.error(f"Error handling duplicates found: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr(
+                        "errors.duplicates_failed",
+                        "Error processing duplicates: {error}"
+                    ).format(error=str(e)),
+                    5000  # Show for 5 seconds
+                )
+    
+    def _on_scan_finished(self, duplicate_groups=None):
+        """Handle scan completion.
+        
+        Args:
+            duplicate_groups: List of duplicate file groups found during the scan
+        """
+        try:
+            # Update UI elements
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(False)
+                
+            # Update status message
+            status_msg = self.language_manager.tr(
+                "status.scan_complete", 
+                "Scan complete! Found {count} duplicate groups"
+            )
+            
+            # Process scan results if provided
+            if duplicate_groups is not None:
+                self.last_scan_duplicates = duplicate_groups
+                status_msg = status_msg.format(count=len(duplicate_groups))
+            elif hasattr(self, '_scanner') and hasattr(self._scanner, 'duplicate_groups'):
+                self.last_scan_duplicates = self._scanner.duplicate_groups
+                status_msg = status_msg.format(count=len(self.last_scan_duplicates))
+            else:
+                status_msg = self.language_manager.tr(
+                    "status.scan_complete_no_duplicates",
+                    "Scan complete! No duplicates found."
+                )
+            
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(status_msg, 5000)  # Show for 5 seconds
+                
+            # Update the UI with scan results
+            self._update_scan_results_ui()
+                
+        except Exception as e:
+            logger.error(f"Error handling scan completion: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr(
+                        "errors.scan_complete_failed",
+                        "Error completing scan: {error}"
+                    ).format(error=str(e)),
+                    5000  # Show for 5 seconds
+                )
+    
+    def _update_scan_results_ui(self):
+        """Update the UI with the latest scan results."""
+        try:
+            # Initialize the duplicates tree if it doesn't exist
+            if not hasattr(self, 'duplicates_tree') or self.duplicates_tree is None:
+                self._init_duplicates_tree()
+            
+            # Clear existing items
+            self.duplicates_tree.clear()
+            
+            # Check if we have any duplicate groups to display
+            if not hasattr(self, 'last_scan_duplicates') or not self.last_scan_duplicates:
+                # No duplicates found, show a message
+                no_duplicates_item = QTreeWidgetItem([
+                    self.language_manager.tr("ui.no_duplicates", "No duplicate files found."),
+                    "", "", ""
+                ])
+                self.duplicates_tree.addTopLevelItem(no_duplicates_item)
+                return
+                
+            # Add each duplicate group to the tree
+            valid_groups = 0
+            for group_idx, group in enumerate(self.last_scan_duplicates):
+                if group and 'files' in group and len(group['files']) >= 2:
+                    self._add_duplicate_group_to_ui(valid_groups, group)
+                    valid_groups += 1
+            
+            # If no valid groups were found, show a message
+            if valid_groups == 0:
+                no_duplicates_item = QTreeWidgetItem([
+                    self.language_manager.tr("ui.no_duplicates", "No duplicate files found."),
+                    "", "", ""
+                ])
+                self.duplicates_tree.addTopLevelItem(no_duplicates_item)
+            
+            # Resize columns to fit content
+            for i in range(self.duplicates_tree.columnCount()):
+                self.duplicates_tree.resizeColumnToContents(i)
+                
+            logger.info(f"Updated UI with {valid_groups} duplicate groups")
+            
+        except Exception as e:
+            logger.error(f"Error updating scan results UI: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.ui_update_failed", "Failed to update UI: {error}").format(error=str(e)),
+                    5000  # Show for 5 seconds
+                )
+    
+    def _init_duplicates_tree(self):
+        """Initialize the duplicates tree widget."""
+        from PyQt6.QtWidgets import QTreeWidget
+        from PyQt6.QtCore import Qt
+        
+        self.duplicates_tree = QTreeWidget()
+        self.duplicates_tree.setHeaderLabels([
+            self.language_manager.tr("ui.file_name", "File Name"),
+            self.language_manager.tr("ui.file_path", "Path"),
+            self.language_manager.tr("ui.file_size", "Size"),
+            self.language_manager.tr("ui.similarity", "Similarity")
+        ])
+        self.duplicates_tree.setColumnCount(4)
+        self.duplicates_tree.setAlternatingRowColors(True)
+        self.duplicates_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
+        self.duplicates_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.duplicates_tree.customContextMenuRequested.connect(self._show_duplicate_context_menu)
+        
+        # Replace the file list with the tree widget
+        layout = self.main_ui.file_list.parent().layout()
+        layout.replaceWidget(self.main_ui.file_list, self.duplicates_tree)
+        self.main_ui.file_list.deleteLater()
+        self.main_ui.file_list = self.duplicates_tree
+    
+    def _add_duplicate_group_to_ui(self, group_idx, group):
+        """Add a duplicate group to the UI tree."""
+        if not group or 'files' not in group or len(group['files']) < 2:
+            return
+            
+        from PyQt6.QtWidgets import QTreeWidgetItem
+        from PyQt6.QtCore import Qt
+        
+        # Create a group item
+        group_item = QTreeWidgetItem([
+            self.language_manager.tr("ui.duplicate_group", "Duplicate Group {num}").format(num=group_idx + 1),
+            f"({len(group['files'])} {self.language_manager.tr('ui.files', 'files')})",
+            "",  # Empty size for group
+            f"{group.get('similarity', 0) * 100:.1f}%" if 'similarity' in group else ""
+        ])
+        group_item.setData(0, Qt.ItemDataRole.UserRole, group)
+        group_item.setExpanded(True)
+        
+        # Add files to the group
+        for file_info in group['files']:
+            file_path = file_info.get('path', '')
+            file_name = os.path.basename(file_path)
+            file_size = file_info.get('size', 0)
+            
+            # Format file size
+            size_str = self._format_file_size(file_size)
+            
+            # Create file item
+            file_item = QTreeWidgetItem([
+                file_name,
+                os.path.dirname(file_path),
+                size_str,
+                f"{group.get('similarity', 0) * 100:.1f}%" if 'similarity' in group else "100%"
+            ])
+            file_item.setData(0, Qt.ItemDataRole.UserRole, file_info)
+            group_item.addChild(file_item)
+        
+        self.duplicates_tree.addTopLevelItem(group_item)
+    
+    def _format_file_size(self, size_bytes):
+        """Format file size in a human-readable format."""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    
+    def _show_duplicate_context_menu(self, position):
+        """Show context menu for duplicate items."""
+        try:
+            if not hasattr(self, 'duplicates_tree'):
+                return
+                
+            item = self.duplicates_tree.itemAt(position)
+            if not item:
+                return
+                
+            from PyQt6.QtWidgets import QMenu, QMessageBox
+            from PyQt6.QtGui import QAction
+            from PyQt6.QtCore import Qt
+            
+            menu = QMenu()
+            
+            # Add actions based on the selected item type
+            if item.parent() is None:
+                # Group item selected
+                open_group_action = QAction(
+                    self.language_manager.tr("actions.open_all", "Open All in Group"),
+                    self
+                )
+                menu.addAction(open_group_action)
+                
+                action = menu.exec(self.duplicates_tree.viewport().mapToGlobal(position))
+                
+                if action == open_group_action:
+                    self._open_duplicate_group(item)
+            else:
+                # File item selected
+                open_file_action = QAction(
+                    self.language_manager.tr("actions.open_file", "Open File"),
+                    self
+                )
+                show_in_folder_action = QAction(
+                    self.language_manager.tr("actions.show_in_folder", "Show in Folder"),
+                    self
+                )
+                delete_file_action = QAction(
+                    self.language_manager.tr("actions.delete_file", "Delete File"),
+                    self
+                )
+                
+                menu.addAction(open_file_action)
+                menu.addAction(show_in_folder_action)
+                menu.addSeparator()
+                menu.addAction(delete_file_action)
+                
+                action = menu.exec(self.duplicates_tree.viewport().mapToGlobal(position))
+                
+                if action == open_file_action:
+                    self._open_duplicate_file(item)
+                elif action == show_in_folder_action:
+                    self._show_in_folder(item)
+                elif action == delete_file_action:
+                    self._delete_duplicate_file(item)
+                    
+        except Exception as e:
+            logger.error(f"Error showing context menu: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.context_menu_failed", "Failed to show context menu: {error}").format(error=str(e)),
+                    5000
+                )
+    
+    def _open_duplicate_group(self, group_item):
+        """Open all files in a duplicate group."""
+        try:
+            for i in range(group_item.childCount()):
+                file_item = group_item.child(i)
+                self._open_duplicate_file(file_item)
+        except Exception as e:
+            logger.error(f"Error opening duplicate group: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.open_group_failed", "Failed to open group: {error}").format(error=str(e)),
+                    5000
+                )
+    
+    def _open_duplicate_file(self, file_item):
+        """Open a duplicate file with the default application."""
+        try:
+            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
+            if not file_info or 'path' not in file_info:
+                return
+                
+            file_path = file_info['path']
+            if not os.path.isfile(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
+                
+            # Use the system default application to open the file
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            elif os.name == 'posix':  # macOS and Linux
+                import subprocess
+                subprocess.run(['xdg-open', file_path], check=True)
+                
+        except Exception as e:
+            logger.error(f"Error opening file: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.open_file_failed", "Failed to open file: {error}").format(error=str(e)),
+                    5000
+                )
+    
+    def _show_in_folder(self, file_item):
+        """Show the containing folder of a file in the system file manager."""
+        try:
+            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
+            if not file_info or 'path' not in file_info:
+                return
+                
+            file_path = os.path.dirname(file_info['path'])
+            if not os.path.isdir(file_path):
+                raise FileNotFoundError(f"Directory not found: {file_path}")
+                
+            # Open the folder in the system file manager
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            elif os.name == 'posix':  # macOS and Linux
+                import subprocess
+                subprocess.run(['xdg-open', file_path], check=True)
+                
+        except Exception as e:
+            logger.error(f"Error showing in folder: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.show_folder_failed", "Failed to show in folder: {error}").format(error=str(e)),
+                    5000
+                )
+    
+    def _delete_duplicate_file(self, file_item):
+        """Delete a duplicate file after confirmation."""
+        try:
+            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
+            if not file_info or 'path' not in file_info:
+                return
+                
+            file_path = file_info['path']
+            file_name = os.path.basename(file_path)
+            
+            # Ask for confirmation
+            from PyQt6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(
+                self,
+                self.language_manager.tr("dialog.confirm_delete", "Confirm Delete"),
+                self.language_manager.tr("dialog.confirm_delete_msg", "Are you sure you want to delete '{file}'?").format(file=file_name),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                # Delete the file
+                os.remove(file_path)
+                
+                # Remove the item from the tree
+                parent = file_item.parent()
+                if parent:
+                    parent.removeChild(file_item)
+                    
+                    # If this was the last file in the group, remove the group
+                    if parent.childCount() == 0:
+                        self.duplicates_tree.takeTopLevelItem(
+                            self.duplicates_tree.indexOfTopLevelItem(parent)
+                        )
+                
+                # Show success message
+                if hasattr(self, 'status_bar'):
+                    self.status_bar.showMessage(
+                        self.language_manager.tr("status.file_deleted", "Deleted: {file}").format(file=file_name),
+                        5000
+                    )
+                
+        except Exception as e:
+            logger.error(f"Error deleting file: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("errors.delete_failed", "Failed to delete file: {error}").format(error=str(e)),
+                    5000
+                )
     
     def on_show_settings(self):
         """Override to ensure the settings dialog is shown correctly."""

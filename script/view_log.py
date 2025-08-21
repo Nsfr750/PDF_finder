@@ -23,43 +23,57 @@ class LogHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
         self.highlighting_rules = []
         
-        # Format for different log levels
-        error_format = QTextCharFormat()
-        error_format.setForeground(QColor(200, 0, 0))  # Red
-        error_format.setFontWeight(QFont.Weight.Bold)
-        self.highlighting_rules.append((QRegularExpression(r'ERROR.*'), error_format))
+        # Format for different log levels with improved contrast and accessibility
         
-        warning_format = QTextCharFormat()
-        warning_format.setForeground(QColor(255, 165, 0))  # Orange
-        warning_format.setFontWeight(QFont.Weight.Bold)
-        self.highlighting_rules.append((QRegularExpression(r'WARNING.*'), warning_format))
-        
+        # CRITICAL - High contrast red background with white text
         critical_format = QTextCharFormat()
-        critical_format.setForeground(QColor(255, 255, 255))  # White
-        critical_format.setBackground(QColor(200, 0, 0))  # Red background
+        critical_format.setForeground(QColor(255, 255, 255))  # White text
+        critical_format.setBackground(QColor(178, 34, 34))    # Firebrick red background
         critical_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'CRITICAL.*'), critical_format))
         
-        debug_format = QTextCharFormat()
-        debug_format.setForeground(QColor(100, 100, 100))  # Gray
-        self.highlighting_rules.append((QRegularExpression(r'DEBUG.*'), debug_format))
+        # ERROR - Bright red
+        error_format = QTextCharFormat()
+        error_format.setForeground(QColor(220, 50, 47))  # Bright red
+        error_format.setFontWeight(QFont.Weight.Bold)
+        self.highlighting_rules.append((QRegularExpression(r'ERROR.*'), error_format))
         
+        # WARNING - Orange/brown
+        warning_format = QTextCharFormat()
+        warning_format.setForeground(QColor(203, 75, 22))  # Chocolate orange
+        warning_format.setFontWeight(QFont.Weight.Bold)
+        self.highlighting_rules.append((QRegularExpression(r'WARNING.*'), warning_format))
+        
+        # INFO - Navy blue
         info_format = QTextCharFormat()
-        info_format.setForeground(QColor(0, 0, 200))  # Blue
+        info_format.setForeground(QColor(42, 101, 153))  # Darker blue
         info_format.setFontWeight(QFont.Weight.Bold)
         self.highlighting_rules.append((QRegularExpression(r'INFO.*'), info_format))
         
-        # Format for timestamps
+        # DEBUG - Dark gray
+        debug_format = QTextCharFormat()
+        debug_format.setForeground(QColor(88, 110, 117))  # Dark gray-blue
+        debug_format.setFontItalic(True)  # Italic to distinguish debug messages
+        self.highlighting_rules.append((QRegularExpression(r'DEBUG.*'), debug_format))
+        
+        # Timestamp - Teal
         time_format = QTextCharFormat()
-        time_format.setForeground(QColor(0, 128, 0))  # Dark green
-        time_format.setFontWeight(QFont.Weight.Bold)
+        time_format.setForeground(QColor(7, 102, 120))  # Dark teal
+        time_format.setFontWeight(QFont.Weight.Medium)
         self.highlighting_rules.append((QRegularExpression(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}'), time_format))
         
-        # Format for tracebacks
+        # Tracebacks - Dark red with subtle background
         traceback_format = QTextCharFormat()
-        traceback_format.setForeground(QColor(200, 0, 0))  # Red
+        traceback_format.setForeground(QColor(178, 34, 34))  # Firebrick red
+        traceback_format.setBackground(QColor(255, 245, 245))  # Very light red background
         self.highlighting_rules.append((QRegularExpression(r'Traceback \(most recent call last\):'), traceback_format))
         self.highlighting_rules.append((QRegularExpression(r'File ".*", line \d+.*'), traceback_format))
+        
+        # Module/function names - Purple
+        module_format = QTextCharFormat()
+        module_format.setForeground(QColor(108, 113, 196))  # Soft purple
+        module_format.setFontWeight(QFont.Weight.Medium)
+        self.highlighting_rules.append((QRegularExpression(r'\b[a-zA-Z_][a-zA-Z0-9_]*\.py:\d+'), module_format))
     
     def highlightBlock(self, text):
         """Apply syntax highlighting to the given block of text."""
@@ -195,15 +209,13 @@ class LogViewer(QDialog):
             search_text = self.search_edit.text().lower()
             
             self.filtered_content = []
-            
-            # Buffer for multi-line entries
             current_entry = []
             
             for line in self.log_content:
                 line = line.rstrip('\n')
                 
                 # Check if line starts with a timestamp (new log entry)
-                is_new_entry = bool(re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}', line))
+                is_new_entry = bool(re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', line))
                 
                 if is_new_entry and current_entry:
                     # Process the previous entry
@@ -223,29 +235,39 @@ class LogViewer(QDialog):
             
             # Update display
             self.log_display.clear()
-            self.log_display.setPlainText('\n\n'.join(self.filtered_content))
+            if self.filtered_content:
+                self.log_display.setPlainText('\n\n'.join(self.filtered_content))
+            else:
+                no_results = self.tr("No log entries match the current filters.")
+                self.log_display.setPlainText(no_results)
             
             # Update status
+            total_entries = len([l for l in self.log_content if l.strip() and re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', l)])
             self.status_bar.setText(self.tr("Showing {count} of {total} log entries").format(
-                count=len(self.filtered_content),
-                total=len([l for l in self.log_content if l.strip()])
+                count=len(self.filtered_content) if self.filtered_content else 0,
+                total=total_entries
             ))
             
-            # Scroll to bottom
-            self.log_display.verticalScrollBar().setValue(
-                self.log_display.verticalScrollBar().maximum()
-            )
+            # Scroll to top after filtering
+            self.log_display.verticalScrollBar().setValue(0)
             
         except Exception as e:
             self.log_display.setPlainText(self.tr("Error filtering logs: {}").format(str(e)))
+            logger.error(f"Error filtering logs: {e}", exc_info=True)
     
     def _should_include_entry(self, entry_text, level, search_text):
         """Check if a log entry should be included based on filters."""
         # Check level filter
         if level != "ALL":
-            level_match = re.search(r' - ' + re.escape(level) + r' - ', entry_text)
+            # Match the actual log format: "YYYY-MM-DD HH:MM:SS - APPNAME - LEVEL - "
+            level_pattern = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - [^-]+ - ' + re.escape(level) + r' - '
+            level_match = re.search(level_pattern, entry_text)
             if not level_match:
-                return False
+                # For multi-line entries (like tracebacks), check the first line
+                first_line = entry_text.split('\n')[0]
+                level_match = re.search(level_pattern, first_line)
+                if not level_match:
+                    return False
         
         # Check search text
         if search_text and search_text.lower() not in entry_text.lower():
