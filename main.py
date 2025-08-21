@@ -82,7 +82,14 @@ class PDFDuplicateFinder(MainWindow):
         try:
             dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
             dialog.settings_changed.connect(self.on_settings_changed)
-            dialog.language_changed.connect(lambda: self.change_language(dialog.language_combo.currentData()))
+            
+            # Connect language changed signal
+            def handle_language_changed():
+                if hasattr(dialog, 'language_combo'):
+                    lang_code = dialog.language_combo.currentData()
+                    self.on_language_change(lang_code)
+            
+            dialog.language_changed.connect(handle_language_changed)
             dialog.exec()
         except Exception as e:
             print(f"ERROR in PDFDuplicateFinder.on_show_settings: {e}")
@@ -93,6 +100,205 @@ class PDFDuplicateFinder(MainWindow):
                 self.tr("Error"),
                 self.tr(f"Could not open settings: {e}")
             )
+            
+    def on_language_change(self, language_code: str):
+        """Handle language change from the settings dialog.
+        
+        Args:
+            language_code: The new language code to change to (e.g., 'en', 'it')
+        """
+        try:
+            logger.info(f"Changing language to: {language_code}")
+            
+            # Save the new language setting
+            self.settings.set_language(language_code)
+            
+            # Update the language manager
+            self.language_manager.set_language(language_code)
+            
+            # Retranslate the UI
+            self.retranslate_ui()
+            
+            # Show a message to the user
+            self.main_ui.status_bar.showMessage(
+                self.tr("Language changed. Restart the application for all changes to take effect."), 
+                5000  # 5 seconds
+            )
+            
+        except Exception as e:
+            logger.error(f"Error changing language: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr(f"Failed to change language: {e}")
+            )
+    
+    def on_language_changed(self, language_code: str):
+        """Handle language change from the language manager.
+        
+        This is called when the language is changed through other means
+        (e.g., from a menu or keyboard shortcut).
+        
+        Args:
+            language_code: The new language code (e.g., 'en', 'it')
+        """
+        # Just forward to on_language_change since the logic is the same
+        self.on_language_change(language_code)
+    
+    def change_language(self, language_code: str):
+        """Change the application language.
+        
+        This is called when the language is changed from the menu.
+        
+        Args:
+            language_code: The new language code (e.g., 'en', 'it')
+        """
+        try:
+            # Update the language manager
+            self.language_manager.set_language(language_code)
+            
+            # Save the language setting
+            self.settings.set_language(language_code)
+            
+            # Refresh the UI
+            self.retranslate_ui()
+            
+            # Show a status message
+            self.main_ui.status_bar.showMessage(
+                self.tr("Language changed to {}").format(language_code),
+                3000  # 3 seconds
+            )
+            
+        except Exception as e:
+            logger.error(f"Error changing language: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr(f"Failed to change language: {e}")
+            )
+    
+    def check_for_updates(self):
+        """Check for application updates."""
+        try:
+            # Get current version
+            from script.version import __version__ as current_version
+            
+            # Show checking message
+            self.status_bar.showMessage(self.tr("Checking for updates..."), 5000)
+            
+            # In a real application, you would check for updates from a server
+            # For now, we'll just show a message that no updates are available
+            QMessageBox.information(
+                self,
+                self.tr("Check for Updates"),
+                self.tr("You are using the latest version: v{}").format(current_version)
+            )
+            
+            # Example of how to check for updates (commented out for reference):
+            """
+            import requests
+            try:
+                response = requests.get("https://api.github.com/repos/Nsfr750/PDF_Finder/releases/latest", timeout=10)
+                if response.status_code == 200:
+                    latest_release = response.json()
+                    latest_version = latest_release['tag_name'].lstrip('v')
+                    
+                    if latest_version > current_version:
+                        # New version available
+                        reply = QMessageBox.information(
+                            self,
+                            self.tr("Update Available"),
+                            self.tr("A new version (v{}) is available. Would you like to download it now?").format(latest_version),
+                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                        )
+                        
+                        if reply == QMessageBox.StandardButton.Yes:
+                            # Open download URL in default browser
+                            download_url = latest_release.get('html_url', '')
+                            if download_url:
+                                import webbrowser
+                                webbrowser.open(download_url)
+                    else:
+                        QMessageBox.information(
+                            self,
+                            self.tr("No Updates"),
+                            self.tr("You are using the latest version: v{}").format(current_version)
+                        )
+                else:
+                    QMessageBox.warning(
+                        self,
+                        self.tr("Update Check Failed"),
+                        self.tr("Failed to check for updates. Please try again later.")
+                    )
+            except Exception as e:
+                logger.error(f"Error checking for updates: {e}", exc_info=True)
+                QMessageBox.warning(
+                    self,
+                    self.tr("Update Error"),
+                    self.tr("An error occurred while checking for updates: {}").format(str(e))
+                )
+            """
+            
+        except Exception as e:
+            logger.error(f"Error in check_for_updates: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to check for updates: {}").format(str(e))
+            )
+    
+    def retranslate_ui(self):
+        """Retranslate all UI elements when the language changes."""
+        try:
+            logger.info("Retranslating UI...")
+            
+            # Update window title
+            self.setWindowTitle(self.tr("PDF Duplicate Finder"))
+            
+            # Update menu bar
+            if hasattr(self, 'menu_bar'):
+                self.menu_bar.retranslate_ui()
+            
+            # Update toolbar
+            if hasattr(self, 'toolbar'):
+                self.toolbar.retranslate_ui()
+            
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(self.tr("Ready"))
+            
+            # Update any other UI elements that need translation
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'retranslate_ui'):
+                self.main_ui.retranslate_ui()
+                
+            logger.info("UI retranslation complete")
+                
+        except Exception as e:
+            logger.error(f"Error retranslating UI: {e}", exc_info=True)
+            
+    def apply_settings(self):
+        """Apply settings that need to be updated immediately."""
+        try:
+            # Apply language setting if changed
+            current_lang = self.language_manager.get_current_language()
+            saved_lang = self.settings.get_language()
+            
+            if current_lang != saved_lang:
+                self.language_manager.set_language(saved_lang)
+                self.retranslate_ui()
+            
+            # Apply UI settings
+            if hasattr(self, 'toolbar') and hasattr(self.settings, 'get_show_toolbar'):
+                self.toolbar.setVisible(self.settings.get_show_toolbar())
+                
+            if hasattr(self.main_ui, 'status_bar') and hasattr(self.settings, 'get_show_statusbar'):
+                self.main_ui.status_bar.setVisible(self.settings.get_show_statusbar())
+                
+            logger.info("Settings applied successfully")
+            
+        except Exception as e:
+            logger.error(f"Error applying settings: {e}", exc_info=True)
+            raise
     
     def on_settings_changed(self):
         """Handle settings changes from the settings dialog."""

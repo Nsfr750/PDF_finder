@@ -275,7 +275,7 @@ class MainWindow(QMainWindow):
             # Open in viewer on double-click or Enter/Activation
             self.main_ui.file_list.itemDoubleClicked.connect(self.on_open_selected_in_viewer)
             self.main_ui.file_list.itemActivated.connect(self.on_open_selected_in_viewer)
-            
+        
         # Connect menu actions to toolbar
         if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):
             # Get menu actions that should be in the toolbar
@@ -285,6 +285,64 @@ class MainWindow(QMainWindow):
                 'deselect_all': self.menu_bar.actions.get('deselect_all'),
                 'delete_selected': self.menu_bar.actions.get('delete_selected')
             }
+
+    def on_file_selection_changed(self):
+        """Update preview and status when file selection changes."""
+        try:
+            if not hasattr(self, 'main_ui') or not hasattr(self.main_ui, 'file_list'):
+                return
+            lw = self.main_ui.file_list
+            selected = lw.selectedItems()
+            count = len(selected)
+            if count == 0:
+                if hasattr(self.main_ui, 'clear_preview'):
+                    self.main_ui.clear_preview()
+                if hasattr(self, 'status_bar'):
+                    self.status_bar.showMessage(
+                        self.language_manager.tr("ui.no_selection", "No item selected")
+                    )
+                return
+            if count == 1:
+                item = selected[0]
+                path = item.data(Qt.ItemDataRole.UserRole)
+                if path and hasattr(self.main_ui, 'update_preview'):
+                    self.main_ui.update_preview(path)
+                if hasattr(self, 'status_bar'):
+                    name = os.path.basename(path) if path else item.text()
+                    self.status_bar.showMessage(
+                        self.language_manager.tr("ui.selected_one", "Selected: %s") % name
+                    )
+            else:
+                if hasattr(self, 'status_bar'):
+                    self.status_bar.showMessage(
+                        self.language_manager.tr("ui.selected_many", "%d items selected") % count
+                    )
+        except Exception as e:
+            logger.error(f"Error handling selection change: {e}", exc_info=True)
+
+    def on_open_selected_in_viewer(self, item):
+        """Open the currently selected PDF in the built-in viewer."""
+        try:
+            path = None
+            if item is not None:
+                path = item.data(Qt.ItemDataRole.UserRole)
+            if not path and hasattr(self.main_ui, 'file_list'):
+                current = self.main_ui.file_list.currentItem()
+                if current is not None:
+                    path = current.data(Qt.ItemDataRole.UserRole)
+            if not path:
+                return
+            show_pdf_viewer(path, parent=self)
+        except Exception as e:
+            logger.error(f"Error opening viewer: {e}", exc_info=True)
+            try:
+                QMessageBox.critical(
+                    self,
+                    self.language_manager.tr("dialog.error", "Error"),
+                    self.language_manager.tr("errors.viewer_open_failed", "Could not open viewer: %s") % str(e)
+                )
+            except Exception:
+                pass
 
     def _start_scan(self, folder_path: str):
         """Start scanning the given folder in a background thread."""

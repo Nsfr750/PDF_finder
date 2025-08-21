@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-finder"
-version = "1.0.0"
+version = "2.9.0"
 description = "A PDF search and management application with advanced features"
 readme = "README.md"
 requires-python = ">=3.8"

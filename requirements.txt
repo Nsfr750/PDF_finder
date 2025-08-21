@@ -5,13 +5,12 @@ imagehash>=4.3.1
 requests>=2.31.0
 PyMuPDF>=1.21.0
 numpy>=1.21.0
-scikit-image>=0.19.0
 qrcode>=7.3.1
 wand>=0.6.10
 markdown>=3.8.2
 pyyaml>=6.0.2
 pymdown-extensions>=9.0
-pillow>=10.0.0  # Required by pdf2image and other image processing
+opencv-python-headless>=4.8.0
 
 # GUI
 PyQt6>=6.4.0
@@ -45,4 +44,3 @@ pre-commit>=3.7.0
 # Type stubs
 types-PyYAML>=6.0.0
 types-requests>=2.31.0
-types-Pillow>=10.0.0

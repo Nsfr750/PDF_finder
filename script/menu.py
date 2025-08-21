@@ -319,7 +319,12 @@ class MenuBar(QObject):
             for name, code in languages:
                 action = QAction(self.tr(name), self.parent, checkable=True)
                 action.setData(code)
-                action.triggered.connect(lambda checked, c=code: self.parent.change_language(c))
+                
+                # Connect to the language manager's set_language method
+                action.triggered.connect(
+                    lambda checked, c=code: self.language_manager.set_language(c)
+                )
+                
                 self.language_group.addAction(action)
                 self.menus['language'].addAction(action)
                 

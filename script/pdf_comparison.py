@@ -13,8 +13,7 @@ from typing import Optional, Tuple, Dict, Any, List
 
 import fitz  # PyMuPDF
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw
-from skimage.metrics import structural_similarity as ssim
+import cv2
 from wand.image import Image as WandImage
 
 # Configure logging
@@ -138,34 +137,39 @@ class PDFComparator:
             # Compare each page
             similarities = []
             for page_num in range(len(doc1)):
-                # Convert pages to images
+                # Render pages to pixmaps
                 pix1 = doc1.load_page(page_num).get_pixmap(dpi=self.dpi)
-                img1 = Image.frombytes("RGB", [pix1.width, pix1.height], pix1.samples)
-                
                 pix2 = doc2.load_page(page_num).get_pixmap(dpi=self.dpi)
-                img2 = Image.frombytes("RGB", [pix2.width, pix2.height], pix2.samples)
+
+                # Convert pixmap samples to numpy arrays (H, W, C)
+                arr1 = np.frombuffer(pix1.samples, dtype=np.uint8)
+                arr1 = arr1.reshape(pix1.height, pix1.width, pix1.n)
+                arr2 = np.frombuffer(pix2.samples, dtype=np.uint8)
+                arr2 = arr2.reshape(pix2.height, pix2.width, pix2.n)
+
+                # Ensure RGB by taking first 3 channels when available
+                if arr1.shape[2] >= 3:
+                    arr1 = arr1[..., :3]
+                if arr2.shape[2] >= 3:
+                    arr2 = arr2[..., :3]
+
+                # Convert to grayscale using luminosity method
+                img1_array = np.dot(arr1[..., :3].astype(np.float32), [0.2989, 0.5870, 0.1140])
+                img2_array = np.dot(arr2[..., :3].astype(np.float32), [0.2989, 0.5870, 0.1140])
+
+                # Resize to the smaller common shape if different sizes
+                if img1_array.shape != img2_array.shape:
+                    min_height = min(img1_array.shape[0], img2_array.shape[0])
+                    min_width = min(img1_array.shape[1], img2_array.shape[1])
+                    img1_array = cv2.resize(img1_array, (min_width, min_height), interpolation=cv2.INTER_AREA)
+                    img2_array = cv2.resize(img2_array, (min_width, min_height), interpolation=cv2.INTER_AREA)
+
+                # Convert to uint8 for SSIM with fixed data_range
+                img1_array = np.clip(img1_array, 0, 255).astype(np.uint8)
+                img2_array = np.clip(img2_array, 0, 255).astype(np.uint8)
                 
-                # Resize images to match (in case of different DPI settings)
-                if img1.size != img2.size:
-                    # Use the smaller size to maintain aspect ratio
-                    min_width = min(img1.width, img2.width)
-                    min_height = min(img1.height, img2.height)
-                    img1 = img1.resize((min_width, min_height), Image.Resampling.LANCZOS)
-                    img2 = img2.resize((min_width, min_height), Image.Resampling.LANCZOS)
-                
-                # Convert to grayscale for SSIM
-                img1_gray = img1.convert('L')
-                img2_gray = img2.convert('L')
-                
-                # Convert to numpy arrays
-                img1_array = np.array(img1_gray)
-                img2_array = np.array(img2_gray)
-                
-                # Calculate SSIM
-                similarity = ssim(img1_array, img2_array, 
-                                data_range=img2_array.max() - img2_array.min(),
-                                win_size=min(7, min(img1_array.shape) - 1)  # Ensure win_size is odd and smaller than image
-                               )
+                # Calculate SSIM via OpenCV/NumPy implementation
+                similarity = self._ssim(img1_array, img2_array)
                 similarities.append(similarity)
             
             # Calculate average similarity
@@ -271,6 +275,54 @@ class PDFComparator:
         except Exception as e:
             logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
+
+    def _ssim(self, img1: np.ndarray, img2: np.ndarray) -> float:
+        """Compute SSIM between two uint8 grayscale images using OpenCV/NumPy.
+        Args:
+            img1: Grayscale image uint8 [H,W]
+            img2: Grayscale image uint8 [H,W]
+        Returns:
+            SSIM value in [0,1]
+        """
+        try:
+            if img1.shape != img2.shape:
+                h = min(img1.shape[0], img2.shape[0])
+                w = min(img1.shape[1], img2.shape[1])
+                img1 = cv2.resize(img1, (w, h), interpolation=cv2.INTER_AREA)
+                img2 = cv2.resize(img2, (w, h), interpolation=cv2.INTER_AREA)
+
+            # Convert to float32 and normalize to [0,1]
+            img1 = img1.astype(np.float32) / 255.0
+            img2 = img2.astype(np.float32) / 255.0
+
+            C1 = (0.01) ** 2
+            C2 = (0.03) ** 2
+
+            # Gaussian kernel window
+            win_size = 11
+            sigma = 1.5
+            mu1 = cv2.GaussianBlur(img1, (win_size, win_size), sigma)
+            mu2 = cv2.GaussianBlur(img2, (win_size, win_size), sigma)
+
+            mu1_sq = mu1 * mu1
+            mu2_sq = mu2 * mu2
+            mu1_mu2 = mu1 * mu2
+
+            sigma1_sq = cv2.GaussianBlur(img1 * img1, (win_size, win_size), sigma) - mu1_sq
+            sigma2_sq = cv2.GaussianBlur(img2 * img2, (win_size, win_size), sigma) - mu2_sq
+            sigma12 = cv2.GaussianBlur(img1 * img2, (win_size, win_size), sigma) - mu1_mu2
+
+            ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2) + 1e-12)
+            val = float(ssim_map.mean())
+
+            # Clamp to [0,1]
+            if val < 0:
+                return 0.0
+            if val > 1:
+                return 1.0
+            return val
+        except Exception:
+            return 0.0
 
 # Example usage
 if __name__ == "__main__":
