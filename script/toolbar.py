@@ -38,15 +38,19 @@ class MainToolBar(QToolBar):
         icon_map = {
             'open_folder': 'folder-open',
             'pdf_viewer': 'document-preview',
+            'export_csv': 'document-save',
+            'exit': 'application-exit',
             'select_all': 'edit-select-all',
             'deselect_all': 'edit-select-none',
             'delete_selected': 'edit-delete',
+            'log_viewer':'document-preview',
             'about': 'help-about',
             'help': 'help-contents',
-            'documentation': 'help-contents',
+            'documentation': 'docs-contents',
             'sponsor': 'emblem-favorite',
             'settings': 'preferences-system',
-            'check_updates': 'system-software-update'
+            'language': 'language' ,
+            'check_updates': 'system-software-update',
         }
         
         icon_name = icon_map.get(name, '')
@@ -126,7 +130,7 @@ class MainToolBar(QToolBar):
          
         # Right group (help and about)
         right_group = [
-            ['about', 'help', 'documentation',  'sponsor'], 
+            ['help', 'documentation'], 
         ]
 
         first_group_added = False
