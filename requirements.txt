@@ -27,10 +27,6 @@ pyobjc>=8.0; sys_platform == 'darwin'
 pycairo>=1.20.0; sys_platform == 'linux'
 psutil>=5.9.8
 
-# Documentation
-sphinx>=7.0.0
-sphinx-rtd-theme>=1.2.0
-
 # Testing & Development
 pytest>=8.1.1
 pytest-qt>=4.2.0

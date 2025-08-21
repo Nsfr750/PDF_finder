@@ -90,144 +90,124 @@ class PDFDuplicateFinder(MainWindow):
         # Initialize the scanner
         self._init_scanner()
     
-    def _init_scanner(self):
+    def _init_scanner(self) -> bool:
         """Initialize the PDF scanner with default settings and connect signals."""
-        logger.info("Initializing scanner...")
-        
-        # Clean up any existing scanner and thread
-        if hasattr(self, '_scanner'):
-            try:
-                if hasattr(self._scanner, 'deleteLater'):
-                    self._scanner.deleteLater()
-            except Exception as e:
-                logger.warning(f"Error cleaning up scanner: {e}")
-        
-        if hasattr(self, 'scan_thread'):
-            try:
-                if self.scan_thread.isRunning():
-                    self.scan_thread.quit()
-                    self.scan_thread.wait(1000)
-            except Exception as e:
-                logger.warning(f"Error cleaning up thread: {e}")
+        logger.info("Initializing PDF scanner...")
         
         try:
-            # Create new scanner and thread
-            self._scanner = PDFScanner()
-            self.scan_thread = QThread()
+            # Add script directory to path to ensure imports work
+            import sys
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            if script_dir not in sys.path:
+                sys.path.append(script_dir)
             
-            # Move scanner to thread
-            self._scanner.moveToThread(self.scan_thread)
-            
-            # Connect signals
-            self._scanner.progress_updated.connect(self._on_scan_progress)
-            self._scanner.status_updated.connect(self._on_scan_status)
-            self._scanner.duplicates_found.connect(self._on_duplicates_found)
-            self._scanner.finished.connect(self._on_scan_finished)
-            
-            # Set up status callback
-            self._scanner.set_status_callback(self._on_scan_status)
-            
-            # Connect thread signals
-            self.scan_thread.started.connect(self._scanner.start_scan)
-            self._scanner.finished.connect(self.scan_thread.quit)
-            self._scanner.finished.connect(self._scanner.deleteLater)
-            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
-            
-            # Set up progress bar if needed
-            if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
-                self.progress_bar = QProgressBar()
-                self.progress_bar.setMinimum(0)
-                self.progress_bar.setMaximum(100)
-                self.progress_bar.setTextVisible(True)
-                self.progress_bar.setVisible(False)
-                self.status_bar.addPermanentWidget(self.progress_bar)
+            # Import here to avoid circular imports
+            try:
+                logger.debug("Attempting to import PDFScanner...")
+                from script.scanner import PDFScanner
+                logger.debug("Successfully imported PDFScanner class")
                 
-            logger.info("Scanner initialized successfully")
-            return True
-            
+                # Connect signals
+                logger.debug("Connecting scanner signals")
+                self._scanner.status_updated.connect(self._on_scan_status_updated)
+                self._scanner.progress_updated.connect(self._on_scan_progress_updated)
+                self._scanner.finished.connect(self._on_scan_finished)
+                self._scanner.finished.connect(self.scan_thread.quit)
+                self.scan_thread.started.connect(self._scanner.start_scan)
+                
+                # Connect thread finished signal to clean up
+                self.scan_thread.finished.connect(self._on_scan_thread_finished)
+                
+                logger.info("Scanner and thread initialized successfully")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error setting up scanner thread: {str(e)}", exc_info=True)
+                if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
+                    self.scan_thread.quit()
+                    self.scan_thread.wait(2000)
+                raise
+                
         except Exception as e:
-            logger.error(f"Failed to initialize scanner: {e}", exc_info=True)
+            error_msg = f"Failed to initialize scanner: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            QMessageBox.critical(
+                self, 
+                self.tr("Error"),
+                self.tr("Failed to initialize PDF scanner: {}".format(str(e)))
+            )
             return False
     
     def _start_scan(self, folder_path: str):
-        """Start scanning the given folder with current filter settings.
-        
-        Args:
-            folder_path: Path to the folder to scan
-        """
+        """Start scanning the specified folder for duplicate PDFs."""
         try:
+            logger.info(f"Starting scan in folder: {folder_path}")
+            
+            # Validate folder path
             if not folder_path or not os.path.isdir(folder_path):
-                QMessageBox.warning(
-                    self,
-                    self.language_manager.tr("dialog.warning", "Warning"),
-                    self.language_manager.tr("errors.invalid_folder", "Please select a valid folder to scan.")
-                )
-                return
-                
-            # Update status
-            self.status_bar.showMessage(
-                self.language_manager.tr("status.scanning", "Scanning folder: {folder}").format(
-                    folder=os.path.basename(folder_path)
-                )
-            )
-            
-            # Initialize the scanner and thread
-            if not self._init_scanner():
-                error_msg = self.language_manager.tr("errors.scanner_init_failed", "Failed to initialize scanner. Please check the logs for details.")
+                error_msg = f"Invalid or non-existent folder: {folder_path}"
                 logger.error(error_msg)
-                QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
+                self._on_scan_status_updated(self.tr("scanner.error", f"Error: {error_msg}"), 0, 0)
+                return
+                
+            # Check read permissions
+            if not os.access(folder_path, os.R_OK):
+                error_msg = f"No read permissions for folder: {folder_path}"
+                logger.error(error_msg)
+                self._on_scan_status_updated(self.tr("scanner.error", f"Error: {error_msg}"), 0, 0)
                 return
             
-            try:
-                # Configure scan parameters
-                self._scanner.scan_directory = folder_path
-                self._scanner.recursive = True
-                self._scanner.min_file_size = self.current_filters['min_size']
-                self._scanner.max_file_size = self.current_filters['max_size']
-                self._scanner.min_similarity = self.current_filters['min_similarity']
-                self._scanner.enable_text_compare = self.current_filters['enable_text_compare']
-                
-                # Clear previous results
-                self.last_scan_duplicates = []
-                if hasattr(self, 'duplicates_tree'):
-                    self.duplicates_tree.clear()
-                
-                # Show progress bar
-                if hasattr(self, 'progress_bar'):
-                    self.progress_bar.setValue(0)
-                    self.progress_bar.setVisible(True)
-                
-                # Start the scan in the background thread
-                if hasattr(self, 'scan_thread') and isinstance(self.scan_thread, QThread):
-                    logger.info("Starting scan thread...")
-                    self.scan_thread.start()
-                else:
-                    error_msg = self.language_manager.tr("errors.thread_init_failed", "Failed to start scan thread.")
+            # Ensure scanner is initialized
+            if not hasattr(self, '_scanner') or not hasattr(self, 'scan_thread'):
+                logger.debug("Scanner not initialized, initializing now...")
+                if not self._init_scanner():
+                    error_msg = "Failed to initialize scanner"
                     logger.error(error_msg)
-                    QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
+                    self._on_scan_status_updated(self.tr("scanner.error", f"Error: {error_msg}"), 0, 0)
+                    return
+                # Start the thread - this will call start_scan() in the scanner's thread
+                logger.info("Starting scan thread...")
+                try:
+                    self.scan_thread.start()
+                    logger.info("Scan thread started successfully")
                     
-            except Exception as e:
-                error_msg = self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: {error}").format(error=str(e))
-                logger.error(error_msg, exc_info=True)
-                QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
-            
-            logger.info(f"Started scanning folder: {folder_path}")
-            
+                    # Update status
+                    if hasattr(self, 'status_bar'):
+                        self.status_bar.showMessage(
+                            self.language_manager.tr("status.scan_started", "Scan started. Processing files..."),
+                            5000  # Show for 5 seconds
+                        )
+                    return True
+                except Exception as e:
+                    error_msg = f"Failed to start scan thread: {e}"
+                    logger.error(error_msg, exc_info=True)
+                    if hasattr(self, 'status_bar'):
+                        self.status_bar.showMessage(
+                            self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: {error}").format(error=str(e)),
+                            5000
+                        )
+                    raise RuntimeError(error_msg) from e
+                
+                logger.info(f"Started scanning folder: {folder_path}")
+                
         except Exception as e:
+            error_msg = f"Error preparing scan: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.scan_prepare_failed", "Failed to prepare scan: {error}").format(error=str(e))
+            )
             logger.error(f"Error starting scan: {e}", exc_info=True)
             
             # Update UI
             if hasattr(self, 'progress_bar'):
                 self.progress_bar.setVisible(False)
                 
-            # Show error message
             QMessageBox.critical(
                 self,
                 self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr(
-                    "errors.scan_failed", 
-                    "Failed to start scan: {error}"
-                ).format(error=str(e))
+                self.language_manager.tr("errors.scan_failed", "Failed to start scan. Please check the logs for details.")
             )
             
             # Update status bar
@@ -1330,85 +1310,260 @@ class PDFDuplicateFinder(MainWindow):
                 progress.setLabelText(msg)
                 # Save empty results for export clarity
                 self.last_scan_duplicates = []
-                
-                # Add a message to the file list
-                no_duplicates_item = QListWidgetItem(self.tr("No duplicate files found in the selected folder."))
-                no_duplicates_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.main_ui.file_list.addItem(no_duplicates_item)
-            
-            # Show completion for a moment before closing
-            progress.setValue(100)
-            QTimer.singleShot(1000, progress.close)
-            
-        except Exception as e:
-            # Show error message
-            error_msg = self.tr("Failed to scan folder: %s") % str(e)
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                error_msg
-            )
-            
-            # Update status bar
-            self.main_ui.status_bar.showMessage(error_msg)
-            logger.error(f"Error scanning folder: {e}", exc_info=True)
-            
-        finally:
-            # Make sure to close the progress dialog if it's still open
-            if progress.isVisible():
-                progress.close()
 
-    def on_export_csv(self):
-        """Export the latest scan results to a CSV file."""
-        try:
-            results = getattr(self, 'last_scan_duplicates', [])
-            if not results:
-                QMessageBox.information(
-                    self,
-                    self.tr("Export CSV"),
-                    self.tr("No results to export. Please run a scan first.")
-                )
-                return
-            # Ask for destination file
-            dest_path, _ = QFileDialog.getSaveFileName(
-                self,
-                self.tr("Save Scan Results as CSV"),
-                "duplicates.csv",
-                self.tr("CSV Files (*.csv)")
-            )
-            if not dest_path:
-                return
-            # Write CSV
-            with open(dest_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(["group", "path", "filename", "size_bytes", "size_kb", "modified_epoch", "md5"]) 
-                for group_idx, group in enumerate(results, start=1):
-                    for info in group or []:
-                        if not isinstance(info, dict):
-                            continue
-                        path = info.get('path', '')
-                        filename = info.get('filename', os.path.basename(path))
-                        size = int(info.get('size', 0) or 0)
-                        size_kb = f"{size/1024:.1f}"
-                        modified = info.get('modified', 0)
-                        md5 = info.get('md5', '')
-                        writer.writerow([group_idx, path, filename, size, size_kb, modified, md5])
+def on_open_folder(self):
+    """Use MainWindow's scanning flow (status-bar progress bar)."""
+    # Delegate to base class which starts PDFScanner and updates the status-bar QProgressBar
+    return super().on_open_folder()
+    
+def on_toggle_toolbar(self, checked: bool):
+    """Show or hide the toolbar.
+    
+    Args:
+        checked: Whether the toolbar should be visible
+    """
+    if hasattr(self, 'toolbar'):
+        self.toolbar.setVisible(checked)
+    
+def on_toggle_statusbar(self, checked: bool):
+    """Show or hide the status bar.
+    
+    Args:
+        checked: Whether the status bar should be visible
+    """
+    if hasattr(self.main_ui, 'status_bar'):
+        self.main_ui.status_bar.setVisible(checked)
+    
+def on_select_all(self):
+    """Select all items in the current view."""
+    if hasattr(self.main_ui, 'file_list'):
+        self.main_ui.file_list.selectAll()
+    
+def on_deselect_all(self):
+    """Deselect all items in the current view."""
+    if hasattr(self.main_ui, 'file_list'):
+        self.main_ui.file_list.clearSelection()
+    
+def on_show_about(self):
+    """Show the about dialog."""
+    from script.about import AboutDialog
+        
+    about_dialog = AboutDialog(self)
+    about_dialog.exec()
+    
+def on_show_log_viewer(self):
+    """Open the log viewer dialog for today's log file."""
+    try:
+        from script.view_log import show_log_viewer
+        # Build expected log file path (same pattern as logger.setup_logger)
+        logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+        today = datetime.now().strftime('%Y%m%d')
+        log_file = os.path.join(logs_dir, f"PDFDuplicateFinder_{today}.log")
+        show_log_viewer(log_file, parent=self)
+    except Exception as e:
+        QMessageBox.critical(
+            self,
+            self.tr("Error"),
+            self.tr("Could not open log viewer: %s") % str(e)
+        )
+    
+def scan_folder(self, folder_path: str):
+    """Scan a folder for duplicate PDF files.
+    
+    Args:
+        folder_path: Path to the folder to scan
+    """
+    try:
+        # Update status bar and show progress bar
+        self.status_bar.showMessage(self.tr("Scanning folder: %s") % folder_path)
+        
+        # Initialize scanner if needed
+        if not hasattr(self, '_scanner') or self._scanner is None:
+            self._init_scanner()
+        
+        # Reset UI state
+        if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'file_list'):
+            self.main_ui.file_list.clear()
+            
+        # Show and reset progress bar
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setValue(0)
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(100)
+            self.progress_bar.setFormat("%p% - %v/%m")
+        
+        # Start scan in a separate thread
+        self.scan_thread = QThread()
+        self.scan_worker = lambda: self._scan_worker(folder_path)
+        self.scan_thread.started.connect(self.scan_worker)
+        
+        # Connect signals
+        if hasattr(self, 'scan_status'):
+            self.scan_status.connect(self._update_scan_status)
+        if hasattr(self, 'scan_finished'):
+            self.scan_finished.connect(self._on_scan_finished)
+        
+        # Start the thread
+        self.scan_thread.start()
+        
+    except Exception as e:
+        logger.error(f"Error starting scan: {e}", exc_info=True)
+        QMessageBox.critical(
+            self,
+            self.tr("Error"),
+            self.tr("Failed to start scan: {}").format(str(e))
+        )
+        
+        # Clear the file list
+        if hasattr(self.main_ui, 'file_list'):
+            self.main_ui.file_list.clear()
+        else:
+            # If file_list doesn't exist, log an error and return
+            logger.error("file_list widget not found in main_ui")
+            return
+        
+        # Add duplicates to the file list
+        if duplicates and len(duplicates) > 0:
+            for group_index, duplicate_group in enumerate(duplicates, 1):
+                if not duplicate_group:  # Skip empty groups
+                    continue
+                    
+                # Create a group header item
+                group_item = QListWidgetItem()
+                group_item.setText(f"{self.tr('Group')} {group_index} - {len(duplicate_group)} {self.tr('duplicates')}")
+                group_item.setFlags(group_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)  # Make header non-selectable
+                group_item.setBackground(QColor(240, 240, 240))  # Light gray background for headers
+                group_item.setFont(QFont("Arial", 10, QFont.Weight.Bold))  # Make header text bold
+                self.main_ui.file_list.addItem(group_item)
+                
+                # Add each file in the duplicate group
+                for file_info in duplicate_group:
+                    if isinstance(file_info, dict) and 'path' in file_info:
+                        file_item = QListWidgetItem()
+                        file_name = file_info.get('filename', os.path.basename(file_info['path']))
+                        file_size = file_info.get('size', 0)
+                        size_kb = file_size / 1024.0
+                        file_item.setText(f"  • {file_name} ({size_kb:.1f} KB)")
+                        # Store path for activation/double-click handlers
+                        file_item.setData(Qt.ItemDataRole.UserRole, file_info.get('path'))
+                        # Store full info in another role for future features
+                        try:
+                            file_item.setData(Qt.ItemDataRole.UserRole + 1, file_info)
+                        except Exception:
+                            pass
+                        self.main_ui.file_list.addItem(file_item)
+                
+                # Add a small space between groups
+                spacer = QListWidgetItem()
+                spacer.setFlags(Qt.ItemFlag.NoItemFlags)
+                spacer.setSizeHint(QSize(0, 5))  # 5 pixels height for spacing
+                self.main_ui.file_list.addItem(spacer)
+            
+            # Show completion message
+            msg = self.tr("Found %d groups of duplicate files") % len(duplicates)
+            self.main_ui.status_bar.showMessage(msg)
+            progress.setLabelText(msg)
+        else:
+            # No duplicates found
+            msg = self.tr("No duplicate files found")
+            self.main_ui.status_bar.showMessage(msg)
+            progress.setLabelText(msg)
+            # Save empty results for export clarity
+            self.last_scan_duplicates = []
+            
+            # Add a message to the file list
+            no_duplicates_item = QListWidgetItem(self.tr("No duplicate files found in the selected folder."))
+            no_duplicates_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.main_ui.file_list.addItem(no_duplicates_item)
+        
+        # Show completion for a moment before closing
+        progress.setValue(100)
+        QTimer.singleShot(1000, progress.close)
+        
+    except Exception as e:
+        # Show error message
+        error_msg = self.tr("Failed to scan folder: %s") % str(e)
+        QMessageBox.critical(
+            self,
+            self.tr("Error"),
+            error_msg
+        )
+        
+        # Update status bar
+        self.main_ui.status_bar.showMessage(error_msg)
+        logger.error(f"Error scanning folder: {e}", exc_info=True)
+        
+    finally:
+        # Make sure to close the progress dialog if it's still open
+        if progress.isVisible():
+            progress.close()
+
+def on_export_csv(self):
+    """Export the latest scan results to a CSV file."""
+    try:
+        results = getattr(self, 'last_scan_duplicates', [])
+        if not results:
             QMessageBox.information(
                 self,
                 self.tr("Export CSV"),
-                self.tr("Export completed: %s") % dest_path
+                self.tr("No results to export. Please run a scan first.")
             )
-        except Exception as e:
-            logger.error(f"Error exporting CSV: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr("Failed to export CSV: %s") % str(e)
-            )
-    
+            return
+        # Ask for destination file
+        dest_path, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Scan Results as CSV"),
+            "duplicates.csv",
+            self.tr("CSV Files (*.csv)")
+        )
+        if not dest_path:
+            return
+        # Write CSV
+        with open(dest_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["group", "path", "filename", "size_bytes", "size_kb", "modified_epoch", "md5"]) 
+            for group_idx, group in enumerate(results, start=1):
+                for info in group or []:
+                    if not isinstance(info, dict):
+                        continue
+                    path = info.get('path', '')
+                    filename = info.get('filename', os.path.basename(path))
+                    size = int(info.get('size', 0) or 0)
+                    size_kb = f"{size/1024:.1f}"
+                    modified = info.get('modified', 0)
+                    md5 = info.get('md5', '')
+                    writer.writerow([group_idx, path, filename, size, size_kb, modified, md5])
+        QMessageBox.information(
+            self,
+            self.tr("Export CSV"),
+            self.tr("Export completed: %s") % dest_path
+        )
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {e}", exc_info=True)
+        QMessageBox.critical(
+            self,
+            self.tr("Error"),
+            self.tr("Failed to export CSV: %s") % str(e)
+        )
+
 def main():
     """Main entry point for the application."""
-    # Create the application first
+    # Configure logging first
+    from script.logger import setup_logger
+    import os
+    import logging
+    
+    # Set up logger with debug level
+    logger = setup_logger(log_level=logging.DEBUG)
+    logger.debug("Starting PDF Duplicate Finder with debug logging")
+    
+    # Log environment information
+    logger.debug(f"Python version: {sys.version}")
+    logger.debug(f"Working directory: {os.getcwd()}")
+    logger.debug(f"Executable: {sys.executable}")
+    
+    # Create the application
     app = QApplication(sys.argv)
     
     try:

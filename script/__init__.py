@@ -10,7 +10,7 @@ This package contains the main application modules for the PDF Duplicate Finder.
 # Import main components
 from .main_window import MainWindow
 from .menu import MenuBar
-from .toolbar import MainToolBar
+from .toolbar import ToolBar as MainToolBar
 from .settings_dialog import SettingsDialog
 from .help import HelpDialog
 
@@ -23,7 +23,7 @@ __email__ = 'nsfr750@yandex.com'
 __all__ = [
     'MainWindow',
     'MenuBar',
-    'MainToolBar',
+    'ToolBar',
     'SettingsDialog',
     'HelpDialog'
 ]

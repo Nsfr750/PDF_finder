@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 2.9.0
 
 - Settings dialog: Pre-flight backend checks with inline status labels
-- Settings dialog: "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript
+- Settings dialog: "Test backends" button to validate PyMuPDF and Ghostscript
 - UI: File list automatically populates with scanned PDFs on scan completion
 - Internationalization: Localized status-bar warning when selected backend fails and app falls back
 - Implemented image-based comparison for scanned PDFs

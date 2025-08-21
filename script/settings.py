@@ -50,6 +50,10 @@ class AppSettings:
             else:
                 return default
         return value
+        
+    def get_language(self) -> str:
+        """Get the current language setting."""
+        return self.get('language', 'en')
     
     def set(self, key: str, value: Any) -> None:
         """Set a setting value by dot notation key."""

@@ -2,8 +2,8 @@
 
 - [ ] **Performance Optimization**
   - [ ] Implement caching for file hashes to speed up rescans
-  - [x] Add progress indicators for long-running operations (implemented in v2.8.0)
   - [ ] Optimize memory usage for large PDF collections
+  - [x] Add progress indicators for long-running operations (implemented in v2.8.0)
   - [x] Add quick filters for file size, date modified, etc. (implemented in v2.10.0)
 
 - [x] **Enhanced Comparison**

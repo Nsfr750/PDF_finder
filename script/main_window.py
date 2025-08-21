@@ -24,7 +24,7 @@ from script.settings import AppSettings
 logger = logging.getLogger(__name__)
 
 from .menu import MenuBar
-from .toolbar import MainToolBar
+from .toolbar import ToolBar
 from .ui import MainUI
 from .settings_dialog import SettingsDialog
 from .PDF_viewer import show_pdf_viewer
@@ -250,7 +250,7 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self.menubar)
         
         # Create and set up the toolbar
-        self.toolbar = MainToolBar(self, self.language_manager)
+        self.toolbar = ToolBar(self, self.language_manager)
         self.toolbar.setObjectName("mainToolBar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         

@@ -29,7 +29,6 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - pip (Python package manager)
 - Optional backends for PDF rendering (Auto falls back safely):
   - PyMuPDF (fitz) — default and bundled via requirements
-  - Poppler (for pdf2image) — install Poppler and set its path in Settings
   - Ghostscript (for Wand) — install Ghostscript and set its executable path in Settings
 
 See [PREREQUISITES.md](PREREQUISITES.md) for platform-specific setup.
@@ -95,12 +94,12 @@ See [PREREQUISITES.md](PREREQUISITES.md) for platform-specific setup.
 - Comprehensive keyboard shortcuts
 - Detailed file information and previews
 - Toolbar with improved spacing and visual clarity
-- Settings dialog includes a "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript availability
+- Settings dialog includes a "Test backends" button to validate PyMuPDF and Ghostscript availability
 
 ### PDF Backends and Fallback
 
 - Choose your preferred backend in Settings → PDF Rendering
-- Use "Test backends" to verify if Poppler/Ghostscript are correctly configured
+- Use "Test backends" to verify if Ghostscript are correctly configured
 - If the selected backend fails, the app falls back to an available backend and shows a status-bar warning (localized)
 
 ## Version History
