@@ -51,7 +51,7 @@ class MainUI(QWidget):
         self.splitter.addWidget(self.preview_widget)
         
         # Set initial sizes
-        self.splitter.setSizes([300, 700])
+        self.splitter.setSizes([400, 700])
         
         # Add splitter to main layout
         self.main_layout.addWidget(self.splitter)

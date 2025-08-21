@@ -5,8 +5,8 @@ import logging
 from typing import Optional, Dict
 
 from PyQt6.QtCore import Qt, QCoreApplication, QSize
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QToolBar, QWidget
+from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtWidgets import QToolBar, QWidget, QStyle, QApplication
 from PyQt6.QtWidgets import QSizePolicy
 
 # Import language manager
@@ -32,6 +32,49 @@ class MainToolBar(QToolBar):
         self.menu_actions = {}
         self.setup_ui()
     
+    def _get_icon(self, name):
+        """Get icon from theme or fallback to style standard icons."""
+        # Map action names to standard icons
+        icon_map = {
+            'open_folder': 'folder-open',
+            'pdf_viewer': 'document-preview',
+            'select_all': 'edit-select-all',
+            'deselect_all': 'edit-select-none',
+            'delete_selected': 'edit-delete',
+            'about': 'help-about',
+            'help': 'help-contents',
+            'documentation': 'help-contents',
+            'sponsor': 'emblem-favorite',
+            'settings': 'preferences-system',
+            'check_updates': 'system-software-update'
+        }
+        
+        icon_name = icon_map.get(name, '')
+        if icon_name:
+            # Try to get icon from theme first, fallback to standard icons
+            icon = QIcon.fromTheme(icon_name)
+            if not icon.isNull():
+                return icon
+                
+            # Fallback to standard icons
+            std_icon_map = {
+                'folder-open': QStyle.StandardPixmap.SP_DirOpenIcon,
+                'document-preview': QStyle.StandardPixmap.SP_FileDialogDetailedView,
+                'edit-select-all': QStyle.StandardPixmap.SP_ArrowRight,
+                'edit-select-none': QStyle.StandardPixmap.SP_ArrowLeft,
+                'edit-delete': QStyle.StandardPixmap.SP_TrashIcon,
+                'help-about': QStyle.StandardPixmap.SP_MessageBoxInformation,
+                'help-contents': QStyle.StandardPixmap.SP_DialogHelpButton,
+                'emblem-favorite': QStyle.StandardPixmap.SP_DialogYesButton,
+                'preferences-system': QStyle.StandardPixmap.SP_ComputerIcon,
+                'system-software-update': QStyle.StandardPixmap.SP_BrowserReload
+            }
+            
+            std_icon = std_icon_map.get(icon_name, QStyle.StandardPixmap.SP_ComputerIcon)
+            return self.style().standardIcon(std_icon)
+            
+        return QIcon()
+
     def setup_ui(self):
         """Set up the toolbar UI components."""
         # Clear existing actions
@@ -84,18 +127,29 @@ class MainToolBar(QToolBar):
         # Right group (help and about)
         right_group = [
             ['about', 'help', 'documentation',  'sponsor'], 
-            ['settings', 'check_updates'],
         ]
 
         first_group_added = False
         for group in left_groups:
-            existing = [self.menu_actions[k] for k in group if k in self.menu_actions and self.menu_actions[k] is not None]
+            existing = []
+            for k in group:
+                if k in self.menu_actions and self.menu_actions[k] is not None:
+                    action = self.menu_actions[k]
+                    # Set icon for the action
+                    icon = self._get_icon(k)
+                    if not icon.isNull():
+                        action.setIcon(icon)
+                    existing.append(action)
+                    
             if not existing:
                 continue
+                
             if first_group_added:
                 self.addSeparator()
+                
             for act in existing:
                 self.addAction(act)
+                
             first_group_added = True
 
         # Stretch spacer to push help group to the right
@@ -117,11 +171,21 @@ class MainToolBar(QToolBar):
                 if key in self.menu_actions and self.menu_actions[key] is not None:
                     existing_actions.append(self.menu_actions[key])
             
-            # Add separator if needed and add the actions
+            # Add separator if needed and add the actions with icons
             if existing_actions:
                 if first_group_added:
                     self.addSeparator()
                 for action in existing_actions:
+                    # Set icon for the action
+                    action_name = None
+                    for name, act in self.menu_actions.items():
+                        if act == action:
+                            action_name = name
+                            break
+                    if action_name:
+                        icon = self._get_icon(action_name)
+                        if not icon.isNull():
+                            action.setIcon(icon)
                     self.addAction(action)
                 first_group_added = True
     
