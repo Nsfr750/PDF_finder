@@ -53,8 +53,6 @@ ENV/
 # Project specific
 temp/
 *.pdf
-*.jpg
-*.png
 
 # Testing
 .coverage

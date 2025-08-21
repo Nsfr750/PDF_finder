@@ -6,6 +6,9 @@
 
 A powerful tool to find and manage duplicate PDF files on your computer. PDF Duplicate Finder helps you identify and remove duplicate PDF documents, saving disk space and organizing your files more efficiently.
 
+![screenshot](assets/screenshot.png))
+
+
 ## ✨ Features
 
 - 🔍 **Smart PDF Comparison**: Find duplicate PDFs based on content, not just file names or sizes
