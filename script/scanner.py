@@ -44,6 +44,15 @@ class PDFScanner(QObject):
         self.language_manager = LanguageManager()
         self.tr = self.language_manager.tr
         self.comparator = PDFComparator(threshold=comparison_threshold, dpi=dpi)
+        self.status_callback = None
+        
+    def set_status_callback(self, callback):
+        """Set the status callback function.
+        
+        Args:
+            callback: Function to call with status updates (message, current, total)
+        """
+        self.status_callback = callback
     
     def scan_directory(self, directory: str, recursive: bool = True, 
                       min_file_size: int = 1024, max_file_size: int = 1024*1024*1024) -> None:
@@ -114,6 +123,38 @@ class PDFScanner(QObject):
                 self.status_callback(self.tr("scanner.error_prefix", "Error: {error}").format(error=str(e)), 0, 0)
         finally:
             self.stop_event.set()
+    
+    def start_scan(self):
+        """Start the scan operation."""
+        try:
+            if not hasattr(self, 'scan_directory'):
+                logger.error("scan_directory method not found in PDFScanner")
+                return
+                
+            # Get scan parameters (these should be set before starting the scan)
+            scan_dir = getattr(self, 'scan_directory', '')
+            recursive = getattr(self, 'recursive', True)
+            min_size = getattr(self, 'min_file_size', 1024)  # 1KB default min
+            max_size = getattr(self, 'max_file_size', 1024*1024*1024)  # 1GB default max
+            
+            if not scan_dir or not os.path.isdir(scan_dir):
+                logger.error(f"Invalid scan directory: {scan_dir}")
+                return
+                
+            logger.info(f"Starting scan in directory: {scan_dir}")
+            self.scan_directory(
+                directory=scan_dir,
+                recursive=recursive,
+                min_file_size=min_size,
+                max_file_size=max_size
+            )
+            
+            # Emit finished signal with results
+            self.finished.emit(self.duplicate_groups)
+            
+        except Exception as e:
+            logger.error(f"Error in start_scan: {e}", exc_info=True)
+            self.finished.emit([])
     
     def stop_scan(self):
         """Stop the current scan operation."""

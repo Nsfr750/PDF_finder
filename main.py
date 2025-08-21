@@ -92,50 +92,62 @@ class PDFDuplicateFinder(MainWindow):
     
     def _init_scanner(self):
         """Initialize the PDF scanner with default settings and connect signals."""
-        # Clean up any existing scanner
+        logger.info("Initializing scanner...")
+        
+        # Clean up any existing scanner and thread
         if hasattr(self, '_scanner'):
             try:
                 if hasattr(self._scanner, 'deleteLater'):
                     self._scanner.deleteLater()
             except Exception as e:
-                logger.warning(f"Error cleaning up previous scanner: {e}")
+                logger.warning(f"Error cleaning up scanner: {e}")
         
-        # Clean up any existing thread
         if hasattr(self, 'scan_thread'):
             try:
                 if self.scan_thread.isRunning():
                     self.scan_thread.quit()
-                    self.scan_thread.wait()
+                    self.scan_thread.wait(1000)
             except Exception as e:
-                logger.warning(f"Error cleaning up previous scan thread: {e}")
+                logger.warning(f"Error cleaning up thread: {e}")
         
-        # Create new scanner and thread
-        self._scanner = PDFScanner()
-        self.scan_thread = QThread()
-        self._scanner.moveToThread(self.scan_thread)
-        
-        # Connect scanner signals to our handlers
-        self._scanner.progress_updated.connect(self._on_scan_progress)
-        self._scanner.status_updated.connect(self._on_scan_status)
-        self._scanner.duplicates_found.connect(self._on_duplicates_found)
-        self._scanner.finished.connect(self._on_scan_finished)
-        
-        # Connect thread signals
-        self.scan_thread.started.connect(self._scanner.start_scan)
-        self._scanner.finished.connect(self.scan_thread.quit)
-        self._scanner.finished.connect(self._scanner.deleteLater)
-        self.scan_thread.finished.connect(self.scan_thread.deleteLater)
-        
-        # Set up progress bar in status bar if not exists
-        if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
-            self.progress_bar = QProgressBar()
-            self.progress_bar.setMinimum(0)
-            self.progress_bar.setMaximum(100)
-            self.progress_bar.setTextVisible(True)
-            self.progress_bar.setVisible(False)
-            self.status_bar.addPermanentWidget(self.progress_bar)
+        try:
+            # Create new scanner and thread
+            self._scanner = PDFScanner()
+            self.scan_thread = QThread()
             
-        logger.info("Scanner initialized with signal connections")
+            # Move scanner to thread
+            self._scanner.moveToThread(self.scan_thread)
+            
+            # Connect signals
+            self._scanner.progress_updated.connect(self._on_scan_progress)
+            self._scanner.status_updated.connect(self._on_scan_status)
+            self._scanner.duplicates_found.connect(self._on_duplicates_found)
+            self._scanner.finished.connect(self._on_scan_finished)
+            
+            # Set up status callback
+            self._scanner.set_status_callback(self._on_scan_status)
+            
+            # Connect thread signals
+            self.scan_thread.started.connect(self._scanner.start_scan)
+            self._scanner.finished.connect(self.scan_thread.quit)
+            self._scanner.finished.connect(self._scanner.deleteLater)
+            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            
+            # Set up progress bar if needed
+            if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
+                self.progress_bar = QProgressBar()
+                self.progress_bar.setMinimum(0)
+                self.progress_bar.setMaximum(100)
+                self.progress_bar.setTextVisible(True)
+                self.progress_bar.setVisible(False)
+                self.status_bar.addPermanentWidget(self.progress_bar)
+                
+            logger.info("Scanner initialized successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize scanner: {e}", exc_info=True)
+            return False
     
     def _start_scan(self, folder_path: str):
         """Start scanning the given folder with current filter settings.
@@ -159,30 +171,45 @@ class PDFDuplicateFinder(MainWindow):
                 )
             )
             
-            # Initialize the scanner if not already done
-            if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner()
+            # Initialize the scanner and thread
+            if not self._init_scanner():
+                error_msg = self.language_manager.tr("errors.scanner_init_failed", "Failed to initialize scanner. Please check the logs for details.")
+                logger.error(error_msg)
+                QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
+                return
             
-            # Configure scan parameters
-            self._scanner.scan_directory = folder_path
-            self._scanner.recursive = True
-            self._scanner.min_file_size = self.current_filters['min_size']
-            self._scanner.max_file_size = self.current_filters['max_size']
-            self._scanner.min_similarity = self.current_filters['min_similarity']
-            self._scanner.enable_text_compare = self.current_filters['enable_text_compare']
-            
-            # Clear previous results
-            self.last_scan_duplicates = []
-            if hasattr(self, 'duplicates_tree'):
-                self.duplicates_tree.clear()
-            
-            # Show progress bar
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setValue(0)
-                self.progress_bar.setVisible(True)
-            
-            # Start the scan in the background thread
-            self.scan_thread.start()
+            try:
+                # Configure scan parameters
+                self._scanner.scan_directory = folder_path
+                self._scanner.recursive = True
+                self._scanner.min_file_size = self.current_filters['min_size']
+                self._scanner.max_file_size = self.current_filters['max_size']
+                self._scanner.min_similarity = self.current_filters['min_similarity']
+                self._scanner.enable_text_compare = self.current_filters['enable_text_compare']
+                
+                # Clear previous results
+                self.last_scan_duplicates = []
+                if hasattr(self, 'duplicates_tree'):
+                    self.duplicates_tree.clear()
+                
+                # Show progress bar
+                if hasattr(self, 'progress_bar'):
+                    self.progress_bar.setValue(0)
+                    self.progress_bar.setVisible(True)
+                
+                # Start the scan in the background thread
+                if hasattr(self, 'scan_thread') and isinstance(self.scan_thread, QThread):
+                    logger.info("Starting scan thread...")
+                    self.scan_thread.start()
+                else:
+                    error_msg = self.language_manager.tr("errors.thread_init_failed", "Failed to start scan thread.")
+                    logger.error(error_msg)
+                    QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
+                    
+            except Exception as e:
+                error_msg = self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: {error}").format(error=str(e))
+                logger.error(error_msg, exc_info=True)
+                QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
             
             logger.info(f"Started scanning folder: {folder_path}")
             
