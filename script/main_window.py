@@ -24,7 +24,7 @@ from script.settings import AppSettings
 logger = logging.getLogger(__name__)
 
 from .menu import MenuBar
-from .toolbar import ToolBar
+from .toolbar import MainToolBar as ToolBar
 from .ui import MainUI
 from .settings_dialog import SettingsDialog
 from .PDF_viewer import show_pdf_viewer
