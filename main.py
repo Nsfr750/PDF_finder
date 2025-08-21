@@ -44,6 +44,7 @@ from script.settings import AppSettings
 from script.lang_mgr import LanguageManager
 from script.logger import get_logger
 from script.settings_dialog import SettingsDialog
+from script.scanner import PDFScanner
 
 # Set up logger
 logger = get_logger('main')
@@ -75,6 +76,9 @@ class PDFDuplicateFinder(MainWindow):
         self.show()
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
+        
+        # Initialize the scanner
+        self._init_scanner()
     
     def on_show_settings(self):
         """Override to ensure the settings dialog is shown correctly."""
@@ -131,6 +135,180 @@ class PDFDuplicateFinder(MainWindow):
                 self,
                 self.tr("Error"),
                 self.tr(f"Failed to change language: {e}")
+            )
+    
+    def _update_scan_status(self, message: str, current: int, total: int):
+        """Update the UI with scan status.
+        
+        Args:
+            message: Status message
+            current: Current file number
+            total: Total number of files to process
+        """
+        try:
+            # Ensure we're on the main thread for UI updates
+            if not QThread.currentThread() == QApplication.instance().thread():
+                QMetaObject.invokeMethod(
+                    self,
+                    '_update_scan_status',
+                    Qt.ConnectionType.QueuedConnection,
+                    Q_ARG(str, message),
+                    Q_ARG(int, current),
+                    Q_ARG(int, total)
+                )
+                return
+                
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(f"{message} ({current}/{total})")
+            
+            # Update progress bar
+            if hasattr(self, 'progress_bar'):
+                if total > 0:
+                    # Ensure progress is within valid range
+                    progress = max(0, min(100, int((current / total) * 100)))
+                    self.progress_bar.setValue(progress)
+                    
+                    # Update format with current progress
+                    if not self.progress_bar.isVisible():
+                        self.progress_bar.setVisible(True)
+                        
+                    # Update format with current progress
+                    self.progress_bar.setFormat(f"{message} - %p% (%v/%m)")
+                    
+        except Exception as e:
+            logger.error(f"Error updating scan status: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(f"Error updating progress: {str(e)}", 5000)
+    
+    def _on_scan_finished(self):
+        """Handle the scan finished event."""
+        try:
+            # Ensure we're on the main thread for UI updates
+            if not QThread.currentThread() == QApplication.instance().thread():
+                QMetaObject.invokeMethod(
+                    self,
+                    '_on_scan_finished',
+                    Qt.ConnectionType.QueuedConnection
+                )
+                return
+                
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.tr("Scan completed successfully"),
+                    5000  # Show for 5 seconds
+                )
+                
+            # Update progress bar
+            if hasattr(self, 'progress_bar'):
+                # Ensure progress is at 100%
+                self.progress_bar.setValue(100)
+                self.progress_bar.setFormat(self.tr("Scan completed - %p%"))
+                
+                # Hide progress bar after a short delay
+                QTimer.singleShot(3000, lambda: self.progress_bar.setVisible(False))
+                
+            logger.info("PDF scan completed successfully")
+            
+            # Clean up thread
+            if hasattr(self, 'scan_thread'):
+                if self.scan_thread.isRunning():
+                    self.scan_thread.quit()
+                    self.scan_thread.wait(2000)  # Wait up to 2 seconds
+                self.scan_thread = None
+            
+        except Exception as e:
+            logger.error(f"Error in scan finished handler: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.tr("Error completing scan: {}").format(str(e)),
+                    5000
+                )
+    
+    def _scan_worker(self, folder_path: str):
+        """Worker method that runs in a separate thread to perform the scan.
+        
+        Args:
+            folder_path: Path to the folder to scan for PDF files
+        """
+        try:
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                self._init_scanner()
+            
+            # Reset UI state
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'file_list'):
+                self.main_ui.file_list.clear()
+            
+            # Connect scanner signals
+            if hasattr(self, 'scan_status') and hasattr(self._scanner, 'status_callback'):
+                self._scanner.status_callback = self.scan_status.emit
+                
+            if hasattr(self, 'scan_progress') and hasattr(self._scanner, 'progress_callback'):
+                self._scanner.progress_callback = self.scan_progress.emit
+            
+            # Update status
+            if hasattr(self, 'scan_status'):
+                self.scan_status.emit(self.tr("Preparing to scan..."), 0, 0)
+            
+            # Start the scan
+            self._scanner.scan_directory(folder_path)
+            
+            # Update with results if available
+            if hasattr(self._scanner, 'duplicate_groups'):
+                self.last_scan_duplicates = self._scanner.duplicate_groups
+                
+                # Update UI with results on the main thread
+                if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'update_results'):
+                    QMetaObject.invokeMethod(
+                        self.main_ui, 
+                        'update_results',
+                        Qt.ConnectionType.QueuedConnection,
+                        Q_ARG(list, self.last_scan_duplicates)
+                    )
+            
+            # Signal that the scan is complete
+            if hasattr(self, 'scan_finished'):
+                self.scan_finished.emit()
+                
+        except Exception as e:
+            logger.error(f"Error in scan worker: {e}", exc_info=True)
+            if hasattr(self, 'scan_status'):
+                self.scan_status.emit(
+                    self.tr("Error during scan: {}").format(str(e)), 
+                    0, 
+                    0
+                )
+            if hasattr(self, 'scan_finished'):
+                self.scan_finished.emit()
+    
+    def _init_scanner(self):
+        """Initialize the PDF scanner with current settings."""
+        try:
+            # Get comparison settings from settings or use defaults
+            comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
+            dpi = int(self.settings.get('comparison_dpi', 200))
+            
+            # Initialize the scanner
+            self._scanner = PDFScanner(
+                comparison_threshold=comparison_threshold,
+                dpi=dpi
+            )
+            
+            # Connect scanner signals
+            if hasattr(self, 'scan_progress'):
+                self._scanner.progress_callback = self.scan_progress.emit
+            if hasattr(self, 'scan_status'):
+                self._scanner.status_callback = self.scan_status.emit
+            if hasattr(self, 'scan_finished'):
+                self.scan_finished.connect(self._on_scan_finished)
+                
+        except Exception as e:
+            logger.error(f"Error initializing scanner: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to initialize PDF scanner: {}").format(str(e))
             )
     
     def on_language_changed(self, language_code: str):
@@ -422,87 +600,47 @@ class PDFDuplicateFinder(MainWindow):
         Args:
             folder_path: Path to the folder to scan
         """
-        from script.pdf_utils import find_duplicates
-        
-        # Update status bar
-        self.main_ui.status_bar.showMessage(self.tr("Scanning folder: %s") % folder_path)
-        
-        # Create and configure progress dialog
-        progress = QProgressDialog(
-            self.tr("Preparing to scan..."),
-            self.tr("Cancel"),
-            0, 100,
-            self
-        )
-        progress.setWindowTitle(self.tr("Scanning for Duplicates"))
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setValue(0)
-        progress.setAutoReset(False)
-        progress.setAutoClose(False)
-        
-        # Force the progress dialog to appear immediately
-        QApplication.processEvents()
-        
-        # Flag to track if the user cancelled the operation
-        cancelled = [False]
-        
-        def progress_callback(message: str):
-            """Handle progress updates from the scanning process."""
-            if cancelled[0]:
-                return False  # Stop processing if cancelled
-                
-            if "Processed" in message:
-                # Extract progress percentage from message if available
-                try:
-                    parts = message.split()
-                    current = int(parts[1].split('/')[0])
-                    total = int(parts[1].split('/')[1])
-                    percent = int((current / total) * 100) if total > 0 else 0
-                    progress.setValue(percent)
-                    progress.setLabelText(f"{message} - {percent}%")
-                except (IndexError, ValueError):
-                    progress.setLabelText(message)
-            else:
-                progress.setLabelText(message)
-                
-            # Process events to update the UI
-            QApplication.processEvents()
-            
-            # Check if the user clicked cancel
-            if progress.wasCanceled():
-                cancelled[0] = True
-                return False
-                
-            return True
-        
         try:
-            # Find duplicate PDFs with progress updates
-            progress.setLabelText(self.tr("Searching for PDF files..."))
-            QApplication.processEvents()
+            # Update status bar and show progress bar
+            self.status_bar.showMessage(self.tr("Scanning folder: %s") % folder_path)
             
-            duplicates = find_duplicates(
-                directory=folder_path,
-                recursive=True,
-                min_file_size=1024,  # 1KB minimum file size
-                max_file_size=100 * 1024 * 1024,  # 100MB maximum file size
-                hash_size=8,
-                threshold=0.80,
-                progress_callback=progress_callback
+            # Initialize scanner if needed
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                self._init_scanner()
+            
+            # Reset UI state
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'file_list'):
+                self.main_ui.file_list.clear()
+                
+            # Show and reset progress bar
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar.setVisible(True)
+                self.progress_bar.setValue(0)
+                self.progress_bar.setMinimum(0)
+                self.progress_bar.setMaximum(100)
+                self.progress_bar.setFormat("%p% - %v/%m")
+            
+            # Start scan in a separate thread
+            self.scan_thread = QThread()
+            self.scan_worker = lambda: self._scan_worker(folder_path)
+            self.scan_thread.started.connect(self.scan_worker)
+            
+            # Connect signals
+            if hasattr(self, 'scan_status'):
+                self.scan_status.connect(self._update_scan_status)
+            if hasattr(self, 'scan_finished'):
+                self.scan_finished.connect(self._on_scan_finished)
+            
+            # Start the thread
+            self.scan_thread.start()
+            
+        except Exception as e:
+            logger.error(f"Error starting scan: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to start scan: {}").format(str(e))
             )
-            # Save for export
-            self.last_scan_duplicates = duplicates or []
-            
-            # Check if operation was cancelled
-            if cancelled[0]:
-                self.main_ui.status_bar.showMessage(self.tr("Scan cancelled by user"))
-                progress.close()
-                return
-            
-            # Update progress
-            progress.setValue(100)
-            progress.setLabelText(self.tr("Processing results..."))
-            QApplication.processEvents()
             
             # Clear the file list
             if hasattr(self.main_ui, 'file_list'):

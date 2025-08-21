@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Create version_info.txt in the assets folder
 def create_version_info():
-    version = "1.0.0"
+    version = "2.9.0"
     try:
         with open("script/version.py") as fp:
             for line in fp:

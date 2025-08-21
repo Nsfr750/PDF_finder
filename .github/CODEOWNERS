@@ -5,7 +5,6 @@
 *       @Nsfr750
 
 # Specific ownership
-/docs/      @Nsfr750
 /tests/     @Nsfr750
 /script/    @Nsfr750
 /lang/      @Nsfr750
@@ -15,3 +14,4 @@
 /CHANGELOG.md @Nsfr750
 /CONTRIBUTING.md @Nsfr750
 /PREREQUISITES.md @Nsfr750
+/LICENSE @Nsfr750

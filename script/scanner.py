@@ -154,49 +154,107 @@ class PDFScanner:
                         path=path, error=str(e))
                     logger.error(error_msg)
     
+    def _update_status(self, message: str):
+        """Update the status using the status callback if available.
+        
+        Args:
+            message: Status message to display
+        """
+        if self.status_callback:
+            try:
+                self.status_callback(message, self.scanned_files, self.total_files)
+            except Exception as e:
+                logger.error(f"Error in status callback: {e}")
+    
     def _process_file(self, file_path: str) -> Optional[Dict[str, Any]]:
         """Process a single PDF file and extract its metadata."""
         try:
+            if not file_path or not isinstance(file_path, str):
+                logger.warning(f"Received invalid file_path: {file_path}. Expected non-empty string.")
+                return None
+            
             if self.stop_event.is_set():
                 return None
                 
             # Update status
-            self._update_status(self.tr("scanner.status.processing_file", "Processing {current}/{total}: {file}")
-                             .format(current=self.scanned_files + 1, total=self.total_files, file=os.path.basename(file_path)))
+            self._update_status(
+                self.tr("scanner.status.processing_file", "Processing {current}/{total}: {file}")
+                .format(
+                    current=self.scanned_files + 1, 
+                    total=self.total_files, 
+                    file=os.path.basename(file_path)
+                )
+            )
             
             # Process the file
             doc = self._process_single_file(file_path)
             if doc is None:
                 return None
             
-            # Detect PDF type
-            pdf_type = self.comparator.detect_pdf_type(file_path)
+            # Get document info with safe defaults
+            try:
+                # Get file stats
+                file_stats = os.stat(file_path)
+                file_size = file_stats.st_size
+                created = getattr(file_stats, 'st_ctime', 0)
+                modified = getattr(file_stats, 'st_mtime', 0)
                 
-            # Add to results
-            with self.lock:
-                self.scanned_files += 1
+                # Get PDF type
+                try:
+                    pdf_type = self.comparator.detect_pdf_type(file_path)
+                    pdf_type_str = pdf_type.value if hasattr(pdf_type, 'value') else 'unknown'
+                except Exception as e:
+                    logger.warning(f"Could not detect PDF type for {file_path}: {e}")
+                    pdf_type_str = 'unknown'
                 
-            # Return file info
-            return {
-                'path': file_path,
-                'size': os.path.getsize(file_path),
-                'pages': doc.page_count,
-                'title': doc.title or os.path.basename(file_path),
-                'author': doc.author or '',
-                'created': doc.creation_date or 0,
-                'modified': doc.modification_date or 0,
-                'hash': doc.content_hash,
-                'image_hash': doc.image_hash,
-                'type': pdf_type.value
-            }
+                # Get document attributes with safe defaults
+                file_info = {
+                    'path': file_path,
+                    'size': file_size,
+                    'pages': 0,  # Not available in PDFDocument
+                    'title': os.path.basename(file_path),
+                    'author': '',
+                    'created': created,
+                    'modified': modified,
+                    'hash': getattr(doc, 'content_hash', ''),
+                    'image_hash': getattr(doc, 'image_hash', ''),
+                    'type': pdf_type_str
+                }
+                
+                # Update scan counter
+                with self.lock:
+                    self.scanned_files += 1
+                
+                return file_info
+                
+            except Exception as e:
+                logger.error(f"Error processing file info for {file_path}: {e}", exc_info=True)
+                return None
             
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}", exc_info=True)
             return None
     
     def _process_single_file(self, file_path: str) -> Optional[PDFDocument]:
-        """Process a single PDF file."""
-        if self.stop_event.is_set() or not PDFUtils.is_pdf(file_path):
+        """Process a single PDF file.
+        
+        Args:
+            file_path: Path to the PDF file to process
+            
+        Returns:
+            PDFDocument instance if successful, None otherwise
+        """
+        # Validate input
+        if not file_path or not isinstance(file_path, str):
+            logger.warning(f"Invalid file path: {file_path}")
+            return None
+            
+        if not os.path.isfile(file_path):
+            logger.warning(f"File not found: {file_path}")
+            return None
+            
+        if not file_path.lower().endswith('.pdf'):
+            logger.debug(f"Skipping non-PDF file: {file_path}")
             return None
             
         # Track the last status message to avoid duplicates
@@ -214,11 +272,16 @@ class PDFScanner:
         
         # Process the PDF document with our progress callback
         try:
-            return PDFDocument(file_path, progress_callback=_progress)
+            logger.debug(f"Processing PDF: {file_path}")
+            doc = PDFDocument(file_path, progress_callback=_progress)
+            if doc is None:
+                logger.warning(f"Failed to load PDF: {file_path}")
+            return doc
+            
         except Exception as e:
             error_msg = self.tr("scanner.load_error", "Error loading PDF {file}: {error}").format(
-                file=file_path, error=str(e))
-            logger.warning(error_msg)
+                file=os.path.basename(file_path), error=str(e))
+            logger.error(error_msg, exc_info=True)
             return None
     
     def _compare_files(self, file1: Dict[str, Any], file2: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -253,7 +316,29 @@ class PDFScanner:
         """Find duplicate PDFs using content hash, image hash, and direct comparison."""
         # First pass: Group by content hash (exact matches)
         content_hash_groups = {}
-        for file_info in self.scan_results.values():
+        
+        # Ensure scan_results is a dictionary
+        if not isinstance(self.scan_results, dict):
+            logger.error(f"scan_results is not a dictionary: {type(self.scan_results)}")
+            return
+            
+        # Flatten the scan_results into a single list of files
+        all_files = []
+        for key, value in self.scan_results.items():
+            if isinstance(value, list):
+                # Handle case where value is a list of file info dicts
+                all_files.extend([f for f in value if isinstance(f, dict) and 'path' in f])
+            elif isinstance(value, dict) and 'path' in value:
+                # Handle case where value is a single file info dict
+                all_files.append(value)
+            else:
+                logger.warning(f"Unexpected item in scan_results: {value}")
+        
+        # Group files by content hash
+        for file_info in all_files:
+            if not isinstance(file_info, dict) or 'hash' not in file_info:
+                continue
+                
             content_hash = file_info['hash']
             if content_hash not in content_hash_groups:
                 content_hash_groups[content_hash] = []
@@ -271,11 +356,21 @@ class PDFScanner:
                 })
         
         # Second pass: For files with unique content hashes, group by image hash
-        unique_files = [f for f in self.scan_results.values() 
-                       if len(content_hash_groups[f['hash']]) == 1]
+        unique_files = []
+        for file_info in all_files:
+            if not isinstance(file_info, dict) or 'hash' not in file_info:
+                continue
+                
+            content_hash = file_info['hash']
+            if content_hash in content_hash_groups and len(content_hash_groups[content_hash]) == 1:
+                unique_files.append(file_info)
         
+        # Group unique files by image hash
         image_hash_groups = {}
         for file_info in unique_files:
+            if not isinstance(file_info, dict) or 'image_hash' not in file_info:
+                continue
+                
             image_hash = file_info['image_hash']
             if image_hash not in image_hash_groups:
                 image_hash_groups[image_hash] = []
