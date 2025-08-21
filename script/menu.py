@@ -2,9 +2,9 @@
 Menu implementation for the PDF Duplicate Finder application.
 """
 from PyQt6.QtWidgets import (
-    QMenu, QMenuBar, QFileDialog, QMessageBox, QApplication
+    QMenu, QMenuBar, QFileDialog, QMessageBox, QApplication, QStyle
 )
-from PyQt6.QtGui import QAction, QActionGroup, QIcon
+from PyQt6.QtGui import QAction, QActionGroup, QIcon, QPixmap, QColor
 from PyQt6.QtCore import Qt, QObject, QCoreApplication
 
 import os
@@ -88,8 +88,12 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("File"), self.parent)
         
-        # Open Folder action
-        self.actions['open_folder'] = QAction(self.tr("Open Folder"), self.parent)
+        # Open Folder action with icon
+        self.actions['open_folder'] = QAction(
+            QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon),
+            self.tr("Open Folder"),
+            self.parent
+        )
         self.actions['open_folder'].setShortcut("Ctrl+O")
         self.actions['open_folder'].setStatusTip(self.tr("Open a folder to scan for duplicate PDFs"))
         self.actions['open_folder'].triggered.connect(self.parent.on_open_folder)
@@ -98,15 +102,23 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
 
-        # PDF Viewer action
-        self.actions['pdf_viewer'] = QAction(self.tr("PDF Viewer"), self.parent)
+        # PDF Viewer action with icon
+        self.actions['pdf_viewer'] = QAction(
+            QIcon.fromTheme("document-preview", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)),
+            self.tr("PDF Viewer"),
+            self.parent
+        )
         self.actions['open_folder'].setShortcut("Ctrl+T")
         self.actions['pdf_viewer'].setStatusTip(self.tr("Open PDF Viewer"))
         self.actions['pdf_viewer'].triggered.connect(self.on_show_pdf_viewer)
         menu.addAction(self.actions['pdf_viewer'])
         
-        # Export Results to CSV
-        self.actions['export_csv'] = QAction(self.tr("Export Results to CSV"), self.parent)
+        # Export Results to CSV with icon
+        self.actions['export_csv'] = QAction(
+            QIcon.fromTheme("document-export", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp)),
+            self.tr("Export Results to CSV"),
+            self.parent
+        )
         self.actions['export_csv'].setStatusTip(self.tr("Export last scan results to a CSV file"))
         if hasattr(self.parent, 'on_export_csv'):
             self.actions['export_csv'].triggered.connect(self.parent.on_export_csv)
@@ -115,8 +127,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # Exit action
-        self.actions['exit'] = QAction(self.tr("Exit"), self.parent)
+        # Exit action with icon
+        self.actions['exit'] = QAction(
+            QIcon.fromTheme("application-exit", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton)),
+            self.tr("Exit"),
+            self.parent
+        )
         self.actions['exit'].setShortcut("Ctrl+Q")
         self.actions['exit'].setStatusTip(self.tr("Exit the application"))
         self.actions['exit'].triggered.connect(QApplication.quit)
@@ -132,21 +148,33 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("Edit"), self.parent)
         
-        # Select All action
-        self.actions['select_all'] = QAction(self.tr("Select All"), self.parent)
+        # Select All action with icon
+        self.actions['select_all'] = QAction(
+            QIcon.fromTheme("edit-select-all", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown)),
+            self.tr("Select All"),
+            self.parent
+        )
         self.actions['select_all'].setShortcut("Ctrl+A")
         self.actions['select_all'].setStatusTip(self.tr("Select all items"))
         self.actions['select_all'].triggered.connect(self.parent.on_select_all)
         menu.addAction(self.actions['select_all'])
         
-        # Deselect All action
-        self.actions['deselect_all'] = QAction(self.tr("Deselect All"), self.parent)
+        # Deselect All action with icon
+        self.actions['deselect_all'] = QAction(
+            QIcon.fromTheme("edit-clear", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogResetButton)),
+            self.tr("Deselect All"),
+            self.parent
+        )
         self.actions['deselect_all'].setStatusTip(self.tr("Deselect all items"))
         self.actions['deselect_all'].triggered.connect(self.parent.on_deselect_all)
         menu.addAction(self.actions['deselect_all'])
 
-        # Delete Selected (to Recycle Bin) action
-        self.actions['delete_selected'] = QAction(self.tr("Delete Selected"), self.parent)
+        # Delete Selected (to Recycle Bin) action with icon
+        self.actions['delete_selected'] = QAction(
+            QIcon.fromTheme("edit-delete", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)),
+            self.tr("Delete Selected"),
+            self.parent
+        )
         self.actions['delete_selected'].setShortcut("Del")
         self.actions['delete_selected'].setStatusTip(self.tr("Move selected files to Recycle Bin"))
         if hasattr(self.parent, 'on_delete_selected'):
@@ -163,16 +191,24 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("View"), self.parent)
         
-        # Toolbar toggle action
-        self.actions['toggle_toolbar'] = QAction(self.tr("Show Toolbar"), self.parent)
+        # Toolbar toggle action with icon
+        self.actions['toggle_toolbar'] = QAction(
+            QIcon.fromTheme("view-sort-ascending", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ToolBarHorizontalExtensionButton)),
+            self.tr("Show Toolbar"),
+            self.parent
+        )
         self.actions['toggle_toolbar'].setCheckable(True)
         self.actions['toggle_toolbar'].setChecked(True)
         self.actions['toggle_toolbar'].setStatusTip(self.tr("Show or hide the toolbar"))
         self.actions['toggle_toolbar'].triggered.connect(self.parent.on_toggle_toolbar)
         menu.addAction(self.actions['toggle_toolbar'])
         
-        # Status bar toggle action
-        self.actions['toggle_statusbar'] = QAction(self.tr("Show Status Bar"), self.parent)
+        # Status bar toggle action with icon
+        self.actions['toggle_statusbar'] = QAction(
+            QIcon.fromTheme("view-sort-descending", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ToolBarVerticalExtensionButton)),
+            self.tr("Show Status Bar"),
+            self.parent
+        )
         self.actions['toggle_statusbar'].setCheckable(True)
         self.actions['toggle_statusbar'].setChecked(True)
         self.actions['toggle_statusbar'].setStatusTip(self.tr("Show or hide the status bar"))
@@ -182,8 +218,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # Log viewer action
-        self.actions['log_viewer'] = QAction(self.tr("Log Viewer"), self.parent)
+        # Log viewer action with icon
+        self.actions['log_viewer'] = QAction(
+            QIcon.fromTheme("text-x-log", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)),
+            self.tr("Log Viewer"),
+            self.parent
+        )
         self.actions['log_viewer'].setStatusTip(self.tr("View application logs"))
         if hasattr(self.parent, 'on_show_log_viewer'):
             self.actions['log_viewer'].triggered.connect(self.parent.on_show_log_viewer)
@@ -199,8 +239,12 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("Tools"), self.parent)
         
-        # Settings action
-        self.actions['settings'] = QAction(self.tr("Settings"), self.parent)
+        # Settings action with icon
+        self.actions['settings'] = QAction(
+            QIcon.fromTheme("preferences-system", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)),
+            self.tr("Settings"),
+            self.parent
+        )
         self.actions['settings'].setStatusTip(self.tr("Configure application settings"))
         
         def on_settings_triggered():
@@ -253,8 +297,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # Check for Updates action
-        self.actions['check_updates'] = QAction(self.tr("Check for Updates"), self.parent)
+        # Check for Updates action with icon
+        self.actions['check_updates'] = QAction(
+            QIcon.fromTheme("system-software-update", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)),
+            self.tr("Check for Updates"),
+            self.parent
+        )
         self.actions['check_updates'].setStatusTip(self.tr("Check for application updates"))
         if hasattr(self.parent, 'check_for_updates'):
             self.actions['check_updates'].triggered.connect(self.parent.check_for_updates)
@@ -270,8 +318,12 @@ class MenuBar(QObject):
         """
         menu = QMenu(self.tr("Help"), self.parent)
         
-        # Help action
-        self.actions['help'] = QAction(self.tr("Help"), self.parent)
+        # Help action with icon
+        self.actions['help'] = QAction(
+            QIcon.fromTheme("help-contents", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarContextHelpButton)),
+            self.tr("Help"),
+            self.parent
+        )
         self.actions['help'].setShortcut("F1")
         self.actions['help'].setStatusTip(self.tr("Open help documentation"))
         self.actions['help'].triggered.connect(self.on_show_help)
@@ -280,8 +332,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # About action
-        self.actions['about'] = QAction(self.tr("About"), self.parent)
+        # About action with icon
+        self.actions['about'] = QAction(
+            QIcon.fromTheme("help-about", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)),
+            self.tr("About"),
+            self.parent
+        )
         self.actions['about'].setStatusTip(self.tr("Show information about the application"))
         self.actions['about'].triggered.connect(self.parent.on_show_about)
         menu.addAction(self.actions['about'])
@@ -289,8 +345,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
 
-        # Documentation action
-        self.actions['documentation'] = QAction(self.tr("Documentation"), self.parent) 
+        # Documentation action with icon
+        self.actions['documentation'] = QAction(
+            QIcon.fromTheme("help-doc", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView)),
+            self.tr("Documentation"),
+            self.parent
+        )
         self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
         self.actions['documentation'].triggered.connect(self.on_show_documentation)
         menu.addAction(self.actions['documentation'])
@@ -298,8 +358,12 @@ class MenuBar(QObject):
         # Add separator
         menu.addSeparator()
         
-        # Sponsor action
-        self.actions['sponsor'] = QAction(self.tr("Sponsor"), self.parent) 
+        # Sponsor action with icon
+        self.actions['sponsor'] = QAction(
+            QIcon.fromTheme("emblem-favorite", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton)),
+            self.tr("Sponsor"),
+            self.parent
+        )
         self.actions['sponsor'].setStatusTip(self.tr("Support the development of this application"))
         self.actions['sponsor'].triggered.connect(self.on_show_sponsor)
         menu.addAction(self.actions['sponsor'])
@@ -307,21 +371,25 @@ class MenuBar(QObject):
         return menu
     
     def setup_language_menu(self):
-        """Set up the language selection menu."""
+        """Set up the language selection menu with country flags."""
         if not hasattr(self, 'language_group'):
             self.language_group = QActionGroup(self)
             self.language_group.setExclusive(True)
             
-            # Add available languages
+            # Language data with flag emojis
             languages = [
-                ('English', 'en'),
-                ('Italiano', 'it'),
-                # Add more languages as needed
+                ('English', 'en', '🇬🇧'),
+                ('Italiano', 'it', '🇮🇹'),
+                # Add more languages as needed: ('Language Name', 'code', 'flag_emoji')
             ]
             
-            for name, code in languages:
-                action = QAction(self.tr(name), self.parent, checkable=True)
+            for name, code, flag in languages:
+                # Create action with flag and language name
+                action = QAction(f"{flag} {self.tr(name)}", self.parent, checkable=True)
                 action.setData(code)
+                
+                # Set tooltip
+                action.setToolTip(self.tr(f"Switch to {name}"))
                 
                 # Connect to the language manager's set_language method
                 action.triggered.connect(
@@ -334,7 +402,19 @@ class MenuBar(QObject):
                 # Check the current language
                 if hasattr(self, 'language_manager') and code == self.language_manager.get_current_language():
                     action.setChecked(True)
-                
+            
+            # Add a separator
+            self.menus['language'].addSeparator()
+            
+            # Add a refresh action
+            refresh_action = QAction(
+                QIcon.fromTheme("view-refresh", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)),
+                self.tr("Refresh Language"),
+                self.parent
+            )
+            refresh_action.triggered.connect(self.retranslate_ui)
+            self.menus['language'].addAction(refresh_action)
+            
             # Connect to language changed signal to update the menu
             if hasattr(self, 'language_manager'):
                 self.language_manager.language_changed.connect(self.update_language_menu)
