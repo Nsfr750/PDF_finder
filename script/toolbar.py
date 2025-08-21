@@ -75,11 +75,17 @@ class MainToolBar(QToolBar):
         # Left groups (main actions)
         left_groups = [
             ['open_folder', 'pdf_viewer'],
-            ['select_all', 'deselect_all', 'delete_selected'],
+            ['select_all', 'deselect_all'], 
+            ['delete_selected'],            
+        ]
+
+        self.addSeparator()
+         
+        # Right group (help and about)
+        right_group = [
+            ['about', 'help', 'documentation',  'sponsor'], 
             ['settings', 'check_updates'],
         ]
-        # Right group (help and about)
-        right_group = ['help', 'documentation', 'about', 'sponsor']
 
         first_group_added = False
         for group in left_groups:
@@ -101,13 +107,23 @@ class MainToolBar(QToolBar):
         self.addSeparator()
 
         # Right-aligned help group
-        existing_right = [self.menu_actions[k] for k in right_group if k in self.menu_actions and self.menu_actions[k] is not None]
-        if existing_right:
-            # Remove the previous separator since we already added one
-            if first_group_added and self.actions() and self.actions()[-1].isSeparator():
-                self.removeAction(self.actions()[-1])
-            for act in existing_right:
-                self.addAction(act)
+        for group in right_group:
+            # Handle both single actions and lists of actions
+            action_keys = group if isinstance(group, list) else [group]
+            existing_actions = []
+            
+            # Collect all valid actions
+            for key in action_keys:
+                if key in self.menu_actions and self.menu_actions[key] is not None:
+                    existing_actions.append(self.menu_actions[key])
+            
+            # Add separator if needed and add the actions
+            if existing_actions:
+                if first_group_added:
+                    self.addSeparator()
+                for action in existing_actions:
+                    self.addAction(action)
+                first_group_added = True
     
     def on_language_changed(self):
         """Handle language change event."""
