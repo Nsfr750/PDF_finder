@@ -96,12 +96,16 @@ class MainToolBar(QToolBar):
         spacer = QWidget(self)
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.addWidget(spacer)
+        
+        # Add a visual separator before the right-aligned group
+        self.addSeparator()
 
         # Right-aligned help group
         existing_right = [self.menu_actions[k] for k in right_group if k in self.menu_actions and self.menu_actions[k] is not None]
         if existing_right:
-            if first_group_added:
-                self.addSeparator()
+            # Remove the previous separator since we already added one
+            if first_group_added and self.actions() and self.actions()[-1].isSeparator():
+                self.removeAction(self.actions()[-1])
             for act in existing_right:
                 self.addAction(act)
     

@@ -278,13 +278,18 @@ class MainWindow(QMainWindow):
         
         # Connect menu actions to toolbar
         if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):
-            # Get menu actions that should be in the toolbar
-            toolbar_actions = {
-                'open_folder': self.menu_bar.actions.get('open_folder'),
-                'select_all': self.menu_bar.actions.get('select_all'),
-                'deselect_all': self.menu_bar.actions.get('deselect_all'),
-                'delete_selected': self.menu_bar.actions.get('delete_selected')
-            }
+            # Get all available menu actions
+            all_actions = {}
+            for key, action in self.menu_bar.actions.items():
+                if action is not None:
+                    all_actions[key] = action
+            
+            # Add the actions to the toolbar
+            self.toolbar.add_actions_from_menu(all_actions)
+            
+            # Connect toolbar toggle action
+            if hasattr(self, 'on_toggle_toolbar'):
+                self.menu_bar.actions.get('toggle_toolbar').toggled.connect(self.on_toggle_toolbar)
 
     def on_file_selection_changed(self):
         """Update preview and status when file selection changes."""
