@@ -90,28 +90,14 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 ### Coding Standards
 
-1. Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide.
-
-1. Use **black** for code formatting:
-
-   ```bash
-   black .
-   ```
-
-1. Use **flake8** for linting:
-
-   ```bash
-   flake8 .
-   ```
-
-1. Use **mypy** for type checking:
-
-   ```bash
-   mypy .
-   ```
-
-1. Keep lines under 100 characters.
-1. Use docstrings for all public modules, functions, classes, and methods following [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guidelines
+- Use 4 spaces for indentation (no tabs)
+- Keep lines under 100 characters
+- Use docstrings for all public modules, functions, classes, and methods
+- Write meaningful variable and function names
+- Keep functions small and focused on a single task
+- For text comparison features, ensure proper encoding handling
+- When working with file filters, maintain backward compatibility
 
 ### Type Hints
 
@@ -130,6 +116,13 @@ This project and everyone participating in it is governed by our [Code of Conduc
 - Update README.md if necessary.
 
 ## Testing
+
+- Write unit tests for all new functionality
+- Ensure all tests pass before submitting a pull request
+- Include test data with your tests when appropriate
+- Test on multiple platforms when possible
+- For text comparison features, include tests for different encodings
+- Test filtering with various combinations of file sizes and dates
 
 1. **Run the tests**:
 

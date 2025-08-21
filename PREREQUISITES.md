@@ -6,12 +6,21 @@ This project runs on Python and supports multiple PDF rendering backends. Auto m
 
 - Python 3.8+
 - pip
+- Tesseract OCR (for text extraction from scanned PDFs)
 
 Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+## Text Processing Requirements
+
+For optimal text comparison performance, the following are recommended:
+
+- At least 4GB of free RAM for processing large PDFs
+- SSD storage for faster file access during scanning
+- Python packages in `requirements.txt` will handle text processing
 
 ## Optional PDF Rendering Backends
 

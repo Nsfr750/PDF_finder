@@ -5,9 +5,33 @@ All notable changes to PDF Duplicate Finder will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2025-08-21
+
+### Added in 2.10.0
+
+- Text-based PDF comparison for identifying duplicates with minor visual differences
+- Advanced filtering options for file size, modification date, and name patterns
+- Performance optimizations for scanning large PDF collections
+- Updated help documentation with new features and usage instructions
+- Added keyboard shortcuts for common actions
+- Improved error handling and user feedback
+
+### Changed in 2.10.0
+
+- Enhanced duplicate detection algorithm for better accuracy
+- Updated dependencies to their latest stable versions
+- Improved memory management for large PDF files
+- Optimized UI responsiveness during scanning operations
+
+### Fixed in 2.10.0
+
+- Fixed issue with certain PDF files not being properly compared
+- Resolved memory leaks in the scanning process
+- Fixed UI glitches in the file comparison view
+
 ## [2.9.0] - 2025-08-20
 
-### Added
+### Added in 2.9.0
 
 - Settings dialog: Pre-flight backend checks with inline status labels
 - Settings dialog: "Test backends" button to validate PyMuPDF, Poppler, and Ghostscript
@@ -32,33 +56,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Propagated backend fallback messages from PDF processing to the UI status bar
 - Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors
-- fixed language manager
-    - fixed en.json
-    - fixed it.json
-- fixed delete selected files
-- fixed toggle permanent delete
-- fixed progress bar appearance
+- Fixed language manager
+  - Fixed en.json
+  - Fixed it.json
+- Fixed delete selected files
+- Fixed toggle permanent delete
+- Fixed progress bar appearance
 
 ## [2.8.0] - 2025-08-17
 
-### Added (2.8.0)
+### Added in 2.8.0
 
 - Added tqdm progress bar for better user feedback during file processing
 - Enhanced logging with more detailed progress information
 
-### Changed (2.8.0)
+### Changed in 2.8.0
 
 - Updated dependencies in requirements.txt
 - Improved error handling for file operations
 
-### Fixed (2.8.0)
+### Fixed in 2.8.0
 
 - Fixed module import error by adding tqdm to requirements
 - Improved error handling for missing dependencies
 
 ## [2.7.3] - 2025-07-09
 
-### Added (2.7.3)
+### Added in 2.7.3
 
 - Migrated from PySide6 to PyQt6 for better compatibility and performance
 - Added utility functions for consistent file path handling
@@ -66,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added more detailed error messages for file operations
 - Added better handling of files in use by other applications
 
-### Changed (2.7.3)
+### Changed in 2.7.3
 
 - Updated all UI components to use PyQt6 APIs
 - Refactored file info handling to be more robust
@@ -74,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved file deletion with better error handling
 - Enhanced recycle bin fallback mechanism
 
-### Fixed (2.7.3)
+### Fixed in 2.7.3
 
 - Fixed QPainter warnings and rendering issues
 - Resolved file path handling inconsistencies

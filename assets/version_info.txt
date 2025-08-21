@@ -1,5 +1,11 @@
-Version: .".join(map(str, VERSION))
-Build Date: 2025-08-20 20:09:31
+Version: 2.10.0
+Build Date: 2025-08-21 15:39:14
 Author: Nsfr750
 License: GPL-3.0-or-later
 Website: https://github.com/Nsfr750/PDF_finder
+
+What's New in 2.10.0:
+- Added text-based PDF comparison for better duplicate detection
+- Implemented advanced filtering by file size, date modified, and name pattern
+- Improved performance with optimized scanning algorithms
+- Updated help documentation with new features

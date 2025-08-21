@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (2, 9, 0)
+VERSION = (2, 10, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
@@ -17,7 +17,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-08-20"
+__date__ = "2025-08-21"
 
 # Version description
 __description__ = "A tool to find and manage duplicate PDF files on your computer."

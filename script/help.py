@@ -199,6 +199,27 @@ class HelpDialog(QDialog):
                 <li>Seleziona i file e usa <b>Mantieni</b> o <b>Elimina</b> per gestire i duplicati</li>
             </ol>
             
+            <h2>Nuove Funzionalità</h2>
+            
+            <h3>Confronto Testuale</h3>
+            <p>L'applicazione ora confronta i PDF sia per contenuto che per testo. Questo aiuta a identificare i duplicati anche quando i file hanno piccole differenze visive ma contengono lo stesso testo.</p>
+            <p>Regola la soglia di somiglianza del testo nelle impostazioni per controllare quanto simili devono essere i file per essere considerati duplicati.</p>
+            
+            <h3>Filtri Avanzati</h3>
+            <p>Utilizza i filtri per restringere la ricerca:</p>
+            <ul>
+                <li><b>Dimensione File:</b> Filtra per dimensione minima e massima</li>
+                <li><b>Data Modifica:</b> Trova file modificati in un intervallo di date specifico</li>
+                <li><b>Modello Nome:</b> Cerca file che corrispondono a un modello specifico (supporta caratteri jolly)</li>
+            </ul>
+            
+            <h3>Suggerimenti per le Prestazioni</h3>
+            <ul>
+                <li>Usa i filtri per ridurre il numero di file da confrontare</li>
+                <li>Regola la soglia di somiglianza in base alle tue esigenze</li>
+                <li>Per grandi raccolte, considera di eseguire la scansione in lotti più piccoli</li>
+            </ul>
+            
             <h2>Scorciatoie da Tastiera</h2>
             <ul>
                 <li><b>Ctrl+O</b>: Apri cartella da scansionare</li>
@@ -215,21 +236,42 @@ class HelpDialog(QDialog):
             """
             <h1>PDF Duplicate Finder - Help</h1>
             
-            <h2>Getting Started</h2>
+            <h2>Introduction</h2>
             <p>PDF Duplicate Finder helps you find and manage duplicate PDF files on your computer.</p>
             
             <h2>How to Use</h2>
             <ol>
-                <li>Click <b>Scan Folder</b> to select a directory to scan for duplicate PDFs</li>
+                <li>Click <b>Scan Folder</b> to select a directory to analyze</li>
                 <li>Review the duplicate groups found</li>
                 <li>Use the navigation buttons to move between groups and files</li>
                 <li>Select files and use <b>Keep</b> or <b>Delete</b> to manage duplicates</li>
             </ol>
             
+            <h2>New Features</h2>
+            
+            <h3>Text Comparison</h3>
+            <p>The application now compares PDFs by both content and text. This helps identify duplicates even when the files have minor visual differences but contain the same text.</p>
+            <p>Adjust the text similarity threshold in the settings to control how similar the text needs to be for files to be considered duplicates.</p>
+            
+            <h3>Advanced Filtering</h3>
+            <p>Use filters to narrow down your search:</p>
+            <ul>
+                <li><b>File Size:</b> Filter by minimum and maximum file size</li>
+                <li><b>Date Modified:</b> Find files modified within a specific date range</li>
+                <li><b>Name Pattern:</b> Search for files matching a specific name pattern (supports wildcards)</li>
+            </ul>
+            
+            <h3>Performance Tips</h3>
+            <ul>
+                <li>Use filters to reduce the number of files being compared</li>
+                <li>Adjust the similarity threshold based on your needs</li>
+                <li>For large collections, consider scanning in smaller batches</li>
+            </ul>
+            
             <h2>Keyboard Shortcuts</h2>
             <ul>
                 <li><b>Ctrl+O</b>: Open folder to scan</li>
-                <li><b>Ctrl+Q</b>: Quit the application</li>
+                <li><b>Ctrl+Q</b>: Quit application</li>
                 <li><b>F1</b>: Show this help</li>
             </ul>
             """
