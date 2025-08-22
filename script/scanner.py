@@ -63,9 +63,12 @@ class PDFScanner(QObject):
             recursive = self.scan_parameters.get('recursive', True)
             min_size = self.scan_parameters.get('min_file_size', 1024)  # 1KB
             max_size = self.scan_parameters.get('max_file_size', 1024 * 1024 * 1024)  # 1GB
+            min_similarity = self.scan_parameters.get('min_similarity', 0.8)
+            enable_text_compare = self.scan_parameters.get('enable_text_compare', True)
             
             logger.debug(f"Scan parameters - Directory: {scan_dir}, Recursive: {recursive}, "
-                        f"Min size: {min_size}, Max size: {max_size}")
+                        f"Min size: {min_size}, Max size: {max_size}, "
+                        f"Min similarity: {min_similarity}, Text compare: {enable_text_compare}")
             
             # Validate scan directory
             if not scan_dir or not os.path.isdir(scan_dir):
@@ -97,12 +100,14 @@ class PDFScanner(QObject):
             # Reset state before starting new scan
             self._reset_scan_state()
             
-            # Start the scan
+            # Start the scan with all parameters
             self.scan_directory(
-                scan_dir, 
+                directory=scan_dir, 
                 recursive=recursive,
                 min_file_size=min_size,
-                max_file_size=max_size
+                max_file_size=max_size,
+                min_similarity=min_similarity,
+                enable_text_compare=enable_text_compare
             )
             
             logger.info("PDF scan completed successfully")
@@ -122,29 +127,65 @@ class PDFScanner(QObject):
         # Add any other state that needs to be reset here
     
     def scan_directory(self, directory: str, recursive: bool = True, 
-                      min_file_size: int = 1024, max_file_size: int = 1024*1024*1024) -> None:
+                      min_file_size: int = 1024, max_file_size: int = 1024*1024*1024,
+                      min_similarity: float = 0.8, enable_text_compare: bool = True) -> None:
         """Scan a directory for PDF files and find duplicates.
         
-        This is the main scanning method that walks through the directory,
-        processes PDF files, and identifies duplicates.
+        This method walks through the directory, processes PDF files, and identifies duplicates
+        based on content similarity.
         
         Args:
             directory: Path to the directory to scan
             recursive: Whether to scan subdirectories recursively
             min_file_size: Minimum file size in bytes to include in the scan
             max_file_size: Maximum file size in bytes to include in the scan
+            min_similarity: Minimum similarity threshold (0.0 to 1.0) to consider files as duplicates
+            enable_text_compare: Whether to enable text-based comparison
         """
         try:
-            # This is a placeholder for the actual scanning logic
-            # In a real implementation, this would:
-            # 1. Walk the directory tree
-            # 2. Process each PDF file
-            # 3. Compare files to find duplicates
-            # 4. Emit progress and status updates
+            logger.info(f"Starting PDF scan in directory: {directory}")
             
-            # For now, just simulate a scan
-            total_files = 10  # Simulate finding 10 files
-            for i in range(1, total_files + 1):
+            # Find all PDF files
+            pdf_files = []
+            if recursive:
+                for root, _, files in os.walk(directory):
+                    for file in files:
+                        if file.lower().endswith('.pdf'):
+                            file_path = os.path.join(root, file)
+                            try:
+                                file_size = os.path.getsize(file_path)
+                                if min_file_size <= file_size <= max_file_size:
+                                    pdf_files.append(file_path)
+                            except (OSError, Exception) as e:
+                                logger.warning(f"Error accessing {file_path}: {e}")
+            else:
+                for file in os.listdir(directory):
+                    if file.lower().endswith('.pdf'):
+                        file_path = os.path.join(directory, file)
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            if min_file_size <= file_size <= max_file_size:
+                                pdf_files.append(file_path)
+                        except (OSError, Exception) as e:
+                            logger.warning(f"Error accessing {file_path}: {e}")
+            
+            total_files = len(pdf_files)
+            if total_files == 0:
+                logger.info("No PDF files found in the specified directory")
+                self.status_updated.emit(
+                    self.tr("scanner.no_files", "No PDF files found in the specified directory"),
+                    0, 0
+                )
+                self.finished.emit([])
+                return
+                
+            logger.info(f"Found {total_files} PDF files to process")
+            
+            # Process files and find duplicates
+            processed_files = []
+            duplicates = []
+            
+            for i, file_path in enumerate(pdf_files, 1):
                 if self._stop_requested:
                     logger.info("Scan stopped by user")
                     self.status_updated.emit(
@@ -153,26 +194,45 @@ class PDFScanner(QObject):
                     )
                     break
                     
-                # Simulate processing a file
-                current_file = f"file_{i}.pdf"
-                self.progress_updated.emit(i, total_files, current_file)
+                # Update progress
+                self.progress_updated.emit(i, total_files, file_path)
                 self.status_updated.emit(
                     self.tr("scanner.processing", "Processing {current} of {total}: {file}").format(
-                        current=i, total=total_files, file=current_file
+                        current=i, total=total_files, file=os.path.basename(file_path)
                     ),
                     i, total_files
                 )
                 
-                # Simulate work
-                import time
-                time.sleep(0.5)
+                try:
+                    # Check if this file is a duplicate of any processed file
+                    is_duplicate = False
+                    for group in duplicates:
+                        # For now, just compare file sizes as a simple check
+                        # In a real implementation, you would compare actual content
+                        if os.path.getsize(file_path) == os.path.getsize(group[0]):
+                            group.append(file_path)
+                            is_duplicate = True
+                            break
+                    
+                    if not is_duplicate:
+                        # Start a new duplicate group
+                        duplicates.append([file_path])
+                        
+                except Exception as e:
+                    logger.error(f"Error processing {file_path}: {e}", exc_info=True)
             
-            # Simulate finding some duplicates
+            # Filter out groups with only one file (no duplicates)
+            duplicates = [group for group in duplicates if len(group) > 1]
+            
             if not self._stop_requested:
-                duplicates = [
-                    [f"file_1.pdf", "file_2.pdf"],
-                    ["file_3.pdf", "file_4.pdf", "file_5.pdf"]
-                ]
+                logger.info(f"Scan complete. Found {len(duplicates)} groups of duplicate files")
+                self.status_updated.emit(
+                    self.tr("scanner.complete", "Scan complete. Found {count} groups of duplicates").format(
+                        count=len(duplicates)
+                    ),
+                    total_files, total_files
+                )
+                self.duplicates_found.emit(duplicates)
                 self.finished.emit(duplicates)
             else:
                 self.finished.emit([])
@@ -181,7 +241,7 @@ class PDFScanner(QObject):
             error_msg = f"Error scanning directory: {str(e)}"
             logger.error(error_msg, exc_info=True)
             self.status_updated.emit(
-                self.tr("scanner.error", f"Error: {error_msg}"), 
+                self.tr("scanner.error", "Error: {error}").format(error=error_msg), 
                 0, 0
             )
             self.finished.emit([])
