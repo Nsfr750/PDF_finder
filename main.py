@@ -496,12 +496,12 @@ class PDFDuplicateFinder(MainWindow):
         except Exception as e:
             logger.error(f"Error updating scan status: {e}", exc_info=True)
     
-    @pyqtSlot(object)
-    def _on_duplicates_found(self, duplicate_groups):
+    @pyqtSlot(list)
+    def _on_duplicates_found(self, duplicate_groups: List[List[Dict[str, Any]]]) -> None:
         """Handle when duplicates are found during scanning.
         
         Args:
-            duplicate_groups: List of duplicate file groups found
+            duplicate_groups: List of duplicate file groups found, where each group is a list of file info dicts
         """
         try:
             # Make sure we're in the main thread for UI updates
@@ -1236,18 +1236,42 @@ class PDFDuplicateFinder(MainWindow):
             self._scanner.moveToThread(self.scan_thread)
             logger.debug("Scanner moved to thread")
             
-            # Connect signals
+            # Connect signals with proper connection type
             logger.debug("Connecting signals...")
-            self._scanner.progress_updated.connect(self._on_scan_progress)
-            self._scanner.status_updated.connect(self._on_scan_status)
-            self._scanner.duplicates_found.connect(self._on_duplicates_found)
-            self._scanner.finished.connect(self._on_scan_finished)
-            self._scanner.finished.connect(self.scan_thread.quit)
-            self._scanner.finished.connect(self._scanner.deleteLater)
-            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
-            logger.debug("All signals connected")
+            self._scanner.progress_updated.connect(
+                self._on_scan_progress,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.status_updated.connect(
+                self._on_scan_status,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.duplicates_found.connect(
+                self._on_duplicates_found,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.finished.connect(
+                self._on_scan_finished,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.finished.connect(
+                self.scan_thread.quit,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.finished.connect(
+                self._scanner.deleteLater,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self.scan_thread.finished.connect(
+                self.scan_thread.deleteLater,
+                Qt.ConnectionType.QueuedConnection
+            )
+            logger.debug("All signals connected with QueuedConnection")
             
-            # Connect scanner signals
+            # Start the thread
+            logger.debug("Starting scanner thread...")
+            self.scan_thread.start()
+            logger.debug("Scanner thread started")
             logger.debug("Connecting scanner signals...")
             if hasattr(self, 'scan_progress'):
                 logger.debug("Connecting progress signal")
