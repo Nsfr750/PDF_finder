@@ -1,15 +1,21 @@
 """
 UI components for PDF Duplicate Finder.
 """
+import os
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
     QListWidget, QLabel, QFrame, QStatusBar, QTreeWidget,
-    QTreeWidgetItem, QHeaderView, QSizePolicy
+    QTreeWidgetItem, QHeaderView, QSizePolicy, QMenuBar, QToolBar,
+    QApplication
 )
 from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QAction, QIcon
 
 # Import language manager
 from script.lang_mgr import LanguageManager
+
+# Import preview widget
+from script.preview_widget import PDFPreviewWidget as PreviewWidget
 
 class MainUI(QWidget):
     """Main UI components for the application."""
@@ -18,7 +24,7 @@ class MainUI(QWidget):
         """Initialize the UI components.
         
         Args:
-            parent: Parent widget.
+            parent: Parent widget (main window).
         """
         super().__init__(parent)
         # Initialize language manager
@@ -30,74 +36,66 @@ class MainUI(QWidget):
         """Set up the UI components."""
         # Main layout
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(4, 4, 4, 4)
+        self.main_layout.setSpacing(4)
         
-        # Create main content area with vertical splitter
-        self.splitter = QSplitter(Qt.Orientation.Vertical)
+        # Create main horizontal splitter for file list and preview
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        # Top panel - Main content (horizontal split)
-        self.horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
+        # Left panel - File list with label (30% width)
+        file_list_container = QWidget()
+        file_list_layout = QVBoxLayout(file_list_container)
+        file_list_layout.setContentsMargins(0, 0, 4, 0)
+        file_list_layout.setSpacing(4)
         
-        # Left panel - File list
+        file_list_label = QLabel(self.tr("Files"))
+        file_list_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        file_list_layout.addWidget(file_list_label)
+        
         self.file_list = QListWidget()
-        self.file_list.setMinimumWidth(300)
-        self.file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.file_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.file_list.itemDoubleClicked.connect(self.on_file_double_clicked)
+        file_list_layout.addWidget(self.file_list)
         
-        # Right panel - Preview
-        self.preview_widget = QLabel()
-        self.preview_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_widget.setFrameShape(QFrame.Shape.StyledPanel)
-        self.preview_widget.setText(self.tr("ui.preview_placeholder", "Preview will be shown here"))
+        # Right panel - Preview with label (70% width)
+        preview_container = QWidget()
+        preview_layout = QVBoxLayout(preview_container)
+        preview_layout.setContentsMargins(4, 0, 0, 0)
+        preview_layout.setSpacing(4)
         
-        # Add widgets to horizontal splitter
-        self.horizontal_splitter.addWidget(self.file_list)
-        self.horizontal_splitter.addWidget(self.preview_widget)
-        self.horizontal_splitter.setSizes([400, 700])
+        preview_label = QLabel(self.tr("Preview"))
+        preview_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        preview_layout.addWidget(preview_label)
         
-        # Bottom panel - Duplicates tree
-        self.duplicates_tree = QTreeWidget()
-        self.duplicates_tree.setObjectName("duplicatesTree")
-        self.duplicates_tree.setHeaderLabels([
-            self.tr("File Path"),
-            self.tr("Size"),
-            self.tr("Modified"),
-            self.tr("Similarity")
-        ])
-        self.duplicates_tree.setAlternatingRowColors(True)
-        self.duplicates_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
-        self.duplicates_tree.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.duplicates_tree.setMinimumHeight(200)
+        self.preview_widget = PreviewWidget()
+        preview_layout.addWidget(self.preview_widget)
         
-        # Configure header
-        header = self.duplicates_tree.header()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        # Add file list and preview to main splitter
+        main_splitter.addWidget(file_list_container)
+        main_splitter.addWidget(preview_container)
         
-        # Add widgets to main vertical splitter
-        self.splitter.addWidget(self.horizontal_splitter)
-        self.splitter.addWidget(self.duplicates_tree)
-        
-        # Set initial sizes (2/3 for top, 1/3 for bottom)
-        total_height = 800  # Default height, will be adjusted by window
-        self.splitter.setSizes([int(total_height * 0.67), int(total_height * 0.33)])
+        # Set stretch factors (30% for file list, 70% for preview)
+        main_splitter.setStretchFactor(0, 30)
+        main_splitter.setStretchFactor(1, 70)
         
         # Add splitter to main layout
-        self.main_layout.addWidget(self.splitter)
+        self.main_layout.addWidget(main_splitter, 1)  # Takes all available space
         
-        # Create status bar
-        self.status_bar = QStatusBar()
-        
-        # Add a permanent widget for backend status
-        self.backend_status_label = QLabel("")
-        self.backend_status_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.backend_status_label.setStyleSheet("color: #666666; font-style: italic; padding: 0 8px;")
-        self.status_bar.addPermanentWidget(self.backend_status_label)
-        
-        # Show initial status
-        self.status_bar.showMessage(self.tr("ui.status_ready", "Ready"))
+        # Initialize the preview widget with placeholder
+        self.preview_widget.set_placeholder(self.tr("No preview available"))
+    
+    def on_file_double_clicked(self, item):
+        """Handle double-click on a file in the file list."""
+        file_path = item.text()
+        if file_path and os.path.exists(file_path):
+            self.preview_widget.load_pdf(file_path)
+    
+    def on_duplicate_double_clicked(self, item, column):
+        """Handle double-click on a duplicate file in the tree."""
+        if item.parent():  # This is a file item (not a group header)
+            file_path = item.text(0)  # Get the file path from the first column
+            if file_path and os.path.exists(file_path):
+                self.preview_widget.load_pdf(file_path)
     
     def update_preview(self, file_path):
         """Update the preview with the selected file.
@@ -107,18 +105,15 @@ class MainUI(QWidget):
         """
         if not file_path or not hasattr(self, 'preview_widget'):
             return
-            
-        # Update preview with localized text
-        self.preview_widget.setText(
-            self.tr("ui.preview_of", "Preview of: {file_path}")
-            .format(file_path=file_path)
-        )
+        
+        # Load the PDF in the preview widget
+        self.preview_widget.load_pdf(file_path)
     
     def clear_preview(self):
         """Clear the preview area."""
         if hasattr(self, 'preview_widget'):
-            self.preview_widget.setText(
-                self.tr("ui.preview_placeholder", "Preview will be shown here")
+            self.preview_widget.set_placeholder(
+                self.tr("preview.no_preview", "No preview available")
             )
     
     def update_status(self, message):

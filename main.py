@@ -7,10 +7,9 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QMessageBox,
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QListWidget, QListWidgetItem, QProgressBar,
-    QSplitter, QMenu, QMenuBar, QStatusBar, QToolBar, 
+    QApplication, QMainWindow, QFileDialog, QMessageBox, QMenu,
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QStatusBar, QSplitter,
+    QWidget, QListWidget, QListWidgetItem, QProgressBar, QTreeWidget, QTreeWidgetItem,
     QCheckBox, QDialog, QDialogButtonBox,
     QFormLayout, QLineEdit, QSpinBox, QComboBox, QGroupBox,
     QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView,
@@ -566,12 +565,21 @@ class PDFDuplicateFinder(MainWindow):
                 group_item.setExpanded(True)
                 
                 for file_info in group:
-                    file_item = QTreeWidgetItem([
-                        file_info.get('path', ''),
-                        self._format_file_size(file_info.get('size', 0)),
-                        self._format_timestamp(file_info.get('modified', 0)),
-                        f"{file_info.get('similarity', 0) * 100:.1f}%"
-                    ])
+                    if isinstance(file_info, str):
+                        # Handle case where file_info is just a path string
+                        file_item = QTreeWidgetItem([file_info, "", "", ""])
+                    elif isinstance(file_info, dict):
+                        # Handle case where file_info is a dictionary
+                        file_item = QTreeWidgetItem([
+                            str(file_info.get('path', '')),
+                            self._format_file_size(file_info.get('size', 0)),
+                            self._format_timestamp(file_info.get('modified', 0)),
+                            f"{file_info.get('similarity', 0) * 100:.1f}%" if 'similarity' in file_info else ""
+                        ])
+                    else:
+                        # Skip invalid items
+                        continue
+                        
                     group_item.addChild(file_item)
                 
                 self.duplicates_tree.addTopLevelItem(group_item)

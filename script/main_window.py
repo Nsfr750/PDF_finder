@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any
 import threading
+from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QMainWindow, QFileDialog, QMenu, QWidget, QVBoxLayout, 
@@ -29,6 +30,7 @@ from .ui import MainUI
 from .settings_dialog import SettingsDialog
 from .PDF_viewer import show_pdf_viewer
 from .scanner import PDFScanner
+from .updates import UpdateDataManager
 
 class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
@@ -86,6 +88,54 @@ class MainWindow(QMainWindow):
         # Connect to language change signals
         if hasattr(self.language_manager, 'language_changed'):
             self.language_manager.language_changed.connect(self.on_language_changed)
+            
+        # Initialize update manager and check for updates on startup
+        self.update_manager = UpdateDataManager("config")
+        self.check_for_updates()
+    
+    def check_for_updates(self):
+        """Check for application updates."""
+        try:
+            # Get current version (you'll need to import your version)
+            from script.version import __version__ as current_version
+            
+            # Check if we already have a recent update check
+            last_check = self.update_manager.get_last_check()
+            if last_check and (datetime.now() - last_check).days < 1:  # Check once per day
+                logger.debug("Skipping update check - already checked today")
+                return
+                
+            # In a real app, you would fetch this from your update server
+            # For now, we'll just demonstrate the data structure
+            update_data = {
+                "version": "1.1.0",  # Example new version
+                "release_notes": "New features and improvements",
+                "download_url": "https://github.com/yourusername/yourrepo/releases/latest",
+                "release_date": "2025-08-22"
+            }
+            
+            # Save the update check
+            self.update_manager.save_update_check(
+                version=current_version,
+                update_available=True,  # In a real app, compare versions
+                update_data=update_data
+            )
+            
+            # Notify user if update is available
+            if self.update_manager.is_update_available():
+                update_info = self.update_manager.get_update_data()
+                QMessageBox.information(
+                    self,
+                    self.tr("Update Available"),
+                    self.tr("Version {0} is now available!\n\n{1}").format(
+                        update_info.get('version', '1.0.0'),
+                        update_info.get('release_notes', '')
+                    )
+                )
+                
+        except Exception as e:
+            logger.error(f"Error checking for updates: {e}")
+            # Don't show error to user for failed update checks
     
     def on_open_folder(self):
         """Handle the 'Open Folder' action from the menu."""
