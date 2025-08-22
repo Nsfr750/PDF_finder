@@ -74,9 +74,6 @@ class PDFDuplicateFinder(MainWindow):
         # Load window state and geometry from settings
         self.load_window_state()
         
-        # Show the window
-        self.show()
-        
         # Initialize filter settings
         self.current_filters = {
             'min_size': 0,  # in bytes
@@ -85,6 +82,12 @@ class PDFDuplicateFinder(MainWindow):
             'enable_text_compare': True,
             'min_similarity': 0.8
         }
+        
+        # Show the window
+        self.show()
+        
+        # Automatically open the folder selection dialog
+        QTimer.singleShot(100, self.on_open_folder)
         
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
