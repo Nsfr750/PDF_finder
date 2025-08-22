@@ -551,23 +551,13 @@ class PDFDuplicateFinder(MainWindow):
         This method is called on the main thread after a scan completes.
         """
         try:
-            if not hasattr(self, 'duplicates_tree'):
-                logger.warning("duplicates_tree widget not found in UI")
+            if not hasattr(self, 'main_ui') or not hasattr(self.main_ui, 'update_duplicates_tree'):
+                logger.warning("MainUI or update_duplicates_tree method not found")
                 return
                 
-            # Clear existing items
-            self.duplicates_tree.clear()
-            
-            # Add header if not already set
-            if self.duplicates_tree.header().count() == 0:
-                self.duplicates_tree.setHeaderLabels([
-                    self.tr("File Path"),
-                    self.tr("Size"),
-                    self.tr("Modified"),
-                    self.tr("Similarity")
-                ])
-            
-            # Add duplicate groups to the tree
+            # Update the duplicates tree in the main UI
+            self.main_ui.update_duplicates_tree(self.last_scan_duplicates)
+            logger.info(f"Updated UI with {len(self.last_scan_duplicates)} duplicate groups")
             for group_idx, group in enumerate(self.last_scan_duplicates, 1):
                 group_item = QTreeWidgetItem([
                     self.tr("Group {}").format(group_idx),
@@ -620,7 +610,10 @@ class PDFDuplicateFinder(MainWindow):
             self.last_scan_duplicates = duplicates
             
             # Update the UI with the found duplicates
-            if hasattr(self, 'update_duplicates_list'):
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'update_duplicates_tree'):
+                self.main_ui.update_duplicates_tree(duplicates)
+            elif hasattr(self, 'update_duplicates_list'):
+                # Fallback to old method if exists
                 self.update_duplicates_list(duplicates)
                 
             # Enable relevant UI elements
@@ -628,7 +621,7 @@ class PDFDuplicateFinder(MainWindow):
                 self.action_export_csv.setEnabled(True)
                 
         except Exception as e:
-            logger.error(f"Error processing found duplicates: {e}")
+            logger.error(f"Error processing found duplicates: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
                 self.tr("Error"),

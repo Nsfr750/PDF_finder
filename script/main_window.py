@@ -254,8 +254,8 @@ class MainWindow(QMainWindow):
         self.toolbar.setObjectName("mainToolBar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         
-        # Create the main UI
-        self.main_ui = MainUI()
+        # Create the main UI with the central widget as parent
+        self.main_ui = MainUI(central_widget)
         
         # Add the main UI to the main layout
         main_layout.addWidget(self.main_ui)
