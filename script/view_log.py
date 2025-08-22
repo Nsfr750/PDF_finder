@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextEdit,
                              QComboBox, QPushButton, QLabel, QFileDialog,
-                             QMessageBox, QApplication, QLineEdit)
+                             QMessageBox, QApplication, QLineEdit, QStyle)
 from PyQt6.QtCore import Qt, QRegularExpression, pyqtSlot
 from PyQt6.QtGui import QTextCharFormat, QColor, QTextCursor, QSyntaxHighlighter, QFont
 
@@ -90,16 +90,22 @@ class LogViewer(QDialog):
     def __init__(self, log_file, parent=None):
         super().__init__(parent)
         self.language_manager = LanguageManager()
-        self.log_file = log_file
+        self.log_file = os.path.abspath(log_file)
+        self.log_dir = os.path.dirname(self.log_file)
         self.log_content = []
         self.filtered_content = []
         self.current_level = "ALL"
         
-        # Set window size
-        self.resize(600, 400)
+        # Set window size and title
+        self.resize(800, 600)
+        self.setWindowTitle(self.tr("Log Viewer"))
         
+        # Initialize UI
         self.init_ui()
         self.retranslate_ui()
+        
+        # Populate log files and load the initial log
+        self.populate_log_files()
         self.load_log_file()
         
         # Connect language change signal
@@ -109,41 +115,81 @@ class LogViewer(QDialog):
         """Initialize the user interface."""
         layout = QVBoxLayout(self)
         
-        # Toolbar
-        toolbar = QHBoxLayout()
+        # Top toolbar (file selection and actions)
+        top_toolbar = QHBoxLayout()
+        
+        # Log file selection
+        self.log_file_label = QLabel()
+        top_toolbar.addWidget(self.log_file_label)
+        
+        self.log_file_combo = QComboBox()
+        self.log_file_combo.setMinimumWidth(300)
+        self.log_file_combo.currentTextChanged.connect(self.on_log_file_changed)
+        top_toolbar.addWidget(self.log_file_combo, 1)  # Add stretch
+        
+        # Delete log button
+        self.delete_btn = QPushButton()
+        self.delete_btn.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_TrashIcon))
+        self.delete_btn.setToolTip(self.tr("Delete selected log file"))
+        self.delete_btn.clicked.connect(self.delete_log_file)
+        top_toolbar.addWidget(self.delete_btn)
+        
+        # Refresh button
+        self.refresh_btn = QPushButton()
+        self.refresh_btn.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_BrowserReload))
+        self.refresh_btn.setToolTip(self.tr("Refresh log files list"))
+        self.refresh_btn.clicked.connect(self.populate_log_files)
+        top_toolbar.addWidget(self.refresh_btn)
+        
+        layout.addLayout(top_toolbar)
+        
+        # Filter toolbar
+        filter_toolbar = QHBoxLayout()
         
         # Log level filter
         self.level_label = QLabel()
-        toolbar.addWidget(self.level_label)
+        filter_toolbar.addWidget(self.level_label)
         
         self.level_combo = QComboBox()
         self.level_combo.addItems(["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
         self.level_combo.currentTextChanged.connect(self.filter_logs)
-        toolbar.addWidget(self.level_combo)
+        filter_toolbar.addWidget(self.level_combo)
         
         # Search box
         self.search_label = QLabel()
-        toolbar.addWidget(self.search_label)
+        filter_toolbar.addWidget(self.search_label)
         
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText(self.tr("Search in logs..."))
         self.search_edit.textChanged.connect(self.filter_logs)
-        toolbar.addWidget(self.search_edit)
+        filter_toolbar.addWidget(self.search_edit, 1)  # Add stretch
+        
+        # Clear search button
+        self.clear_search_btn = QPushButton()
+        self.clear_search_btn.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogCloseButton))
+        self.clear_search_btn.setToolTip(self.tr("Clear search"))
+        self.clear_search_btn.clicked.connect(self.clear_search)
+        filter_toolbar.addWidget(self.clear_search_btn)
         
         # Buttons
-        self.refresh_btn = QPushButton()
-        self.refresh_btn.clicked.connect(self.load_log_file)
-        toolbar.addWidget(self.refresh_btn)
-        
         self.clear_btn = QPushButton()
+        self.clear_btn.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogResetButton))
+        self.clear_btn.setToolTip(self.tr("Clear log content"))
         self.clear_btn.clicked.connect(self.clear_logs)
-        toolbar.addWidget(self.clear_btn)
+        filter_toolbar.addWidget(self.clear_btn)
         
         self.save_btn = QPushButton()
+        self.save_btn.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogSaveButton))
+        self.save_btn.setToolTip(self.tr("Save logs to file..."))
         self.save_btn.clicked.connect(self.save_logs)
-        toolbar.addWidget(self.save_btn)
+        filter_toolbar.addWidget(self.save_btn)
         
-        layout.addLayout(toolbar)
+        layout.addLayout(filter_toolbar)
         
         # Log display
         self.log_display = QTextEdit()
@@ -170,37 +216,180 @@ class LogViewer(QDialog):
     def retranslate_ui(self):
         """Update the UI when the language changes."""
         self.setWindowTitle(self.tr("Log Viewer"))
-        self.level_label.setText(self.tr("Filter by level:"))
+        self.log_file_label.setText(self.tr("Log File:"))
+        self.level_label.setText(self.tr("Level:"))
         self.search_label.setText(self.tr("Search:"))
         self.search_edit.setPlaceholderText(self.tr("Search in logs..."))
-        self.refresh_btn.setText(self.tr("Refresh"))
-        self.clear_btn.setText(self.tr("Clear Logs"))
-        self.save_btn.setText(self.tr("Save As..."))
+        self.clear_btn.setText(self.tr("Clear"))
+        self.save_btn.setText(self.tr("Save"))
+        
+        # Update tooltips
+        self.delete_btn.setToolTip(self.tr("Delete selected log file"))
+        self.refresh_btn.setToolTip(self.tr("Refresh log files list"))
+        self.clear_search_btn.setToolTip(self.tr("Clear search"))
+        self.clear_btn.setToolTip(self.tr("Clear log content"))
+        self.save_btn.setToolTip(self.tr("Save logs to file..."))
         
         # Update status bar if we have content
         if hasattr(self, 'log_content'):
-            self.status_bar.setText(self.tr("Loaded {count} log entries").format(count=len(self.log_content)))
+            self.update_status_bar()
     
     def log_document(self):
         """Return the document associated with the log display."""
         return self.log_display.document()
     
+    def populate_log_files(self):
+        """Populate the log files dropdown with available log files."""
+        if not os.path.exists(self.log_dir):
+            try:
+                os.makedirs(self.log_dir, exist_ok=True)
+            except Exception as e:
+                QMessageBox.critical(self, self.tr("Error"),
+                                   self.tr("Failed to create logs directory: {}").format(str(e)))
+                return
+        
+        # Store current selection
+        current_file = self.log_file_combo.currentText()
+        
+        # Clear and repopulate the combo box
+        self.log_file_combo.blockSignals(True)
+        self.log_file_combo.clear()
+        
+        # Add all .log files from the logs directory
+        try:
+            log_files = sorted([f for f in os.listdir(self.log_dir) 
+                              if f.endswith('.log')], 
+                             key=lambda x: os.path.getmtime(os.path.join(self.log_dir, x)), 
+                             reverse=True)
+            
+            for log_file in log_files:
+                self.log_file_combo.addItem(log_file, os.path.join(self.log_dir, log_file))
+            
+            # Try to restore the previous selection or select the main log file
+            if current_file and os.path.exists(current_file):
+                index = self.log_file_combo.findData(current_file)
+                if index >= 0:
+                    self.log_file_combo.setCurrentIndex(index)
+            elif self.log_file_combo.count() > 0:
+                # Select the main log file if available
+                main_log_index = self.log_file_combo.findText(os.path.basename(self.log_file))
+                if main_log_index >= 0:
+                    self.log_file_combo.setCurrentIndex(main_log_index)
+                else:
+                    self.log_file_combo.setCurrentIndex(0)
+                    
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("Error"),
+                               self.tr("Failed to list log files: {}").format(str(e)))
+        
+        self.log_file_combo.blockSignals(False)
+    
+    def on_log_file_changed(self, text):
+        """Handle log file selection change."""
+        if not text:
+            return
+            
+        index = self.log_file_combo.currentIndex()
+        if index >= 0:
+            self.log_file = self.log_file_combo.currentData()
+            self.load_log_file()
+    
     def load_log_file(self):
         """Load the log file content."""
+        if not self.log_file or not os.path.exists(self.log_file):
+            self.log_display.setPlainText(self.tr("Log file not found: {path}").format(path=self.log_file))
+            self.log_content = []
+            self.filtered_content = []
+            self.update_status_bar()
+            return
+        
         try:
-            if not os.path.exists(self.log_file):
-                self.log_display.setPlainText(self.tr("Log file not found: {path}").format(path=self.log_file))
-                return
-            
-            with open(self.log_file, 'r', encoding='utf-8') as f:
+            with open(self.log_file, 'r', encoding='utf-8', errors='replace') as f:
                 self.log_content = f.readlines()
             
             self.filter_logs()
-            self.status_bar.setText(self.tr("Loaded {count} log entries").format(count=len(self.log_content)))
+            self.update_status_bar()
             
         except Exception as e:
-            QMessageBox.critical(self, self.tr("Error"), 
-                               self.tr("Failed to load log file: {error}").format(error=str(e)))
+            QMessageBox.critical(self, self.tr("Error"),
+                               self.tr("Failed to load log file: {}").format(str(e)))
+    
+    def update_status_bar(self):
+        """Update the status bar with current log file info."""
+        if not hasattr(self, 'log_content'):
+            return
+            
+        if not self.log_file or not os.path.exists(self.log_file):
+            self.status_bar.setText(self.tr("No log file selected"))
+            return
+            
+        file_size = os.path.getsize(self.log_file)
+        file_size_mb = file_size / (1024 * 1024)  # Convert to MB
+        
+        if file_size_mb > 1:
+            size_str = f"{file_size_mb:.1f} MB"
+        else:
+            size_str = f"{file_size / 1024:.1f} KB"
+            
+        self.status_bar.setText(
+            self.tr("File: {file} | Entries: {entries} | Size: {size}").format(
+                file=os.path.basename(self.log_file),
+                entries=len(self.log_content),
+                size=size_str
+            )
+        )
+    
+    def clear_search(self):
+        """Clear the search box and reset filters."""
+        self.search_edit.clear()
+        self.level_combo.setCurrentText("ALL")
+        self.filter_logs()
+    
+    def delete_log_file(self):
+        """Delete the currently selected log file after confirmation."""
+        if not self.log_file or not os.path.exists(self.log_file):
+            return
+            
+        reply = QMessageBox.question(
+            self,
+            self.tr("Confirm Delete"),
+            self.tr("Are you sure you want to delete the log file?\n"
+                   "This will permanently delete: {}\n"
+                   "This action cannot be undone.").format(os.path.basename(self.log_file)),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                os.remove(self.log_file)
+                # Remove from combo box
+                index = self.log_file_combo.findData(self.log_file)
+                if index >= 0:
+                    self.log_file_combo.removeItem(index)
+                
+                # Select the first available log file or clear the display
+                if self.log_file_combo.count() > 0:
+                    self.log_file = self.log_file_combo.currentData()
+                    self.load_log_file()
+                else:
+                    self.log_file = None
+                    self.log_content = []
+                    self.filtered_content = []
+                    self.log_display.clear()
+                    self.update_status_bar()
+                
+                QMessageBox.information(
+                    self,
+                    self.tr("Success"),
+                    self.tr("Log file has been deleted.")
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    self.tr("Error"),
+                    self.tr("Failed to delete log file: {}").format(str(e))
+                )
     
     def filter_logs(self):
         """Filter logs based on selected level and search text."""
@@ -208,9 +397,14 @@ class LogViewer(QDialog):
             level = self.level_combo.currentText()
             search_text = self.search_edit.text().lower()
             
+            if not hasattr(self, 'log_content') or not self.log_content:
+                self.log_display.clear()
+                return
+            
             self.filtered_content = []
             current_entry = []
             
+            # Process each line in the log file
             for line in self.log_content:
                 line = line.rstrip('\n')
                 
@@ -222,10 +416,10 @@ class LogViewer(QDialog):
                     entry_text = '\n'.join(current_entry)
                     if self._should_include_entry(entry_text, level, search_text):
                         self.filtered_content.append(entry_text)
-                    current_entry = []
-                
-                if line.strip():  # Only add non-empty lines
-                    current_entry.append(line)
+                    current_entry = [line]
+                else:
+                    if current_entry or line.strip():
+                        current_entry.append(line)
             
             # Process the last entry
             if current_entry:
@@ -233,27 +427,29 @@ class LogViewer(QDialog):
                 if self._should_include_entry(entry_text, level, search_text):
                     self.filtered_content.append(entry_text)
             
-            # Update display
-            self.log_display.clear()
-            if self.filtered_content:
-                self.log_display.setPlainText('\n\n'.join(self.filtered_content))
-            else:
-                no_results = self.tr("No log entries match the current filters.")
-                self.log_display.setPlainText(no_results)
+            # Update the display
+            self.log_display.setPlainText('\n\n'.join(self.filtered_content))
             
-            # Update status
-            total_entries = len([l for l in self.log_content if l.strip() and re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', l)])
-            self.status_bar.setText(self.tr("Showing {count} of {total} log entries").format(
-                count=len(self.filtered_content) if self.filtered_content else 0,
-                total=total_entries
-            ))
+            # Scroll to the bottom
+            self.log_display.verticalScrollBar().setValue(
+                self.log_display.verticalScrollBar().maximum()
+            )
             
-            # Scroll to top after filtering
-            self.log_display.verticalScrollBar().setValue(0)
-            
+            # Update status bar with filtered count
+            if hasattr(self, 'status_bar'):
+                self.status_bar.setText(
+                    self.tr("Showing {filtered} of {total} entries").format(
+                        filtered=len(self.filtered_content),
+                        total=len(self.log_content)
+                    )
+                )
+                
         except Exception as e:
-            self.log_display.setPlainText(self.tr("Error filtering logs: {}").format(str(e)))
-            logger.error(f"Error filtering logs: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to filter logs: {}").format(str(e))
+            )
     
     def _should_include_entry(self, entry_text, level, search_text):
         """Check if a log entry should be included based on filters."""
@@ -328,13 +524,36 @@ def show_log_viewer(log_file, parent=None):
         log_file (str): Path to the log file
         parent: Parent widget
     """
+    # Ensure logs directory exists
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+            # Create an empty log file
+            with open(log_file, 'w') as f:
+                f.write('Log file created.\n')
+        except Exception as e:
+            QMessageBox.critical(
+                parent,
+                parent.tr("Error") if parent else "Error",
+                parent.tr("Failed to create logs directory: {error}").format(error=str(e)) if parent 
+                else f"Failed to create logs directory: {str(e)}"
+            )
+            return
+    
     if not os.path.exists(log_file):
-        QMessageBox.warning(
-            parent,
-            parent.tr("Log File Not Found"),
-            parent.tr("Log file not found: {path}").format(path=log_file)
-        )
-        return
+        try:
+            # Create an empty log file
+            with open(log_file, 'w') as f:
+                f.write('Log file created.\n')
+        except Exception as e:
+            QMessageBox.critical(
+                parent,
+                parent.tr("Error") if parent else "Error",
+                parent.tr("Failed to create log file: {error}").format(error=str(e)) if parent
+                else f"Failed to create log file: {str(e)}"
+            )
+            return
     
     viewer = LogViewer(log_file, parent)
     viewer.exec()

@@ -107,8 +107,22 @@ class PDFDuplicateFinder(MainWindow):
         about_dialog = AboutDialog(self)
         about_dialog.exec()
         
+    def on_view_logs(self):
+        """Show the log viewer dialog."""
+        from script.view_log import show_log_viewer
+        log_file = os.path.join('logs', 'PDFDuplicateFinder.log')
+        show_log_viewer(log_file, self)
+        
+    def _init_scanner(self):
+        """Initialize the scanner with default settings and connect signals."""
         # Initialize the scanner
-        self._init_scanner()
+        self._scanner = PDFScanner()
+        
+        # Connect scanner signals to UI updates
+        self._scanner.status_updated.connect(self.on_scan_status)
+        self._scanner.progress_updated.connect(self.on_scan_progress)
+        self._scanner.duplicates_found.connect(self.on_duplicates_found)
+        self._scanner.finished.connect(self.on_scan_finished)
         
         # Initialize progress dialog
         self.progress_dialog = None
@@ -557,36 +571,6 @@ class PDFDuplicateFinder(MainWindow):
             # Update the duplicates tree in the main UI
             self.main_ui.update_duplicates_tree(self.last_scan_duplicates)
             logger.info(f"Updated UI with {len(self.last_scan_duplicates)} duplicate groups")
-            for group_idx, group in enumerate(self.last_scan_duplicates, 1):
-                group_item = QTreeWidgetItem([
-                    self.tr("Group {}").format(group_idx),
-                    "", "", ""
-                ])
-                group_item.setExpanded(True)
-                
-                for file_info in group:
-                    if isinstance(file_info, str):
-                        # Handle case where file_info is just a path string
-                        file_item = QTreeWidgetItem([file_info, "", "", ""])
-                    elif isinstance(file_info, dict):
-                        # Handle case where file_info is a dictionary
-                        file_item = QTreeWidgetItem([
-                            str(file_info.get('path', '')),
-                            self._format_file_size(file_info.get('size', 0)),
-                            self._format_timestamp(file_info.get('modified', 0)),
-                            f"{file_info.get('similarity', 0) * 100:.1f}%" if 'similarity' in file_info else ""
-                        ])
-                    else:
-                        # Skip invalid items
-                        continue
-                        
-                    group_item.addChild(file_item)
-                
-                self.duplicates_tree.addTopLevelItem(group_item)
-            
-            # Resize columns to fit content
-            for i in range(self.duplicates_tree.columnCount()):
-                self.duplicates_tree.resizeColumnToContents(i)
                 
             logger.info(f"UI updated with {len(self.last_scan_duplicates)} duplicate groups")
             

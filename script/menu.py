@@ -297,20 +297,6 @@ class MenuBar(QObject):
         self.actions['toggle_statusbar'].triggered.connect(self.parent.on_toggle_statusbar)
         menu.addAction(self.actions['toggle_statusbar'])
         
-        # Add separator
-        menu.addSeparator()
-        
-        # Log viewer action with icon
-        self.actions['log_viewer'] = QAction(
-            QIcon.fromTheme("text-x-log", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)),
-            self.tr("Log Viewer"),
-            self.parent
-        )
-        self.actions['log_viewer'].setStatusTip(self.tr("View application logs"))
-        if hasattr(self.parent, 'on_show_log_viewer'):
-            self.actions['log_viewer'].triggered.connect(self.parent.on_show_log_viewer)
-        menu.addAction(self.actions['log_viewer'])
-        
         return menu
     
     def create_tools_menu(self) -> QMenu:
@@ -466,6 +452,20 @@ class MenuBar(QObject):
         self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
         self.actions['documentation'].triggered.connect(self.on_show_documentation)
         menu.addAction(self.actions['documentation'])
+        
+        # Add separator
+        menu.addSeparator()
+        
+        # View Logs action with icon
+        self.actions['view_logs'] = QAction(
+            QIcon.fromTheme("text-x-log", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)),
+            self.tr("View Logs"),
+            self.parent
+        )
+        self.actions['view_logs'].setStatusTip(self.tr("View application logs"))
+        if hasattr(self.parent, 'on_view_logs'):
+            self.actions['view_logs'].triggered.connect(self.parent.on_view_logs)
+        menu.addAction(self.actions['view_logs'])
         
         # Add separator
         menu.addSeparator()

@@ -15,5 +15,6 @@
   "pdf": {
     "backend": "wand_ghostscript",
     "ghostscript_path": "C:/Progra~1/gs/gs10.05.0/bin/gswin64.exe"
-  }
+  },
+  "language": "en"
 }
