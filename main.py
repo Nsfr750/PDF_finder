@@ -46,8 +46,10 @@ from script.lang_mgr import LanguageManager
 from script.logger import get_logger
 from script.settings_dialog import SettingsDialog
 from script.scanner import PDFScanner
-from PyQt6.QtCore import QThread, QObject
-from PyQt6.QtWidgets import QProgressBar, QMessageBox
+from PyQt6.QtCore import QThread, QObject, QTimer, QMetaObject
+from PyQt6.QtWidgets import QProgressBar, QMessageBox, QDialog
+from script.recents import RecentFilesManager
+from script.progress_dialog import ScanProgressDialog
 
 # Set up logger
 logger = get_logger('main')
@@ -93,8 +95,129 @@ class PDFDuplicateFinder(MainWindow):
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
         
+        # Initialize recent files manager
+        self.recent_files_manager = RecentFilesManager(max_files=10, parent=self)
+        self.recent_files_manager.recents_changed.connect(self.update_recent_files_menu)
+        
+    def on_show_about(self):
+        """Show the about dialog."""
+        from script.about import AboutDialog
+        about_dialog = AboutDialog(self)
+        about_dialog.exec()
+        
         # Initialize the scanner
         self._init_scanner()
+        
+        # Initialize progress dialog
+        self.progress_dialog = None
+    
+    def update_recent_files_menu(self, recent_files):
+        """Update the recent files menu with the latest list of recent files.
+        
+        Args:
+            recent_files: List of recent file entries (dicts with 'path' key)
+        """
+        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'update_recent_files'):
+            self.menu_bar.update_recent_files(recent_files)
+    
+    def open_recent_file(self, file_path: str):
+        """Open a file or folder from the recent files list.
+        
+        Args:
+            file_path: Path to the file or folder to open
+        """
+        if os.path.exists(file_path):
+            if os.path.isdir(file_path):
+                self.scan_folder(file_path)
+            else:
+                # If it's a file, open its containing folder
+                folder_path = os.path.dirname(file_path)
+                if os.path.isdir(folder_path):
+                    self.scan_folder(folder_path)
+        else:
+            # Remove non-existent file from recent list
+            self.recent_files_manager.remove_file(file_path)
+            QMessageBox.warning(
+                self,
+                self.tr("File Not Found"),
+                self.tr("The selected file or directory does not exist anymore.")
+            )
+    
+    def load_window_state(self):
+        """Load window state and geometry from settings."""
+        try:
+            # Get the saved geometry and state
+            geometry = self.settings.get_window_geometry()
+            state = self.settings.get_window_state()
+            
+            if geometry is not None:
+                self.restoreGeometry(geometry)
+            if state is not None:
+                self.restoreState(state)
+                
+            # Ensure the window is on a visible screen
+            screen = QApplication.primaryScreen()
+            if screen is not None:
+                screen_geometry = screen.availableGeometry()
+                if not screen_geometry.intersects(self.frameGeometry()):
+                    # If window is outside visible area, move it to the center
+                    self.move(
+                        (screen_geometry.width() - self.width()) // 2,
+                        (screen_geometry.height() - self.height()) // 2
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to load window state: {e}")
+            # Set default size if loading fails
+            self.resize(1024, 768)
+            self.center_on_screen()
+    
+    def on_language_changed(self, language_code: str):
+        """Handle language change event.
+        
+        Args:
+            language_code: The new language code (e.g., 'en', 'it')
+        """
+        logger.info(f"Language changed to: {language_code}")
+        # Save the new language setting
+        self.settings.set('language', language_code)
+        
+        # Update the UI to reflect the new language
+        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+            self.menu_bar.retranslate_ui()
+            
+        # Update window title if it exists
+        if hasattr(self, 'setWindowTitle'):
+            self.setWindowTitle(self.tr("PDF Duplicate Finder"))
+    
+    def center_on_screen(self):
+        """Center the window on the screen."""
+        screen = QApplication.primaryScreen()
+        if screen is not None:
+            screen_geometry = screen.availableGeometry()
+            self.move(
+                (screen_geometry.width() - self.width()) // 2,
+                (screen_geometry.height() - self.height()) // 2
+            )
+    
+    def apply_settings(self):
+        """Apply application settings to the UI and components."""
+        logger.debug("Applying application settings")
+        
+        # Apply language settings
+        if hasattr(self, 'language_manager'):
+            language = self.settings.get_language()
+            if language and hasattr(self.language_manager, 'get_current_language') and \
+               language != self.language_manager.get_current_language():
+                self.language_manager.set_language(language)
+        
+        # Apply window state and geometry
+        self.load_window_state()
+        
+        # Apply any other settings that need to be set on startup
+        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+            self.menu_bar.retranslate_ui()
+            
+        logger.debug("Application settings applied")
     
     def _init_scanner(self):
         """Initialize the PDF scanner with default settings and connect signals."""
@@ -255,6 +378,18 @@ class PDFDuplicateFinder(MainWindow):
                     )
                     return
                 
+                # Start the scan
+                self.scan_thread.start()
+                
+            except Exception as e:
+                logger.error(f"Error during scan preparation: {e}", exc_info=True)
+                self._cleanup_scan()
+                QMessageBox.critical(
+                    self,
+                    self.language_manager.tr("dialog.error", "Error"),
+                    self.language_manager.tr("errors.scan_preparation_failed", "Failed to prepare scan: {}").format(str(e))
+                )
+                
                 # Stop any existing scan
                 if self.scan_thread.isRunning():
                     logger.info("Stopping existing scan...")
@@ -286,367 +421,14 @@ class PDFDuplicateFinder(MainWindow):
                 # Initialize the duplicates tree if it doesn't exist
                 if not hasattr(self, 'duplicates_tree') or self.duplicates_tree is None:
                     self._init_duplicates_tree()
-                else:
-                    self.duplicates_tree.clear()
                 
-                # Show progress bar
-                if hasattr(self, 'progress_bar'):
-                    self.progress_bar.setValue(0)
-                    self.progress_bar.setMaximum(0)  # Indeterminate progress
-                    self.progress_bar.setVisible(True)
+                # Make sure the tree widget is properly initialized
+                if not hasattr(self, 'duplicates_tree') or not self.duplicates_tree:
+                    logger.error("Failed to initialize duplicates tree widget")
+                    return
                 
-                # Update status
-                if hasattr(self, 'status_bar'):
-                    self.status_bar.showMessage(
-                        self.language_manager.tr(
-                            "status.scan_started", 
-                            "Starting scan in: {folder}"
-                        ).format(folder=os.path.basename(folder_path))
-                    )
-                
-                # Connect signals if not already connected
-                try:
-                    self._scanner.progress_updated.disconnect()
-                    self._scanner.status_updated.disconnect()
-                    self._scanner.duplicates_found.disconnect()
-                    self._scanner.finished.disconnect()
-                except (TypeError, RuntimeError):
-                    pass  # Ignore if signals weren't connected
-                
-                # Reconnect signals
-                self._scanner.progress_updated.connect(self._on_scan_progress)
-                self._scanner.status_updated.connect(self._on_scan_status)
-                self._scanner.duplicates_found.connect(self._on_duplicates_found)
-                self._scanner.finished.connect(self._on_scan_finished)
-                
-                # Start the scan in a separate thread
-                logger.info("Starting scan thread...")
-                self.scan_thread.start()
-                
-                # Start the scan by emitting the started signal
-                self.scan_thread.started.emit()
-                
-                logger.info(f"Scan started in folder: {folder_path}")
-                
-            except Exception as e:
-                error_msg = self.language_manager.tr(
-                    "errors.scan_start_failed", 
-                    "Failed to start scan: {error}"
-                ).format(error=str(e))
-                
-                logger.error(error_msg, exc_info=True)
-                
-                # Update UI
-                if hasattr(self, 'progress_bar'):
-                    self.progress_bar.setVisible(False)
-                    
-                # Show error message
-                QMessageBox.critical(
-                    self,
-                    self.language_manager.tr("dialog.error", "Error"),
-                    error_msg
-                )
-                
-                # Re-raise to be caught by the outer exception handler
-                raise
-                
-        except Exception as e:
-            logger.error(f"Error starting scan: {e}", exc_info=True)
-            
-            # Update UI
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setVisible(False)
-                
-            # Show error message
-            QMessageBox.critical(
-                self,
-                self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr(
-                    "errors.scan_failed", 
-                    "Failed to start scan: {error}"
-                ).format(error=str(e))
-            )
-            
-            # Update status bar
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("status.scan_failed", "Scan failed: {error}").format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
-    
-    def _on_scan_progress(self, current: int, total: int, path: str):
-        """Handle scan progress updates in a thread-safe manner."""
-        try:
-            # Use invokeMethod to ensure we're on the main thread
-            QMetaObject.invokeMethod(
-                self,
-                "_update_scan_progress_ui",
-                Qt.ConnectionType.QueuedConnection,
-                Q_ARG(int, current),
-                Q_ARG(int, total),
-                Q_ARG(str, path)
-            )
-        except Exception as e:
-            logger.error(f"Error queuing scan progress update: {e}", exc_info=True)
-    
-    @pyqtSlot(int, int, str)
-    def _update_scan_progress_ui(self, current: int, total: int, path: str):
-        """Update the UI with scan progress (runs in main thread)."""
-        try:
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setMaximum(total)
-                self.progress_bar.setValue(current)
-                self.progress_bar.setVisible(True)
-                
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "status.scan_progress", 
-                        "Scanning: {current}/{total} - {filename}"
-                    ).format(
-                        current=current,
-                        total=total,
-                        filename=os.path.basename(path)
-                    )
-                )
-        except Exception as e:
-            logger.error(f"Error in scan progress UI update: {e}", exc_info=True)
-    
-    def _on_scan_status(self, message: str, current: int, total: int):
-        """Handle scan status updates in a thread-safe manner."""
-        try:
-            # Use invokeMethod to ensure we're on the main thread
-            QMetaObject.invokeMethod(
-                self,
-                "_update_scan_status_ui",
-                Qt.ConnectionType.QueuedConnection,
-                Q_ARG(str, message),
-                Q_ARG(int, current),
-                Q_ARG(int, total)
-            )
-        except Exception as e:
-            logger.error(f"Error queuing status update: {e}", exc_info=True)
-    
-    @pyqtSlot(str, int, int)
-    def _update_scan_status_ui(self, message: str, current: int, total: int):
-        """Update the UI with scan status (runs in main thread)."""
-        try:
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(message)
-                
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setMaximum(total if total > 0 else 1)
-                self.progress_bar.setValue(current)
-                self.progress_bar.setVisible(True)
-        except Exception as e:
-            logger.error(f"Error in status UI update: {e}", exc_info=True)
-    
-    def _on_scan_progress(self, current: int, total: int, current_file: str):
-        """Handle scan progress updates.
-        
-        Args:
-            current: Current file number being processed
-            total: Total number of files to process
-            current_file: Path to the current file being processed
-        """
-        try:
-            # Update progress bar if it exists
-            if hasattr(self, 'progress_bar'):
-                if not self.progress_bar.isVisible():
-                    self.progress_bar.setVisible(True)
-                self.progress_bar.setMaximum(total)
-                self.progress_bar.setValue(current)
-            
-            # Update status message
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "status.scan_progress",
-                        "Scanning: {current}/{total} - {file}"
-                    ).format(
-                        current=current,
-                        total=total,
-                        file=os.path.basename(current_file)
-                    )
-                )
-                
-        except Exception as e:
-            logger.error(f"Error updating scan progress: {e}", exc_info=True)
-    
-    def _on_scan_status(self, message: str, current: int, total: int):
-        """Handle scan status updates.
-        
-        Args:
-            message: Status message to display
-            current: Current progress value
-            total: Maximum progress value
-        """
-        try:
-            # Update progress bar if it exists
-            if hasattr(self, 'progress_bar'):
-                if not self.progress_bar.isVisible():
-                    self.progress_bar.setVisible(True)
-                self.progress_bar.setMaximum(total if total > 0 else 1)
-                self.progress_bar.setValue(current)
-            
-            # Update status message
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(message)
-                
-        except Exception as e:
-            logger.error(f"Error updating scan status: {e}", exc_info=True)
-    
-    @pyqtSlot(list)
-    def _on_duplicates_found(self, duplicate_groups: List[List[Dict[str, Any]]]) -> None:
-        """Handle when duplicates are found during scanning.
-        
-        Args:
-            duplicate_groups: List of duplicate file groups found, where each group is a list of file info dicts
-        """
-        try:
-            # Make sure we're in the main thread for UI updates
-            if QThread.currentThread() != self.thread():
-                logger.debug("Dispatching _on_duplicates_found to main thread")
-                QMetaObject.invokeMethod(
-                    self,
-                    "_on_duplicates_found",
-                    Qt.ConnectionType.QueuedConnection,
-                    Q_ARG(object, duplicate_groups)
-                )
-                return
-                
-            if not isinstance(duplicate_groups, (list, tuple)):
-                logger.warning(f"Invalid duplicate groups type: {type(duplicate_groups)}")
-                return
-                
-            logger.info(f"Found {len(duplicate_groups)} duplicate groups")
-            self.last_scan_duplicates = duplicate_groups
-            
-            try:
-                # Update the UI with the found duplicates
-                self._update_scan_results_ui()
-                
-                # Update status message
-                if hasattr(self, 'status_bar'):
-                    status_msg = self.language_manager.tr(
-                        "status.duplicates_found",
-                        "Found {count} duplicate groups"
-                    ).format(count=len(duplicate_groups))
-                    self.status_bar.showMessage(status_msg, 5000)  # Show for 5 seconds
-                    
-                # Ensure the tree widget is visible
-                if hasattr(self, 'duplicates_tree'):
-                    self.duplicates_tree.setVisible(True)
-                    
-            except Exception as e:
-                logger.error(f"Error updating UI with duplicates: {e}", exc_info=True)
-                raise
-                
-        except Exception as e:
-            logger.error(f"Error handling duplicates found: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "errors.duplicates_failed",
-                        "Error processing duplicates: {error}"
-                    ).format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
-    
-    @pyqtSlot(object)
-    def _on_scan_finished(self, duplicate_groups=None):
-        """Handle scan completion.
-        
-        Args:
-            duplicate_groups: List of duplicate file groups found during the scan
-        """
-        try:
-            logger.info("Scan finished, processing results...")
-            
-            # Make sure we're in the main thread for UI updates
-            if QThread.currentThread() != self.thread():
-                logger.debug("Dispatching _on_scan_finished to main thread")
-                QMetaObject.invokeMethod(
-                    self,
-                    "_on_scan_finished",
-                    Qt.ConnectionType.QueuedConnection,
-                    Q_ARG(object, duplicate_groups)
-                )
-                return
-                
-            # Update status message
-            status_msg = self.language_manager.tr(
-                "status.scan_complete", 
-                "Scan complete! Found {count} duplicate groups"
-            )
-            
-            # Process scan results if provided
-            try:
-                if duplicate_groups is not None:
-                    self.last_scan_duplicates = duplicate_groups
-                    status_msg = status_msg.format(count=len(duplicate_groups) if duplicate_groups else 0)
-                elif hasattr(self, '_scanner') and hasattr(self._scanner, 'duplicate_groups'):
-                    self.last_scan_duplicates = getattr(self._scanner, 'duplicate_groups', [])
-                    status_msg = status_msg.format(count=len(self.last_scan_duplicates))
-                else:
-                    self.last_scan_duplicates = []
-                    status_msg = self.language_manager.tr(
-                        "status.scan_complete_no_duplicates",
-                        "Scan complete! No duplicates found."
-                    )
-                
-                logger.info(f"Found {len(self.last_scan_duplicates) if self.last_scan_duplicates else 0} duplicate groups")
-                
-                # Update status bar
-                if hasattr(self, 'status_bar'):
-                    self.status_bar.showMessage(status_msg, 5000)  # Show for 5 seconds
-                
-                # Make sure progress bar is hidden
-                if hasattr(self, 'progress_bar') and self.progress_bar.isVisible():
-                    self.progress_bar.setVisible(False)
-                
-                # Update the UI with scan results
-                self._update_scan_results_ui()
-                
-                # Ensure the tree widget is visible
-                if hasattr(self, 'duplicates_tree'):
-                    self.duplicates_tree.setVisible(True)
-                
-            except Exception as e:
-                logger.error(f"Error processing scan results: {e}", exc_info=True)
-                raise
-                
-        except Exception as e:
-            logger.error(f"Error in _on_scan_finished: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "errors.scan_complete_failed",
-                        "Error completing scan: {error}"
-                    ).format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
-            
-            # Make sure progress bar is hidden even on error
-            if hasattr(self, 'progress_bar') and self.progress_bar.isVisible():
-                self.progress_bar.setVisible(False)
-    
-    def _update_scan_results_ui(self):
-        """Update the UI with the latest scan results."""
-        from PyQt6.QtWidgets import QTreeWidgetItem
-        
-        try:
-            # Initialize the duplicates tree if it doesn't exist
-            if not hasattr(self, 'duplicates_tree') or self.duplicates_tree is None:
-                self._init_duplicates_tree()
-                
-            # Make sure the tree widget is properly initialized
-            if not hasattr(self, 'duplicates_tree') or not self.duplicates_tree:
-                logger.error("Failed to initialize duplicates tree widget")
-                return
-                
-            # Clear existing items
-            self.duplicates_tree.clear()
+                # Clear existing items
+                self.duplicates_tree.clear()
             
             # Check if we have any duplicate groups to display
             if not hasattr(self, 'last_scan_duplicates') or not self.last_scan_duplicates:
@@ -705,849 +487,147 @@ class PDFDuplicateFinder(MainWindow):
                     5000  # Show for 5 seconds
                 )
     
-    def _init_duplicates_tree(self):
-        """Initialize the duplicates tree widget."""
-        from PyQt6.QtWidgets import QTreeWidget, QVBoxLayout, QWidget
-        from PyQt6.QtCore import Qt
+    def _reset_scan_ui(self):
+        """Reset the UI for a new scan."""
+        # Clear previous results
+        if hasattr(self, 'duplicates_tree'):
+            self.duplicates_tree.clear()
         
-        try:
-            # Create the tree widget if it doesn't exist
-            if not hasattr(self, 'duplicates_tree') or not self.duplicates_tree:
-                self.duplicates_tree = QTreeWidget()
-                self.duplicates_tree.setHeaderLabels([
-                    self.language_manager.tr("ui.file_name", "File Name"),
-                    self.language_manager.tr("ui.file_path", "Path"),
-                    self.language_manager.tr("ui.file_size", "Size"),
-                    self.language_manager.tr("ui.similarity", "Similarity")
-                ])
-                self.duplicates_tree.setColumnCount(4)
-                self.duplicates_tree.setAlternatingRowColors(True)
-                self.duplicates_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
-                self.duplicates_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-                self.duplicates_tree.customContextMenuRequested.connect(self._show_duplicate_context_menu)
-            
-            # Get the central widget and its layout
-            central_widget = self.centralWidget()
-            if not central_widget:
-                central_widget = QWidget()
-                self.setCentralWidget(central_widget)
-                
-            layout = central_widget.layout()
-            if not layout:
-                layout = QVBoxLayout(central_widget)
-                layout.setContentsMargins(0, 0, 0, 0)
-                
-            # Remove existing widgets from layout
-            while layout.count() > 0:
-                item = layout.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-            
-            # Add the tree widget to the layout
-            layout.addWidget(self.duplicates_tree)
-            
-            # Update the main_ui reference if it exists
-            if hasattr(self, 'main_ui'):
-                if hasattr(self.main_ui, 'file_list') and self.main_ui.file_list:
-                    self.main_ui.file_list.deleteLater()
-                self.main_ui.file_list = self.duplicates_tree
-                
-            logger.info("Initialized duplicates tree widget")
-            
-        except Exception as e:
-            logger.error(f"Error initializing duplicates tree: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.ui_init_failed", "Failed to initialize UI: {error}").format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
+        # Reset status
+        self.status_bar.clearMessage()
     
-    def _add_duplicate_group_to_ui(self, group_idx, group):
-        """Add a duplicate group to the UI tree."""
-        if not group or 'files' not in group or len(group['files']) < 2:
-            return
-            
-        from PyQt6.QtWidgets import QTreeWidgetItem
-        from PyQt6.QtCore import Qt
+    def cancel_scan(self):
+        """Cancel the current scan operation."""
+        if hasattr(self, '_scanner') and self._scanner:
+            self._scanner.cancel_scan()
         
-        # Create a group item
-        group_item = QTreeWidgetItem([
-            self.language_manager.tr("ui.duplicate_group", "Duplicate Group {num}").format(num=group_idx + 1),
-            f"({len(group['files'])} {self.language_manager.tr('ui.files', 'files')})",
-            "",  # Empty size for group
-            f"{group.get('similarity', 0) * 100:.1f}%" if 'similarity' in group else ""
-        ])
-        group_item.setData(0, Qt.ItemDataRole.UserRole, group)
-        group_item.setExpanded(True)
+        if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
+            self.scan_thread.quit()
+            self.scan_thread.wait()
         
-        # Add files to the group
-        for file_info in group['files']:
-            file_path = file_info.get('path', '')
-            file_name = os.path.basename(file_path)
-            file_size = file_info.get('size', 0)
-            
-            # Format file size
-            size_str = self._format_file_size(file_size)
-            
-            # Create file item
-            file_item = QTreeWidgetItem([
-                file_name,
-                os.path.dirname(file_path),
-                size_str,
-                f"{group.get('similarity', 0) * 100:.1f}%" if 'similarity' in group else "100%"
-            ])
-            file_item.setData(0, Qt.ItemDataRole.UserRole, file_info)
-            group_item.addChild(file_item)
+        if self.progress_dialog:
+            self.progress_dialog.accept()
+            self.progress_dialog = None
         
-        self.duplicates_tree.addTopLevelItem(group_item)
+        self.status_bar.showMessage(self.tr("Scan cancelled"), 3000)
     
-    def _format_file_size(self, size_bytes):
-        """Format file size in a human-readable format."""
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes / 1024:.1f} KB"
-        elif size_bytes < 1024 * 1024 * 1024:
-            return f"{size_bytes / (1024 * 1024):.1f} MB"
-        else:
-            return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    def _cleanup_scan(self):
+        """Clean up resources after scan is complete or cancelled."""
+        if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
+            self.scan_thread.quit()
+            self.scan_thread.wait()
+        
+        if self.progress_dialog:
+            self.progress_dialog.accept()
+            self.progress_dialog = None
     
-    def _show_duplicate_context_menu(self, position):
-        """Show context menu for duplicate items."""
-        try:
-            if not hasattr(self, 'duplicates_tree'):
-                return
-                
-            item = self.duplicates_tree.itemAt(position)
-            if not item:
-                return
-                
-            from PyQt6.QtWidgets import QMenu, QMessageBox
-            from PyQt6.QtGui import QAction
-            from PyQt6.QtCore import Qt
-            
-            menu = QMenu()
-            
-            # Add actions based on the selected item type
-            if item.parent() is None:
-                # Group item selected
-                open_group_action = QAction(
-                    self.language_manager.tr("actions.open_all", "Open All in Group"),
-                    self
-                )
-                menu.addAction(open_group_action)
-                
-                action = menu.exec(self.duplicates_tree.viewport().mapToGlobal(position))
-                
-                if action == open_group_action:
-                    self._open_duplicate_group(item)
-            else:
-                # File item selected
-                open_file_action = QAction(
-                    self.language_manager.tr("actions.open_file", "Open File"),
-                    self
-                )
-                show_in_folder_action = QAction(
-                    self.language_manager.tr("actions.show_in_folder", "Show in Folder"),
-                    self
-                )
-                delete_file_action = QAction(
-                    self.language_manager.tr("actions.delete_file", "Delete File"),
-                    self
-                )
-                
-                menu.addAction(open_file_action)
-                menu.addAction(show_in_folder_action)
-                menu.addSeparator()
-                menu.addAction(delete_file_action)
-                
-                action = menu.exec(self.duplicates_tree.viewport().mapToGlobal(position))
-                
-                if action == open_file_action:
-                    self._open_duplicate_file(item)
-                elif action == show_in_folder_action:
-                    self._show_in_folder(item)
-                elif action == delete_file_action:
-                    self._delete_duplicate_file(item)
-                    
-        except Exception as e:
-            logger.error(f"Error showing context menu: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.context_menu_failed", "Failed to show context menu: {error}").format(error=str(e)),
-                    5000
-                )
-    
-    def _open_duplicate_group(self, group_item):
-        """Open all files in a duplicate group."""
-        try:
-            for i in range(group_item.childCount()):
-                file_item = group_item.child(i)
-                self._open_duplicate_file(file_item)
-        except Exception as e:
-            logger.error(f"Error opening duplicate group: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.open_group_failed", "Failed to open group: {error}").format(error=str(e)),
-                    5000
-                )
-    
-    def _open_duplicate_file(self, file_item):
-        """Open a duplicate file with the default application."""
-        try:
-            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
-            if not file_info or 'path' not in file_info:
-                return
-                
-            file_path = file_info['path']
-            if not os.path.isfile(file_path):
-                raise FileNotFoundError(f"File not found: {file_path}")
-                
-            # Use the system default application to open the file
-            if os.name == 'nt':  # Windows
-                os.startfile(file_path)
-            elif os.name == 'posix':  # macOS and Linux
-                import subprocess
-                subprocess.run(['xdg-open', file_path], check=True)
-                
-        except Exception as e:
-            logger.error(f"Error opening file: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.open_file_failed", "Failed to open file: {error}").format(error=str(e)),
-                    5000
-                )
-    
-    def _show_in_folder(self, file_item):
-        """Show the containing folder of a file in the system file manager."""
-        try:
-            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
-            if not file_info or 'path' not in file_info:
-                return
-                
-            file_path = os.path.dirname(file_info['path'])
-            if not os.path.isdir(file_path):
-                raise FileNotFoundError(f"Directory not found: {file_path}")
-                
-            # Open the folder in the system file manager
-            if os.name == 'nt':  # Windows
-                os.startfile(file_path)
-            elif os.name == 'posix':  # macOS and Linux
-                import subprocess
-                subprocess.run(['xdg-open', file_path], check=True)
-                
-        except Exception as e:
-            logger.error(f"Error showing in folder: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.show_folder_failed", "Failed to show in folder: {error}").format(error=str(e)),
-                    5000
-                )
-    
-    def _delete_duplicate_file(self, file_item):
-        """Delete a duplicate file after confirmation."""
-        try:
-            file_info = file_item.data(0, Qt.ItemDataRole.UserRole)
-            if not file_info or 'path' not in file_info:
-                return
-                
-            file_path = file_info['path']
-            file_name = os.path.basename(file_path)
-            
-            # Ask for confirmation
-            from PyQt6.QtWidgets import QMessageBox
-            reply = QMessageBox.question(
-                self,
-                self.language_manager.tr("dialog.confirm_delete", "Confirm Delete"),
-                self.language_manager.tr("dialog.confirm_delete_msg", "Are you sure you want to delete '{file}'?").format(file=file_name),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+    def _on_scan_finished(self, duplicate_groups=None):
+        """Handle scan completion."""
+        logger.info("Scan finished")
+        self.scan_in_progress = False
+        self.last_scan_duplicates = duplicate_groups or []
+        
+        # Update status
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage(
+                self.tr("Found {} duplicate groups").format(len(self.last_scan_duplicates)),
+                5000
             )
-            
-            if reply == QMessageBox.StandardButton.Yes:
-                # Delete the file
-                os.remove(file_path)
-                
-                # Remove the item from the tree
-                parent = file_item.parent()
-                if parent:
-                    parent.removeChild(file_item)
-                    
-                    # If this was the last file in the group, remove the group
-                    if parent.childCount() == 0:
-                        self.duplicates_tree.takeTopLevelItem(
-                            self.duplicates_tree.indexOfTopLevelItem(parent)
-                        )
-                
-                # Show success message
-                if hasattr(self, 'status_bar'):
-                    self.status_bar.showMessage(
-                        self.language_manager.tr("status.file_deleted", "Deleted: {file}").format(file=file_name),
-                        5000
-                    )
-                
-        except Exception as e:
-            logger.error(f"Error deleting file: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.delete_failed", "Failed to delete file: {error}").format(error=str(e)),
-                    5000
-                )
+        
+        # Close progress dialog
+        if self.progress_dialog:
+            self.progress_dialog.accept()
+            self.progress_dialog = None
+        
+        # Update UI on the main thread
+        QMetaObject.invokeMethod(
+            self, 
+            '_update_scan_results_ui', 
+            Qt.ConnectionType.QueuedConnection
+        )
     
-    def on_show_settings(self):
-        """Override to ensure the settings dialog is shown correctly."""
-        print("DEBUG: PDFDuplicateFinder.on_show_settings called")
-        try:
-            dialog = SettingsDialog(parent=self, language_manager=self.language_manager)
-            dialog.settings_changed.connect(self.on_settings_changed)
-            
-            # Connect language changed signal
-            def handle_language_changed():
-                if hasattr(dialog, 'language_combo'):
-                    lang_code = dialog.language_combo.currentData()
-                    self.on_language_change(lang_code)
-            
-            dialog.language_changed.connect(handle_language_changed)
-            dialog.exec()
-        except Exception as e:
-            print(f"ERROR in PDFDuplicateFinder.on_show_settings: {e}")
-            import traceback
-            traceback.print_exc()
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr(f"Could not open settings: {e}")
-            )
-            
-    def on_language_change(self, language_code: str):
-        """Handle language change from the settings dialog.
+    def _on_scan_status(self, message: str, current: int, total: int):
+        """Handle scan status updates."""
+        if self.progress_dialog and not self.progress_dialog._cancelled:
+            self.progress_dialog.update_message(message)
+            self.progress_dialog.update_progress(current, total)
+        
+        # Update status bar less frequently to improve performance
+        if current % 10 == 0 or current == total:
+            self.status_bar.showMessage(f"{message} ({current}/{total})")
+    
+    def _on_scan_progress(self, current: int, total: int, current_file: str):
+        """Handle scan progress updates.
         
         Args:
-            language_code: The new language code to change to (e.g., 'en', 'it')
-        """
-        try:
-            logger.info(f"Changing language to: {language_code}")
-            
-            # Save the new language setting
-            self.settings.set_language(language_code)
-            
-            # Update the language manager
-            self.language_manager.set_language(language_code)
-            
-            # Retranslate the UI
-            self.retranslate_ui()
-            
-            # Show a message to the user
-            self.main_ui.status_bar.showMessage(
-                self.tr("Language changed. Restart the application for all changes to take effect."), 
-                5000  # 5 seconds
-            )
-            
-        except Exception as e:
-            logger.error(f"Error changing language: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr(f"Failed to change language: {e}")
-            )
-    
-    def _update_scan_status(self, message: str, current: int, total: int):
-        """Update the UI with scan status.
-        
-        Args:
-            message: Status message
-            current: Current file number
+            current: Current file number being processed
             total: Total number of files to process
+            current_file: Path to the current file being processed
         """
-        try:
-            # Ensure we're on the main thread for UI updates
-            if not QThread.currentThread() == QApplication.instance().thread():
-                QMetaObject.invokeMethod(
-                    self,
-                    '_update_scan_status',
-                    Qt.ConnectionType.QueuedConnection,
-                    Q_ARG(str, message),
-                    Q_ARG(int, current),
-                    Q_ARG(int, total)
-                )
-                return
-                
-            # Update status bar
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(f"{message} ({current}/{total})")
+        if self.progress_dialog and not self.progress_dialog._cancelled:
+            # Calculate number of duplicates found so far
+            duplicates_found = sum(len(group) for group in self.last_scan_duplicates)
             
-            # Update progress bar
-            if hasattr(self, 'progress_bar'):
-                if total > 0:
-                    # Ensure progress is within valid range
-                    progress = max(0, min(100, int((current / total) * 100)))
-                    self.progress_bar.setValue(progress)
-                    
-                    # Update format with current progress
-                    if not self.progress_bar.isVisible():
-                        self.progress_bar.setVisible(True)
-                        
-                    # Update format with current progress
-                    self.progress_bar.setFormat(f"{message} - %p% (%v/%m)")
-                    
-        except Exception as e:
-            logger.error(f"Error updating scan status: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(f"Error updating progress: {str(e)}", 5000)
-    
-    def _on_scan_finished(self):
-        """Handle the scan finished event."""
-        try:
-            # Ensure we're on the main thread for UI updates
-            if not QThread.currentThread() == QApplication.instance().thread():
-                QMetaObject.invokeMethod(
-                    self,
-                    '_on_scan_finished',
-                    Qt.ConnectionType.QueuedConnection
-                )
-                return
-                
-            # Update status bar
-            if hasattr(self, 'status_bar'):
+            # Update progress dialog
+            self.progress_dialog.update_progress(
+                current, 
+                total, 
+                os.path.basename(current_file),
+                duplicates_found
+            )
+            
+            # Update status less frequently to improve performance
+            if current % 10 == 0 or current == total:
                 self.status_bar.showMessage(
-                    self.tr("Scan completed successfully"),
-                    5000  # Show for 5 seconds
-                )
-                
-            # Update progress bar
-            if hasattr(self, 'progress_bar'):
-                # Ensure progress is at 100%
-                self.progress_bar.setValue(100)
-                self.progress_bar.setFormat(self.tr("Scan completed - %p%"))
-                
-                # Hide progress bar after a short delay
-                QTimer.singleShot(3000, lambda: self.progress_bar.setVisible(False))
-                
-            logger.info("PDF scan completed successfully")
-            
-            # Clean up thread
-            if hasattr(self, 'scan_thread'):
-                if self.scan_thread.isRunning():
-                    self.scan_thread.quit()
-                    self.scan_thread.wait(2000)  # Wait up to 2 seconds
-                self.scan_thread = None
-            
-        except Exception as e:
-            logger.error(f"Error in scan finished handler: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.tr("Error completing scan: {}").format(str(e)),
-                    5000
+                    self.tr("Scanning: {}/{} files | Duplicates found: {}")
+                    .format(current, total, duplicates_found)
                 )
     
-    def _scan_worker(self, folder_path: str):
-        """Worker method that runs in a separate thread to perform the scan.
+    def _start_scan(self, folder_path: str):
+        """Start scanning the given folder with current filter settings.
         
         Args:
-            folder_path: Path to the folder to scan for PDF files
+            folder_path: Path to the folder to scan
         """
         try:
+            # Create and show progress dialog
+            if self.progress_dialog is None:
+                self.progress_dialog = ScanProgressDialog(
+                    self,
+                    self.tr("Scanning for Duplicates"),
+                    self.tr("Preparing to scan: {}").format(folder_path)
+                )
+                self.progress_dialog.cancelled.connect(self.cancel_scan)
+            
+            # Show the dialog
+            self.progress_dialog.show()
+            self.progress_dialog.raise_()
+            self.progress_dialog.activateWindow()
+            
+            # Initialize scanner if needed
             if not hasattr(self, '_scanner') or self._scanner is None:
                 self._init_scanner()
             
-            # Reset UI state
-            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'file_list'):
-                self.main_ui.file_list.clear()
-            
-            # Connect scanner signals
-            if hasattr(self, 'scan_status') and hasattr(self._scanner, 'status_callback'):
-                self._scanner.status_callback = self.scan_status.emit
-                
-            if hasattr(self, 'scan_progress') and hasattr(self._scanner, 'progress_callback'):
-                self._scanner.progress_callback = self.scan_progress.emit
-            
-            # Update status
-            if hasattr(self, 'scan_status'):
-                self.scan_status.emit(self.tr("Preparing to scan..."), 0, 0)
-            
-            # Start the scan
-            self._scanner.scan_directory(folder_path)
-            
-            # Update with results if available
-            if hasattr(self._scanner, 'duplicate_groups'):
-                self.last_scan_duplicates = self._scanner.duplicate_groups
-                
-                # Update UI with results on the main thread
-                if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'update_results'):
-                    QMetaObject.invokeMethod(
-                        self.main_ui, 
-                        'update_results',
-                        Qt.ConnectionType.QueuedConnection,
-                        Q_ARG(list, self.last_scan_duplicates)
-                    )
-            
-            # Signal that the scan is complete
-            if hasattr(self, 'scan_finished'):
-                self.scan_finished.emit()
-                
-        except Exception as e:
-            logger.error(f"Error in scan worker: {e}", exc_info=True)
-            if hasattr(self, 'scan_status'):
-                self.scan_status.emit(
-                    self.tr("Error during scan: {}").format(str(e)), 
-                    0, 
-                    0
-                )
-            if hasattr(self, 'scan_finished'):
-                self.scan_finished.emit()
-    
-    def _init_scanner(self):
-        """Initialize the PDF scanner with current settings."""
-        try:
-            logger.debug("Initializing PDF scanner...")
-            
-            # Clean up any existing scanner and thread
-            if hasattr(self, '_scanner'):
-                logger.debug("Cleaning up existing scanner...")
-                try:
-                    if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
-                        self.scan_thread.quit()
-                        self.scan_thread.wait(1000)
-                    if hasattr(self._scanner, 'deleteLater'):
-                        self._scanner.deleteLater()
-                except Exception as e:
-                    logger.warning(f"Error cleaning up existing scanner: {e}")
-            
-            # Get comparison settings from settings or use defaults
-            comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
-            dpi = int(self.settings.get('comparison_dpi', 200))
-            logger.debug(f"Scanner settings - threshold: {comparison_threshold}, dpi: {dpi}")
-            
-            # Create and configure the thread first
-            logger.debug("Creating QThread instance...")
-            self.scan_thread = QThread()
-            logger.debug(f"QThread created: {self.scan_thread}")
-            
-            # Initialize the scanner with proper parameters
-            logger.debug("Creating PDFScanner instance...")
-            self._scanner = PDFScanner(
-                threshold=comparison_threshold,
-                dpi=dpi
-            )
-            logger.debug("PDFScanner instance created successfully")
-            
-            # Move scanner to thread
-            logger.debug("Moving scanner to thread...")
-            self._scanner.moveToThread(self.scan_thread)
-            logger.debug("Scanner moved to thread")
-            
-            # Connect signals with proper connection type
-            logger.debug("Connecting signals...")
-            self._scanner.progress_updated.connect(
-                self._on_scan_progress,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.status_updated.connect(
-                self._on_scan_status,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.duplicates_found.connect(
-                self._on_duplicates_found,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.finished.connect(
-                self._on_scan_finished,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.finished.connect(
-                self.scan_thread.quit,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.finished.connect(
-                self._scanner.deleteLater,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self.scan_thread.finished.connect(
-                self.scan_thread.deleteLater,
-                Qt.ConnectionType.QueuedConnection
-            )
-            logger.debug("All signals connected with QueuedConnection")
-            
-            # Start the thread
-            logger.debug("Starting scanner thread...")
-            self.scan_thread.start()
-            logger.debug("Scanner thread started")
-            logger.debug("Connecting scanner signals...")
-            if hasattr(self, 'scan_progress'):
-                logger.debug("Connecting progress signal")
-                self._scanner.progress_callback = self.scan_progress.emit
-            if hasattr(self, 'scan_status'):
-                logger.debug("Connecting status signal")
-                self._scanner.status_callback = self.scan_status.emit
-            if hasattr(self, 'scan_finished'):
-                logger.debug("Connecting finished signal")
-                self.scan_finished.connect(self._on_scan_finished)
-                
-            logger.info("PDF scanner initialized successfully")
-            return True
-            
-        except ImportError as e:
-            logger.error(f"Failed to import required module: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Initialization Error"),
-                self.tr("Failed to import required modules. Please make sure all dependencies are installed.\n\nError: {}").format(str(e))
-            )
-        except Exception as e:
-            logger.error(f"Error initializing scanner: {str(e)}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Initialization Error"),
-                self.tr("Failed to initialize PDF scanner. Please check the logs for details.\n\nError: {}").format(str(e))
-            )
-        
-        logger.error("Failed to initialize scanner. The application may not function correctly.")
-        self._scanner = None
-        return False
-    
-    def on_language_changed(self, language_code: str):
-        """Handle language change from the language manager.
-        
-        This is called when the language is changed through other means
-        (e.g., from a menu or keyboard shortcut).
-        
-        Args:
-            language_code: The new language code (e.g., 'en', 'it')
-        """
-        # Just forward to on_language_change since the logic is the same
-        self.on_language_change(language_code)
-    
-    def change_language(self, language_code: str):
-        """Change the application language.
-        
-        This is called when the language is changed from the menu.
-        
-        Args:
-            language_code: The new language code (e.g., 'en', 'it')
-        """
-        try:
-            # Update the language manager
-            self.language_manager.set_language(language_code)
-            
-            # Save the language setting
-            self.settings.set_language(language_code)
-            
-            # Refresh the UI
-            self.retranslate_ui()
-            
-            # Show a status message
-            self.main_ui.status_bar.showMessage(
-                self.tr("Language changed to {}").format(language_code),
-                3000  # 3 seconds
-            )
-            
-        except Exception as e:
-            logger.error(f"Error changing language: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr(f"Failed to change language: {e}")
-            )
-    
-    def check_for_updates(self):
-        """Check for application updates using the UpdateDialog."""
-        try:
-            # Get current version
-            from script.version import __version__ as current_version
-            
-            # Show checking message
-            self.status_bar.showMessage(self.tr("Checking for updates..."), 5000)
-            
-            # Import UpdateDialog here to avoid circular imports
-            from script.updates import UpdateDialog
-            
-            # Get the config directory from settings
-            config_dir = getattr(self.settings, '_config_path', Path("config")).parent
-            
-            # Create and show the update dialog
-            update_dialog = UpdateDialog(
-                current_version=current_version,
-                language_manager=self.language_manager,
-                config_dir=str(config_dir),
-                parent=self
-            )
-            update_dialog.exec()
-            
-        except Exception as e:
-            logger.error(f"Error in check_for_updates: {e}", exc_info=True)
-            QMessageBox.critical(
-                self,
-                self.tr("Error"),
-                self.tr("Failed to check for updates: {}").format(str(e))
-            )
-    
-    def retranslate_ui(self):
-        """Retranslate all UI elements when the language changes."""
-        try:
-            logger.info("Retranslating UI...")
-            
-            # Update window title
-            self.setWindowTitle(self.tr("PDF Duplicate Finder"))
-            
-            # Update menu bar
-            if hasattr(self, 'menu_bar'):
-                self.menu_bar.retranslate_ui()
-            
-            # Update toolbar
-            if hasattr(self, 'toolbar'):
-                self.toolbar.retranslate_ui()
+            # Reset UI
+            self._reset_scan_ui()
             
             # Update status bar
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(self.tr("Ready"))
+            self.status_bar.showMessage(self.tr("Scanning: {}").format(folder_path))
             
-            # Update any other UI elements that need translation
-            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'retranslate_ui'):
-                self.main_ui.retranslate_ui()
-                
-            logger.info("UI retranslation complete")
-                
-        except Exception as e:
-            logger.error(f"Error retranslating UI: {e}", exc_info=True)
-            
-    def apply_settings(self):
-        """Apply settings that need to be updated immediately."""
-        try:
-            # Apply language setting if changed
-            current_lang = self.language_manager.get_current_language()
-            saved_lang = self.settings.get_language()
-            
-            if current_lang != saved_lang:
-                self.language_manager.set_language(saved_lang)
-                self.retranslate_ui()
-            
-            # Apply UI settings
-            if hasattr(self, 'toolbar') and hasattr(self.settings, 'get_show_toolbar'):
-                self.toolbar.setVisible(self.settings.get_show_toolbar())
-                
-            if hasattr(self.main_ui, 'status_bar') and hasattr(self.settings, 'get_show_statusbar'):
-                self.main_ui.status_bar.setVisible(self.settings.get_show_statusbar())
-                
-            logger.info("Settings applied successfully")
+            # Start scan in a separate thread
+            self.scan_thread = QThread()
+            self.scan_worker = lambda: self._scan_worker(folder_path)
+            self.scan_thread.started.connect(self.scan_worker)
+            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            self.scan_thread.start()
             
         except Exception as e:
-            logger.error(f"Error applying settings: {e}", exc_info=True)
-            raise
-    
-    def on_settings_changed(self):
-        """Handle settings changes from the settings dialog."""
-        print("DEBUG: PDFDuplicateFinder.on_settings_changed called")
-        try:
-            # Apply any settings that need to be updated immediately
-            self.apply_settings()
-            
-            # Update the UI to reflect the new settings
-            self.retranslate_ui()
-            
-            # Show a message to the user
-            self.main_ui.status_bar.showMessage(self.tr("Settings have been updated"), 3000)  # 3 seconds
-            
-        except Exception as e:
-            print(f"ERROR in on_settings_changed: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def load_window_state(self):
-        """Load window state and geometry from settings."""
-        try:
-            # Load window geometry
-            geometry = self.settings.get_window_geometry()
-            if geometry:
-                self.restoreGeometry(geometry)
-            
-            # Load window state
-            state = self.settings.get_window_state()
-            if state:
-                self.restoreState(state)
-                
-        except Exception as e:
-            logger.error(f"Error loading window state: {e}")
-    
-    def closeEvent(self, event):
-        """Handle window close event."""
-        try:
-            # Save window geometry and state
-            geometry = self.saveGeometry()
-            state = self.saveState()
-            
-            # Only save non-empty geometry/state
-            if not geometry.isEmpty():
-                self.settings.set_window_geometry(bytes(geometry))
-            if not state.isEmpty():
-                self.settings.set_window_state(bytes(state))
-            
-            # Save any other settings
-            if hasattr(self, 'language_manager'):
-                self.settings.set_language(self.language_manager.get_current_language())
-            
-            # Save settings to disk
-            self.settings._save_settings()
-            
-        except Exception as e:
-            logger.error(f"Error saving settings: {e}")
-        
-        # Proceed with the default close behavior
-        super().closeEvent(event)
-
-    def on_open_folder(self):
-        """Use MainWindow's scanning flow (status-bar progress bar)."""
-        # Delegate to base class which starts PDFScanner and updates the status-bar QProgressBar
-        return super().on_open_folder()
-    
-    def on_toggle_toolbar(self, checked: bool):
-        """Show or hide the toolbar.
-        
-        Args:
-            checked: Whether the toolbar should be visible
-        """
-        if hasattr(self, 'toolbar'):
-            self.toolbar.setVisible(checked)
-    
-    def on_toggle_statusbar(self, checked: bool):
-        """Show or hide the status bar.
-        
-        Args:
-            checked: Whether the status bar should be visible
-        """
-        if hasattr(self.main_ui, 'status_bar'):
-            self.main_ui.status_bar.setVisible(checked)
-    
-    def on_select_all(self):
-        """Select all items in the current view."""
-        if hasattr(self.main_ui, 'file_list'):
-            self.main_ui.file_list.selectAll()
-    
-    def on_deselect_all(self):
-        """Deselect all items in the current view."""
-        if hasattr(self.main_ui, 'file_list'):
-            self.main_ui.file_list.clearSelection()
-    
-    def on_show_about(self):
-        """Show the about dialog."""
-        from script.about import AboutDialog
-        
-        about_dialog = AboutDialog(self)
-        about_dialog.exec()
-    
-    def on_show_log_viewer(self):
-        """Open the log viewer dialog for today's log file."""
-        try:
-            from script.view_log import show_log_viewer
-            # Build expected log file path (same pattern as logger.setup_logger)
-            logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-            today = datetime.now().strftime('%Y%m%d')
-            log_file = os.path.join(logs_dir, f"PDFDuplicateFinder_{today}.log")
-            show_log_viewer(log_file, parent=self)
-        except Exception as e:
+            logger.error(f"Error starting scan: {e}", exc_info=True)
+            self._cleanup_scan()
             QMessageBox.critical(
                 self,
-                self.tr("Error"),
-                self.tr("Could not open log viewer: %s") % str(e)
+                self.tr("Scan Error"),
+                self.tr("Failed to start scan: {}".format(str(e)))
             )
     
     def scan_folder(self, folder_path: str):
@@ -1557,41 +637,26 @@ class PDFDuplicateFinder(MainWindow):
             folder_path: Path to the folder to scan
         """
         try:
-            # Update status bar and show progress bar
-            self.status_bar.showMessage(self.tr("Scanning folder: %s") % folder_path)
+            # Create and show progress dialog
+            if self.progress_dialog is None:
+                self.progress_dialog = ScanProgressDialog(
+                    self,
+                    self.tr("Scanning for Duplicates"),
+                    self.tr("Preparing to scan: {}").format(folder_path)
+                )
+                self.progress_dialog.cancelled.connect(self.cancel_scan)
             
-            # Initialize scanner if needed
-            if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner()
+            # Show the dialog
+            self.progress_dialog.show()
+            self.progress_dialog.raise_()
+            self.progress_dialog.activateWindow()
             
-            # Reset UI state
-            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'file_list'):
-                self.main_ui.file_list.clear()
-                
-            # Show and reset progress bar
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setVisible(True)
-                self.progress_bar.setValue(0)
-                self.progress_bar.setMinimum(0)
-                self.progress_bar.setMaximum(100)
-                self.progress_bar.setFormat("%p% - %v/%m")
-            
-            # Start scan in a separate thread
-            self.scan_thread = QThread()
-            self.scan_worker = lambda: self._scan_worker(folder_path)
-            self.scan_thread.started.connect(self.scan_worker)
-            
-            # Connect signals
-            if hasattr(self, 'scan_status'):
-                self.scan_status.connect(self._update_scan_status)
-            if hasattr(self, 'scan_finished'):
-                self.scan_finished.connect(self._on_scan_finished)
-            
-            # Start the thread
-            self.scan_thread.start()
+            # Start the scan
+            self._start_scan(folder_path)
             
         except Exception as e:
             logger.error(f"Error starting scan: {e}", exc_info=True)
+            self._cleanup_scan()
             QMessageBox.critical(
                 self,
                 self.tr("Error"),

@@ -11,6 +11,7 @@ import os
 import webbrowser
 import logging
 from typing import Optional, Dict, Any, List, Callable
+from script.updates import UpdateDialog
 
 # Import language manager
 from script.lang_mgr import LanguageManager
@@ -34,6 +35,8 @@ class MenuBar(QObject):
         self.menubar = QMenuBar()
         self.actions = {}
         self.menus = {}
+        self.recent_files_menu = None
+        self.recent_files_actions = []
         
         # Connect to language change signal
         self.language_manager.language_changed.connect(self.on_language_changed)
@@ -72,9 +75,73 @@ class MenuBar(QObject):
         # Rebuild all menus with the new language
         self.setup_menus()
         
+        # Update recent files menu if it exists
+        if hasattr(self.parent, 'recent_files_manager'):
+            self.update_recent_files(self.parent.recent_files_manager.get_recent_files())
+        
         # Notify parent that the language has changed
         if hasattr(self.parent, 'on_language_changed'):
             self.parent.on_language_changed()
+    
+    def update_recent_files(self, recent_files):
+        """Update the recent files menu with the given list of files.
+        
+        Args:
+            recent_files: List of recent file entries (dicts with 'path' key)
+        """
+        if not self.recent_files_menu:
+            return
+            
+        # Clear existing actions
+        self.recent_files_menu.clear()
+        self.recent_files_actions = []
+        
+        if not recent_files:
+            # Add a disabled "No recent files" item
+            no_files_action = QAction(self.tr("No recent files"), self.parent)
+            no_files_action.setEnabled(False)
+            self.recent_files_menu.addAction(no_files_action)
+            return
+            
+        # Add each recent file
+        for i, file_info in enumerate(recent_files[:10]):  # Show max 10 recent files
+            file_path = file_info.get('path', '')
+            if not file_path:
+                continue
+                
+            # Create action with shortcut (1-9, 0 for 10th)
+            shortcut = str((i + 1) % 10) if i < 9 else '0'
+            action = QAction(
+                f"&{shortcut} {os.path.basename(file_path)}",
+                self.parent
+            )
+            action.setData(file_path)
+            action.setStatusTip(file_path)
+            action.triggered.connect(
+                lambda checked, path=file_path: self.parent.open_recent_file(path)
+            )
+            self.recent_files_menu.addAction(action)
+            self.recent_files_actions.append(action)
+            
+            # Set up Ctrl+1 through Ctrl+0 shortcuts for the first 10 items
+            if i < 10:
+                action.setShortcut(f"Ctrl+{shortcut}")
+        
+        # Add clear menu action if we have recent files
+        if self.recent_files_actions:
+            self.recent_files_menu.addSeparator()
+            clear_action = QAction(
+                QApplication.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon),
+                self.tr("Clear Recent Files"),
+                self.parent
+            )
+            clear_action.triggered.connect(self.clear_recent_files)
+            self.recent_files_menu.addAction(clear_action)
+    
+    def clear_recent_files(self):
+        """Clear the recent files list."""
+        if hasattr(self.parent, 'recent_files_manager'):
+            self.parent.recent_files_manager.clear()
     
     def on_language_changed(self):
         """Handle language change event."""
@@ -98,6 +165,21 @@ class MenuBar(QObject):
         self.actions['open_folder'].setStatusTip(self.tr("Open a folder to scan for duplicate PDFs"))
         self.actions['open_folder'].triggered.connect(self.parent.on_open_folder)
         menu.addAction(self.actions['open_folder'])
+        
+        # Add separator
+        menu.addSeparator()
+        
+        # Recent Files submenu
+        self.recent_files_menu = QMenu(self.tr("Open Recent"), self.parent)
+        self.recent_files_menu.setIcon(QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogOpenButton))
+        menu.addMenu(self.recent_files_menu)
+        
+        # Add a placeholder for recent files
+        self.update_recent_files([])
+        
+        # Add another separator
+        menu.addSeparator()
         
         # Add separator
         menu.addSeparator()
@@ -318,8 +400,24 @@ class MenuBar(QObject):
             self.parent
         )
         self.actions['check_updates'].setStatusTip(self.tr("Check for application updates"))
-        if hasattr(self.parent, 'check_for_updates'):
-            self.actions['check_updates'].triggered.connect(self.parent.check_for_updates)
+        
+        # Get version information
+        try:
+            from script.version import __version__
+            current_version = __version__
+        except ImportError:
+            current_version = "0.0.0"
+            
+        # Create and connect update dialog
+        self.update_dialog = UpdateDialog(
+            current_version=current_version,
+            language_manager=self.language_manager,
+            config_dir=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config'),
+            parent=self.parent
+        )
+        
+        # Connect the action to show the update dialog
+        self.actions['check_updates'].triggered.connect(self.update_dialog.show)
         menu.addAction(self.actions['check_updates'])
         
         return menu

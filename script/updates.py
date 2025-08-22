@@ -10,7 +10,7 @@ import os
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Import language manager
 from script.lang_mgr import LanguageManager
@@ -286,10 +286,13 @@ class UpdateDialog(QDialog):
             )
         )
         
-        self.release_notes.setHtml(
-            f"<h3>{self.tr('updates.whats_new', 'What\'s New in v')}{self.latest_version}</h3>"
-            f"<pre>{update_data['release_notes']}</pre>"
+        # Use raw string for HTML content to avoid issues with backslashes
+        whats_new = self.tr('updates.whats_new', 'What\'s New in v')
+        html_content = (
+            f'<h3>{whats_new}{self.latest_version}</h3>'
+            f'<pre>{update_data["release_notes"]}</pre>'
         )
+        self.release_notes.setHtml(html_content)
         self.release_notes.setVisible(True)
         
         self.download_btn.setVisible(True)
