@@ -1,158 +1,406 @@
 """
-Docs Dialog Module
+Documentation Dialog Module
+
+This module provides a documentation viewer dialog for PDF Duplicate Finder.
+It displays help documentation in multiple languages and handles navigation
+between different sections of the documentation.
 """
 
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, 
-                             QPushButton, QWidget, QFrame)
-from PyQt6.QtCore import Qt, QUrl, pyqtSignal as Signal, QSize
-from PyQt6.QtGui import QDesktopServices
-import os
+from __future__ import annotations
 
-# Import application logger
 import logging
+import os
+from pathlib import Path
+from typing import Optional, TYPE_CHECKING
 
-# Import language manager
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser,
+    QPushButton, QWidget, QFrame, QMessageBox, QLabel, QComboBox
+)
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal as Signal, QSize, QSettings
+from PyQt6.QtGui import QDesktopServices, QIcon
+
 from script.lang_mgr import LanguageManager
 
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QWidget as QWidgetType
+
+# Set up logger
 logger = logging.getLogger('PDFDuplicateFinder')
 
-def _tr(key, default_text):
-    """Helper function to translate text using the language manager."""
-    return LanguageManager().tr(key, default_text)
+def _tr(key: str, default_text: str) -> str:
+    """
+    Helper function to translate text using the language manager.
+    
+    Args:
+        key: Translation key
+        default_text: Default text to use if translation is not found
+        
+    Returns:
+        Translated string
+    """
+    try:
+        return LanguageManager().tr(key, default_text)
+    except Exception as e:
+        logger.warning(f"Translation failed for key '{key}': {e}")
+        return default_text
 
 class DocsDialog(QDialog):
-    # Signal to notify language change
-    language_changed = Signal(str)
+    """
+    A dialog for displaying application documentation.
     
-    def __init__(self, parent=None, current_lang='en'):
+    This dialog displays help documentation in the user's preferred language
+    and provides navigation between different sections of the documentation.
+    
+    Signals:
+        language_changed: Emitted when the documentation language is changed.
+                         The signal includes the new language code.
+    """
+    
+    # Signals
+    language_changed = Signal(str)  # New language code
+    
+    def __init__(self, parent: Optional[QWidgetType] = None, 
+                 current_lang: str = 'en') -> None:
         """
-        Initialize the help dialog.
+        Initialize the documentation dialog.
         
         Args:
-            parent: Parent widget
-            current_lang (str): Current language code (default: 'en')
+            parent: Parent widget. Defaults to None.
+            current_lang: Current language code (e.g., 'en', 'it'). Defaults to 'en'.
         """
         super().__init__(parent)
+        
+        # Initialize instance variables
         self.current_lang = current_lang
         self.language_manager = LanguageManager()
-        self.setMinimumSize(800, 600)
-        self.setWindowTitle(self.tr("docs.window_title", "Docs"))
+        self.settings = QSettings("PDFDuplicateFinder", "Documentation")
+        self.text_browser = None
         
         try:
+            # Set up window properties
+            self.setWindowTitle(_tr("docs.window_title", "Documentation"))
+            self.setMinimumSize(900, 700)  # Slightly larger for better readability
+            
+            # Set window flags to be a proper dialog
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
+            
+            # Set application icon if available
+            try:
+                from script.resources import get_icon_path
+                icon_path = get_icon_path('app_icon.png')
+                if os.path.exists(icon_path):
+                    self.setWindowIcon(QIcon(icon_path))
+            except (ImportError, AttributeError) as e:
+                logger.debug(f"Could not set window icon: {e}")
+            
             # Set up UI
             self.init_ui()
             self.retranslate_ui()
-            logger.debug(self.tr(
-                "docs.init_success",
-                "docs dialog initialized successfully"
-            ))
+            self.load_documentation()
+            
+            # Restore window geometry if available
+            if self.settings.contains("geometry"):
+                self.restoreGeometry(self.settings.value("geometry"))
+            
+            logger.debug("Documentation dialog initialized successfully")
+            
         except Exception as e:
-            logger.error(self.tr(
-                "docs.init_error",
-                "Error initializing docs dialog: {error}"
-            ).format(error=str(e)))
-            raise
+            error_msg = _tr("docs.error.initialization_failed_message", 
+                          "Failed to initialize documentation. Please check the logs for details.")
+            logger.critical(f"{error_msg}: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                _tr("Error", "Error"),
+                error_msg
+            )
+            self.close()
     
-    def tr(self, key, default_text):
-        """Translate text using the language manager."""
-        return self.language_manager.tr(key, default_text)
+    def _get_docs_directory(self) -> Path:
+        """
+        Get the path to the documentation directory.
+        
+        Returns:
+            Path: Path to the documentation directory
+            
+        Raises:
+            FileNotFoundError: If the documentation directory is not found
+        """
+        # Try different possible locations for the docs directory
+        possible_paths = [
+            Path(__file__).parent.parent / 'docs',  # In project root
+            Path(__file__).parent / 'docs',         # In script directory
+            Path('docs')                            # In current working directory
+        ]
+        
+        for path in possible_paths:
+            if path.exists() and path.is_dir():
+                return path
+                
+        raise FileNotFoundError(
+            f"Documentation directory not found. Tried: {[str(p) for p in possible_paths]}"
+        )
     
-    def init_ui(self):
-        """Initialize the user interface components."""
+    def init_ui(self) -> None:
+        """
+        Initialize the user interface.
+        
+        This method sets up all the UI components and their layout.
+        It's called during the dialog's initialization.
+        """
         try:
-            layout = QVBoxLayout(self)
-            layout.setContentsMargins(15, 15, 15, 15)
-            layout.setSpacing(10)
-        
-            # Language selection with styled buttons
-            lang_widget = QWidget()
-            lang_layout = QHBoxLayout(lang_widget)
-            lang_layout.setContentsMargins(0, 0, 0, 10)
-        
-            # Create a frame to contain the buttons
-            button_frame = QFrame()
-            button_frame.setFrameShape(QFrame.Shape.StyledPanel)
-            button_frame.setStyleSheet("""
-                QFrame {
-                    border-radius: 4px;
-                    padding: 20px;
-                }
-            """)
-            button_layout = QHBoxLayout(button_frame)
-            button_layout.setContentsMargins(10, 2, 10, 2)
-            button_layout.setSpacing(10)
-        
-            # Style for language buttons
-            button_style = """
-                QPushButton {
-                    background-color: #0078d7;
-                    color: white;
-                    border: none;
-                    padding: 6px 12px;
-                    border-radius: 3px;
-                    min-width: 80px;
-                }
-                QPushButton:checked {
-                    background-color: #005a9e;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #106ebe;
-                }
-            """
+            # Create main layout
+            main_layout = QVBoxLayout(self)
+            main_layout.setContentsMargins(10, 10, 10, 10)
+            main_layout.setSpacing(10)
             
-            # English button
-            self.en_button = QPushButton(self.tr("docs.language.en", "English"))
-            self.en_button.setCheckable(True)
-            self.en_button.setStyleSheet(button_style)
-            self.en_button.clicked.connect(lambda: self.on_language_changed('en'))
-            
-            # Italian button
-            self.it_button = QPushButton(self.tr("docs.language.it", "Italiano"))
-            self.it_button.setCheckable(True)
-            self.it_button.setStyleSheet(button_style)
-            self.it_button.clicked.connect(lambda: self.on_language_changed('it'))
-            
-            # Set current language
-            if self.current_lang == 'it':
-                self.it_button.setChecked(True)
-                self.en_button.setChecked(False)
-            else:
-                self.en_button.setChecked(True)
-                self.it_button.setChecked(False)
-            
-            # Add buttons to layout
-            button_layout.addWidget(self.en_button)
-            button_layout.addWidget(self.it_button)
-            
-            # Add to main layout
-            lang_layout.addStretch()
-            lang_layout.addWidget(button_frame)
-            
-            # Text browser for help content
+            # Create text browser for documentation
             self.text_browser = QTextBrowser()
             self.text_browser.setOpenExternalLinks(True)
-            self.text_browser.anchorClicked.connect(self.open_link)
+            self.text_browser.setOpenLinks(False)  # We'll handle link clicks manually
+            self.text_browser.anchorClicked.connect(self._on_anchor_clicked)
             
-            # Close button
-            self.close_btn = QPushButton(self.tr("common.close", "Close"))
-            self.close_btn.clicked.connect(self.accept)
+            # Add text browser to main layout
+            main_layout.addWidget(self.text_browser)
             
-            # Add widgets to layout
-            layout.addWidget(lang_widget)
-            layout.addWidget(self.text_browser, 1)
-            layout.addWidget(self.close_btn, alignment=Qt.AlignmentFlag.AlignRight)
+            # Create button box
+            button_box = QHBoxLayout()
+            button_box.addStretch()
+            
+            # Add language selection
+            self.language_combo = QComboBox()
+            self.language_combo.addItem("English", "en")
+            self.language_combo.addItem("Italiano", "it")
+            self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+            
+            # Set current language
+            index = self.language_combo.findData(self.current_lang)
+            if index >= 0:
+                self.language_combo.setCurrentIndex(index)
+            
+            button_box.addWidget(QLabel(_tr("docs.language", "Language:")))
+            button_box.addWidget(self.language_combo)
+            button_box.addSpacing(20)
+            
+            # Add close button
+            self.close_button = QPushButton(_tr("docs.close", "Close"))
+            self.close_button.clicked.connect(self.accept)
+            button_box.addWidget(self.close_button)
+            
+            # Add button box to main layout
+            main_layout.addLayout(button_box)
+            
+            logger.debug("UI initialized successfully")
             
         except Exception as e:
-            logger.error(self.tr(
-                "docs.ui_init_error",
-                "Error initializing UI: {error}"
-            ).format(error=str(e)))
+            error_msg = self.tr("docs.ui_init_error", "Error initializing UI: {error}").format(error=str(e))
+            logger.error(error_msg, exc_info=True)
             raise
     
-    def retranslate_ui(self):
+    def retranslate_ui(self) -> None:
+        """Update UI text with current translations."""
+        self.setWindowTitle(_tr("docs.window_title", "Documentation"))
+        self.close_button.setText(_tr("Close", "Close"))
+    
+    def _on_language_changed(self, index: int) -> None:
+        """Handle language change event."""
+        lang = self.language_combo.currentData()
+        if lang != self.current_lang:
+            self.change_language(lang)
+    
+    def change_language(self, lang_code: str) -> None:
         """
-        Update the UI with the current language.
+        Change the documentation language.
+        
+        Args:
+            lang_code: Language code to change to (e.g., 'en', 'it')
+        """
+        if lang_code != self.current_lang:
+            self.current_lang = lang_code
+            self.load_documentation()
+            self.retranslate_ui()
+            self.language_changed.emit(lang_code)
+    
+    def _on_anchor_clicked(self, link: QUrl) -> None:
+        """Handle clicks on links in the documentation."""
+        if link.scheme() == "http" or link.scheme() == "https":
+            # Open external links in default browser
+            QDesktopServices.openUrl(link)
+        else:
+            # Handle internal links
+            self.text_browser.setSource(link)
+    
+    def load_documentation(self) -> None:
+        """Load the documentation content based on the current language."""
+        try:
+            if self.current_lang == 'it':
+                content = self._get_italian_help()
+            else:
+                content = self._get_english_help()
+            
+            # Set HTML content with some basic styling
+            css = """
+            body { 
+                font-family: Arial, sans-serif; 
+                line-height: 1.6;
+                margin: 20px;
+                color: #333;
+            }
+            h1 { color: #2c3e50; }
+            h2 { color: #3498db; margin-top: 20px; }
+            code { 
+                background-color: #f5f5f5; 
+                padding: 2px 5px; 
+                border-radius: 3px;
+                font-family: 'Courier New', monospace;
+            }
+            """
+            
+            styled_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>{css}</style>
+            </head>
+            <body>
+                {content}
+            </body>
+            </html>
+            """
+            
+            self.text_browser.setHtml(styled_content)
+            logger.info(_tr("docs.init_success", "Documentation loaded successfully"))
+            
+        except Exception as e:
+            error_msg = _tr("docs.error.loading_failed", "Failed to load documentation.")
+            logger.error(f"{error_msg}: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                _tr("Error", "Error"),
+                error_msg
+            )
+    
+    def _get_english_help(self) -> str:
+        """Return English help content."""
+        return """
+        <h1>PDF Duplicate Finder - Documentation</h1>
+        
+        <p>Welcome to the PDF Duplicate Finder documentation. This application helps you find and manage duplicate PDF files in your system.</p>
+        
+        <h2>Features</h2>
+        <ul>
+            <li>Scan directories for duplicate PDF files</li>
+            <li>Compare files by content, metadata, or both</li>
+            <li>Preview PDF files before taking action</li>
+            <li>Easily manage and remove duplicate files</li>
+            <li>Support for multiple languages</li>
+        </ul>
+        
+        <h2>Getting Started</h2>
+        <p>To start finding duplicate PDFs:</p>
+        <ol>
+            <li>Click on 'Add Directory' to select folders to scan</li>
+            <li>Click 'Start Scan' to begin the duplicate search</li>
+            <li>Review the results in the main window</li>
+            <li>Use the right-click menu to manage duplicate files</li>
+        </ol>
+        
+        <h2>Advanced Features</h2>
+        <h3>Scan Options</h3>
+        <p>Customize your scan with various options:</p>
+        <ul>
+            <li><strong>Compare by content</strong>: Compare actual file contents (slower but more accurate)</li>
+            <li><strong>Compare by metadata</strong>: Compare file metadata like title, author, etc.</li>
+            <li><strong>File size threshold</strong>: Set minimum file size for comparison</li>
+        </ul>
+        
+        <h3>Preview Mode</h3>
+        <p>Preview PDF files directly in the application to help identify duplicates.</p>
+        
+        <h2>Troubleshooting</h2>
+        <p>If you encounter any issues:</p>
+        <ul>
+            <li>Check the log files in the application directory</li>
+            <li>Make sure you have read permissions for the scanned directories</li>
+            <li>Update to the latest version of the application</li>
+        </ul>
+        """
+    
+    def _get_italian_help(self) -> str:
+        """Return Italian help content."""
+        return """
+        <h1>PDF Duplicate Finder - Documentazione</h1>
+        
+        <p>Benvenuti nella documentazione di PDF Duplicate Finder. Questa applicazione ti aiuta a trovare e gestire i file PDF duplicati nel tuo sistema.</p>
+        
+        <h2>Funzionalità</h2>
+        <ul>
+            <li>Scansiona le directory alla ricerca di file PDF duplicati</li>
+            <li>Confronta i file per contenuto, metadati o entrambi</li>
+            <li>Anteprima dei file PDF prima di intraprendere azioni</li>
+            <li>Gestisci e rimuovi facilmente i file duplicati</li>
+            <li>Supporto per più lingue</li>
+        </ul>
+        
+        <h2>Per Iniziare</h2>
+        <p>Per iniziare a trovare PDF duplicati:</p>
+        <ol>
+            <li>Fai clic su 'Aggiungi Directory' per selezionare le cartelle da scansionare</li>
+            <li>Fai clic su 'Avvia Scansione' per iniziare la ricerca dei duplicati</li>
+            <li>Rivedi i risultati nella finestra principale</li>
+            <li>Usa il menu contestuale (tasto destro) per gestire i file duplicati</li>
+        </ol>
+        
+        <h2>Funzionalità Avanzate</h2>
+        <h3>Opzioni di Scansione</h3>
+        <p>Personalizza la tua scansione con varie opzioni:</p>
+        <ul>
+            <li><strong>Confronta per contenuto</strong>: Confronta il contenuto effettivo dei file (più lento ma più accurato)</li>
+            <li><strong>Confronta per metadati</strong>: Confronta i metadati come titolo, autore, ecc.</li>
+            <li><strong>Soglia dimensione file</strong>: Imposta la dimensione minima dei file da confrontare</li>
+        </ul>
+        
+        <h3>Modalità Anteprima</h3>
+        <p>Visualizza in anteprima i file PDF direttamente nell'applicazione per aiutare a identificare i duplicati.</p>
+        
+        <h2>Risoluzione dei Problemi</h2>
+        <p>Se riscontri problemi:</p>
+        <ul>
+            <li>Controlla i file di log nella directory dell'applicazione</li>
+            <li>Assicurati di avere i permessi di lettura per le directory scansionate</li>
+            <li>Aggiorna all'ultima versione dell'applicazione</li>
+        </ul>
+        """
+    
+    def closeEvent(self, event) -> None:
+        """Handle dialog close event."""
+        # Save window geometry
+        self.settings.setValue("geometry", self.saveGeometry())
+        event.accept()
+        
+    def tr(self, key: str, default_text: str = "") -> str:
+        """
+        Translate a string using the language manager.
+        
+        Args:
+            key: The translation key
+            default_text: Default text to return if translation fails
+            
+        Returns:
+            str: The translated string or the default text if translation fails
+        """
+        try:
+            return self.language_manager.tr(key, default_text)
+        except Exception as e:
+            logger.warning(f"Translation failed for key '{key}': {e}")
+            return default_text if default_text else key
+    
+    def retranslate_ui(self) -> None:
+        """
+        Update the UI text based on the current language.
+        
+        This method should be called whenever the language is changed to update
+        all user-visible strings.
         
         This method loads the appropriate docs text based on the current language
         and updates all UI elements accordingly.

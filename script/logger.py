@@ -2,15 +2,19 @@
 Logging configuration for PDF Duplicate Finder.
 
 This module provides a centralized way to configure and access the application logger.
-Logs are saved in the 'logs' directory with filenames in the format 'PDFDuplicateFinder_YYYY-MM-DD.log'.
+All logs are saved in the 'logs' directory with comprehensive traceback information.
 """
 import os
 import sys
 import logging
 import logging.handlers
+import traceback
+import threading
+import inspect
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Union, Dict, Any
+from types import TracebackType
+from typing import Optional, Union, Dict, Any, Type, Callable, Tuple, List
 
 # Log levels mapping
 LOG_LEVELS = {
@@ -21,11 +25,26 @@ LOG_LEVELS = {
     'CRITICAL': logging.CRITICAL
 }
 
+def get_logs_dir() -> Path:
+    """Get the logs directory, create it if it doesn't exist."""
+    base_dir = Path(__file__).parent.parent  # Go up from script/ to project root
+    log_dir = base_dir / 'logs'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+def format_traceback(exc_type: Type[BaseException], 
+                    exc_value: BaseException, 
+                    exc_traceback: Optional[TracebackType]) -> str:
+    """Format exception information and stack trace entries."""
+    if exc_traceback is None:
+        return str(exc_value)
+    return ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+
 def setup_logger(name: str = 'PDFDuplicateFinder', 
-                log_level: Union[str, int] = 'INFO',
-                log_dir: str = 'logs',
-                max_bytes: int = 10 * 1024 * 1024,  # 10MB per file
-                backup_count: int = 7,
+                log_level: Union[str, int] = 'DEBUG',
+                log_dir: Union[str, Path, None] = None,
+                max_bytes: int = 20 * 1024 * 1024,  # 20MB per file
+                backup_count: int = 14,  # Keep logs for 2 weeks
                 log_to_console: bool = True,
                 log_to_file: bool = True) -> logging.Logger:
     """
@@ -56,10 +75,10 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
     
-    # Create formatter with detailed format
+    # Create formatter with detailed format including thread name and process ID
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        '%(asctime)s.%(msecs)03d - %(process)d - %(threadName)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'  # Milliseconds are added in the format string
     )
     
     # Console handler
@@ -72,40 +91,157 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
     # File handler with rotation
     if log_to_file:
         try:
-            # Ensure log directory exists
-            log_dir_path = Path(log_dir)
-            log_dir_path.mkdir(parents=True, exist_ok=True)
+            # Get or create logs directory
+            if log_dir is None:
+                log_dir_path = get_logs_dir()
+            else:
+                log_dir_path = Path(log_dir)
+                log_dir_path.mkdir(parents=True, exist_ok=True)
             
-            # Create log file with timestamp
-            log_file = log_dir_path / f"{name}_{datetime.now().strftime('%Y%m%d')}.log"
+            # Create log file in the logs directory
+            log_file = log_dir_path / f"{name}.log"
             
-            # Create rotating file handler
+            # Create rotating file handler with error handling
             file_handler = logging.handlers.RotatingFileHandler(
-                filename=log_file,
+                filename=str(log_file),
                 maxBytes=max_bytes,
                 backupCount=backup_count,
-                encoding='utf-8'
+                encoding='utf-8',
+                delay=True  # Delay file opening until first write
             )
             file_handler.setFormatter(formatter)
             file_handler.setLevel(log_level)
             logger.addHandler(file_handler)
             
             logger.info(f"Logging to file: {log_file.absolute()}")
+            logger.debug(f"Log level set to: {logging.getLevelName(log_level)}")
             
         except Exception as e:
-            logger.error(f"Failed to set up file logging: {e}", exc_info=True)
+            logger.critical(
+                f"Critical error setting up file logging: {e}", 
+                exc_info=True
+            )
+            # If we can't log to file, at least log to stderr
+            if not log_to_console:
+                console_handler = logging.StreamHandler(sys.stderr)
+                console_handler.setFormatter(formatter)
+                console_handler.setLevel(log_level)
+                logger.addHandler(console_handler)
+                logger.error("Falling back to stderr logging due to file logging failure")
     
-    # Add exception handler for uncaught exceptions
-    def handle_exception(exc_type, exc_value, exc_traceback):
+    # Store the original exception handler
+    original_excepthook = sys.excepthook
+    original_threading_excepthook = threading.excepthook if hasattr(threading, 'excepthook') else None
+    
+    def handle_exception(exc_type: Type[BaseException], exc_value: BaseException, 
+                        exc_traceback: Optional[TracebackType]) -> None:
+        """Handle uncaught exceptions with full traceback and context information."""
+        # Skip keyboard interrupt to allow the program to exit
         if issubclass(exc_type, KeyboardInterrupt):
-            # Call the default excepthook for keyboard interrupts
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
         
-        logger.critical("Uncaught exception", 
-                       exc_info=(exc_type, exc_value, exc_traceback))
+        # Get the full traceback
+        tb_text = format_traceback(exc_type, exc_value, exc_traceback)
+        
+        # Log the exception with full traceback
+        logger.critical(
+            "Unhandled exception: %s\nFull traceback:\n%s",
+            str(exc_value),
+            tb_text,
+            exc_info=(exc_type, exc_value, exc_traceback)
+        )
+        
+        # Also log the current thread information
+        try:
+            current_thread = threading.current_thread()
+            logger.debug(
+                "Exception in thread %s (alive=%s, daemon=%s, ident=%s)",
+                current_thread.name,
+                current_thread.is_alive(),
+                current_thread.daemon,
+                current_thread.ident
+            )
+        except Exception as e:
+            logger.error("Error while gathering thread info: %s", e, exc_info=True)
+        
+        # Also log to stderr if not already going there
+        if not any(isinstance(h, logging.StreamHandler) and h.stream == sys.stderr 
+                  for h in logger.handlers):
+            sys.stderr.write(f"\nUnhandled exception: {tb_text}\n")
     
+    def handle_thread_exception(args: threading.ExceptHookArgs) -> None:
+        """Handle uncaught exceptions in threads with full context."""
+        try:
+            thread_name = 'unknown'
+            if hasattr(args, 'thread') and args.thread:
+                thread = args.thread
+                thread_name = getattr(thread, 'name', 'unnamed')
+                
+            tb_text = format_traceback(args.exc_type, args.exc_value, args.exc_traceback)
+            
+            logger.error(
+                "Unhandled exception in thread %s: %s\nFull traceback:\n%s",
+                thread_name,
+                str(args.exc_value),
+                tb_text,
+                exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
+            )
+        except Exception as e:
+            logger.critical("Error in thread exception handler: %s", e, exc_info=True)
+    
+    # Set the exception handlers
     sys.excepthook = handle_exception
+    if hasattr(threading, 'excepthook'):
+        threading.excepthook = handle_thread_exception
+    
+    # Redirect stdout and stderr to logger with thread safety
+    class StreamToLogger:
+        """Thread-safe stream redirection to logger."""
+        def __init__(self, logger_instance: logging.Logger, log_level: int = logging.INFO):
+            self.logger = logger_instance
+            self.log_level = log_level
+            self.linebuf = ''
+            self._lock = threading.RLock()  # Thread lock for thread safety
+            
+        def write(self, buf: str) -> None:
+            """Safely write buffer to logger, handling thread safety."""
+            if not buf.strip():
+                return
+                
+            with self._lock:
+                try:
+                    # Filter out empty lines and control characters
+                    lines = [line for line in buf.rstrip().splitlines() if line.strip()]
+                    for line in lines:
+                        # Skip common control messages
+                        if line in ('Not in scanner thread!',):
+                            continue
+                        try:
+                            self.logger.log(self.log_level, line.rstrip())
+                        except Exception as e:
+                            # If logging fails, write to original stderr as last resort
+                            sys.__stderr__.write(f"Logging failed: {e}\n")
+                            sys.__stderr__.write(f"Original message: {line}\n")
+                except Exception as e:
+                    sys.__stderr__.write(f"Critical error in StreamToLogger: {e}\n")
+                
+        def flush(self) -> None:
+            """Flush the stream (no-op as we write immediately)."""
+            pass
+    
+    # Only redirect if not already redirected to avoid infinite recursion
+    # and only in the main thread to prevent Qt thread issues
+    if threading.current_thread() is threading.main_thread():
+        if not isinstance(sys.stdout, StreamToLogger):
+            sys.stdout = StreamToLogger(logger, logging.INFO)
+        if not isinstance(sys.stderr, StreamToLogger):
+            sys.stderr = StreamToLogger(logger, logging.ERROR)
+    else:
+        logger.debug("Not in main thread, skipping stream redirection")
+    
+    # Log Python warnings through the logging system
+    logging.captureWarnings(True)
     
     logger.debug("Logger initialized")
     return logger
@@ -118,11 +254,17 @@ def get_logger(name: str = None) -> logging.Logger:
         name: Name of the logger. If None, returns the root logger.
             
     Returns:
-        Logger instance
+        Logger instance with proper configuration
     """
-    if name is None:
-        return logging.getLogger()
-    return logging.getLogger(name)
+    logger = logging.getLogger(name)
+    
+    # If this is a new logger, ensure it has at least one handler
+    if not logger.handlers and logging.getLogger().handlers:
+        # Use the root logger's handlers if available
+        logger.handlers = logging.getLogger().handlers
+        logger.propagate = False
+    
+    return logger
 
 # Create default logger instance
 logger = setup_logger()

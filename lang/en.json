@@ -1,5 +1,26 @@
 {    
     "en": {
+        "docs": {
+            "window_title": "Documentation",
+            "error": {
+                "directory_not_found": "Documentation directory not found. Please reinstall the application.",
+                "initialization_failed": "Documentation initialization failed",
+                "initialization_failed_message": "Failed to initialize documentation. Please check the logs for details.",
+                "loading_failed": "Failed to load documentation"
+            },
+            "init_success": "Documentation loaded successfully",
+            "language": "Language:",
+            "close": "Close",
+            "features": "Features",
+            "getting_started": "Getting Started",
+            "advanced_features": "Advanced Features",
+            "troubleshooting": "Troubleshooting",
+            "ui_init_error": "Error initializing UI: {error}",
+            "help_content": {
+                "introduction": "<h1>PDF Duplicate Finder - Documentation</h1><p>Welcome to the PDF Duplicate Finder documentation.</p>",
+                "features": "<h2>Features</h2><ul><li>Find duplicate PDF files</li><li>Compare files by content or metadata</li><li>Preview PDF files</li><li>Manage duplicates efficiently</li></ul>"
+            }
+        },
         "common": {
             "ok": "OK",
             "cancel": "Cancel",

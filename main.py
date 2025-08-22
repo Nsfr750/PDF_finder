@@ -45,6 +45,8 @@ from script.lang_mgr import LanguageManager
 from script.logger import get_logger
 from script.settings_dialog import SettingsDialog
 from script.scanner import PDFScanner
+from PyQt6.QtCore import QThread, QObject
+from PyQt6.QtWidgets import QProgressBar, QMessageBox
 
 # Set up logger
 logger = get_logger('main')
@@ -111,9 +113,19 @@ class PDFDuplicateFinder(MainWindow):
                 logger.warning(f"Error cleaning up thread: {e}")
         
         try:
-            # Create new scanner and thread
-            self._scanner = PDFScanner()
+            # Create new scanner and thread with proper initialization
+            from PyQt6.QtCore import QThread
             self.scan_thread = QThread()
+            
+            # Get settings for scanner
+            comparison_threshold = self.settings.get('comparison_threshold', 0.95)
+            dpi = self.settings.get('dpi', 150)
+            
+            # Create scanner with settings
+            self._scanner = PDFScanner(
+                threshold=comparison_threshold,
+                dpi=dpi
+            )
             
             # Move scanner to thread
             self._scanner.moveToThread(self.scan_thread)
@@ -127,11 +139,16 @@ class PDFDuplicateFinder(MainWindow):
             # Set up status callback
             self._scanner.set_status_callback(self._on_scan_status)
             
+            # Store the scan method reference
+            self._scanner_scan_method = self._scanner.scan_directory
+            
             # Connect thread signals
-            self.scan_thread.started.connect(self._scanner.start_scan)
             self._scanner.finished.connect(self.scan_thread.quit)
             self._scanner.finished.connect(self._scanner.deleteLater)
             self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            
+            # Make sure the scanner is properly set up in the thread
+            self._scanner.moveToThread(self.scan_thread)
             
             # Set up progress bar if needed
             if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
@@ -197,14 +214,64 @@ class PDFDuplicateFinder(MainWindow):
                     self.progress_bar.setValue(0)
                     self.progress_bar.setVisible(True)
                 
-                # Start the scan in the background thread
-                if hasattr(self, 'scan_thread') and isinstance(self.scan_thread, QThread):
+                # Ensure scanner is properly initialized
+                if not hasattr(self, '_scanner') or not hasattr(self, 'scan_thread'):
+                    logger.error("Scanner or thread not initialized")
+                    QMessageBox.critical(self, 
+                        self.language_manager.tr("dialog.error", "Error"),
+                        self.language_manager.tr("errors.scanner_not_initialized", "Scanner is not properly initialized. Please restart the application.")
+                    )
+                    return
+                
+                # Debug thread state
+                logger.debug(f"Thread state - isRunning: {self.scan_thread.isRunning()}, isFinished: {self.scan_thread.isFinished()}")
+                
+                try:
+                    # Disconnect any existing connections to avoid multiple calls
+                    try:
+                        self.scan_thread.started.disconnect()
+                    except (TypeError, RuntimeError):
+                        pass  # No connections to disconnect
+                    
+                    # Create a function to start the scan with error handling
+                    def start_scan():
+                        try:
+                            logger.info(f"Starting scan in thread for directory: {folder_path}")
+                            # Make sure we're in the right thread
+                            if QThread.currentThread() != self.scan_thread:
+                                logger.error("Not in scanner thread!")
+                                return
+                                
+                            # Call the scan method with all required parameters
+                            self._scanner_scan_method(
+                                directory=folder_path,
+                                recursive=True,
+                                min_file_size=self.current_filters.get('min_size', 1024),
+                                max_file_size=self.current_filters.get('max_size', 1024*1024*1024)
+                            )
+                        except Exception as e:
+                            logger.error(f"Error in scan thread: {e}", exc_info=True)
+                            self._on_scan_status(f"Error: {str(e)}", 0, 0)
+                    
+                    # Connect the start_scan function to the thread's started signal
+                    self.scan_thread.started.connect(start_scan)
+                    
+                    # Start the thread
                     logger.info("Starting scan thread...")
                     self.scan_thread.start()
-                else:
-                    error_msg = self.language_manager.tr("errors.thread_init_failed", "Failed to start scan thread.")
-                    logger.error(error_msg)
-                    QMessageBox.critical(self, self.language_manager.tr("dialog.error", "Error"), error_msg)
+                    
+                    # Verify the thread started
+                    if not self.scan_thread.isRunning():
+                        raise RuntimeError("Thread failed to start")
+                        
+                    logger.debug(f"Thread started successfully. Thread running: {self.scan_thread.isRunning()}")
+                    
+                except Exception as e:
+                    error_msg = f"Failed to start scan thread: {str(e)}"
+                    logger.error(error_msg, exc_info=True)
+                    QMessageBox.critical(self, 
+                                      self.language_manager.tr("dialog.error", "Error"),
+                                      self.language_manager.tr("errors.thread_start_failed", "Failed to start scan thread: {error}").format(error=str(e)))
                     
             except Exception as e:
                 error_msg = self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: {error}").format(error=str(e))
@@ -917,31 +984,87 @@ class PDFDuplicateFinder(MainWindow):
     def _init_scanner(self):
         """Initialize the PDF scanner with current settings."""
         try:
+            logger.debug("Initializing PDF scanner...")
+            
+            # Clean up any existing scanner and thread
+            if hasattr(self, '_scanner'):
+                logger.debug("Cleaning up existing scanner...")
+                try:
+                    if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
+                        self.scan_thread.quit()
+                        self.scan_thread.wait(1000)
+                    if hasattr(self._scanner, 'deleteLater'):
+                        self._scanner.deleteLater()
+                except Exception as e:
+                    logger.warning(f"Error cleaning up existing scanner: {e}")
+            
             # Get comparison settings from settings or use defaults
             comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
             dpi = int(self.settings.get('comparison_dpi', 200))
+            logger.debug(f"Scanner settings - threshold: {comparison_threshold}, dpi: {dpi}")
             
-            # Initialize the scanner
+            # Create and configure the thread first
+            logger.debug("Creating QThread instance...")
+            self.scan_thread = QThread()
+            logger.debug(f"QThread created: {self.scan_thread}")
+            
+            # Initialize the scanner with proper parameters
+            logger.debug("Creating PDFScanner instance...")
             self._scanner = PDFScanner(
-                comparison_threshold=comparison_threshold,
+                threshold=comparison_threshold,
                 dpi=dpi
             )
+            logger.debug("PDFScanner instance created successfully")
+            
+            # Move scanner to thread
+            logger.debug("Moving scanner to thread...")
+            self._scanner.moveToThread(self.scan_thread)
+            logger.debug("Scanner moved to thread")
+            
+            # Connect signals
+            logger.debug("Connecting signals...")
+            self._scanner.progress_updated.connect(self._on_scan_progress)
+            self._scanner.status_updated.connect(self._on_scan_status)
+            self._scanner.duplicates_found.connect(self._on_duplicates_found)
+            self._scanner.finished.connect(self._on_scan_finished)
+            self._scanner.finished.connect(self.scan_thread.quit)
+            self._scanner.finished.connect(self._scanner.deleteLater)
+            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            logger.debug("All signals connected")
             
             # Connect scanner signals
+            logger.debug("Connecting scanner signals...")
             if hasattr(self, 'scan_progress'):
+                logger.debug("Connecting progress signal")
                 self._scanner.progress_callback = self.scan_progress.emit
             if hasattr(self, 'scan_status'):
+                logger.debug("Connecting status signal")
                 self._scanner.status_callback = self.scan_status.emit
             if hasattr(self, 'scan_finished'):
+                logger.debug("Connecting finished signal")
                 self.scan_finished.connect(self._on_scan_finished)
                 
-        except Exception as e:
-            logger.error(f"Error initializing scanner: {e}", exc_info=True)
+            logger.info("PDF scanner initialized successfully")
+            return True
+            
+        except ImportError as e:
+            logger.error(f"Failed to import required module: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
-                self.tr("Error"),
-                self.tr("Failed to initialize PDF scanner: {}").format(str(e))
+                self.tr("Initialization Error"),
+                self.tr("Failed to import required modules. Please make sure all dependencies are installed.\n\nError: {}").format(str(e))
             )
+        except Exception as e:
+            logger.error(f"Error initializing scanner: {str(e)}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Initialization Error"),
+                self.tr("Failed to initialize PDF scanner. Please check the logs for details.\n\nError: {}").format(str(e))
+            )
+        
+        logger.error("Failed to initialize scanner. The application may not function correctly.")
+        self._scanner = None
+        return False
     
     def on_language_changed(self, language_code: str):
         """Handle language change from the language manager.

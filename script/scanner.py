@@ -23,7 +23,8 @@ class PDFScanner(QObject):
     # Signals
     status_updated = pyqtSignal(str, int, int)  # message, current, total
     progress_updated = pyqtSignal(int, int, str)  # current, total, current_file
-    finished = pyqtSignal(list)  # list of duplicate groups
+    duplicates_found = pyqtSignal(list)  # list of duplicate groups
+    finished = pyqtSignal(list)  # list of duplicate groups (emitted when scan is complete)
     
     def __init__(self, threshold: float = 0.95, dpi: int = 150):
         """Initialize the PDF scanner with the given settings.

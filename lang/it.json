@@ -141,6 +141,18 @@
             "language": {
                 "en": "English",
                 "it": "Italiano"
+            },
+            "docs": {
+                "window_title": "Documentazione",
+                "error": {
+                    "directory_not_found": "Directory della documentazione non trovata",
+                    "initialization_failed": "Inizializzazione della documentazione fallita",
+                    "initialization_failed_message": "Impossibile inizializzare la documentazione. Controllare i log per i dettagli.",
+                    "loading_failed": "Impossibile caricare la documentazione"
+                },
+                "init_success": "Documentazione caricata con successo",
+                "language": "Lingua:",
+                "close": "Chiudi"
             }
         },
         "recents": {
@@ -156,6 +168,22 @@
             "error_opening_file": "Errore nell'apertura del file: {error}",
             "max_recent_files_reached": "Raggiunto il numero massimo di file recenti. I file più vecchi verranno rimossi.",
             "cannot_add_nonexistent": "Impossibile aggiungere un percorso inesistente ai recenti: {path}"
+        },
+        "docs": {
+            "window_title": "Documentazione",
+            "error": {
+                "directory_not_found": "Directory della documentazione non trovata. Reinstallare l'applicazione.",
+                "initialization_failed": "Impossibile inizializzare la documentazione.",
+                "initialization_failed_message": "Impossibile inizializzare la documentazione. Controllare i log per i dettagli.",
+                "loading_failed": "Impossibile caricare la documentazione"
+            },
+            "init_success": "Documentazione caricata con successo",
+            "language": "Lingua:",
+            "close": "Chiudi",
+            "features": "Funzionalità",
+            "getting_started": "Per Iniziare",
+            "advanced_features": "Funzionalità Avanzate",
+            "troubleshooting": "Risoluzione dei Problemi"
         },
         "main_window": {
             "title": "PDF Duplicate Finder",
