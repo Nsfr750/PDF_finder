@@ -99,6 +99,9 @@ class PDFDuplicateFinder(MainWindow):
         self.recent_files_manager = RecentFilesManager(max_files=10, parent=self)
         self.recent_files_manager.recents_changed.connect(self.update_recent_files_menu)
         
+        # Initialize progress dialog
+        self.progress_dialog = None
+        
     def on_show_about(self):
         """Show the about dialog."""
         from script.about import AboutDialog
@@ -539,17 +542,103 @@ class PDFDuplicateFinder(MainWindow):
             self.progress_dialog.accept()
             self.progress_dialog = None
         
-        # Update UI on the main thread
-        QMetaObject.invokeMethod(
-            self, 
-            '_update_scan_results_ui', 
-            Qt.ConnectionType.QueuedConnection
-        )
+        # Update the UI directly since we're already on the main thread
+        self._update_scan_results_ui()
+    
+    def _update_scan_results_ui(self):
+        """Update the UI with the latest scan results.
+        
+        This method is called on the main thread after a scan completes.
+        """
+        try:
+            if not hasattr(self, 'duplicates_tree'):
+                logger.warning("duplicates_tree widget not found in UI")
+                return
+                
+            # Clear existing items
+            self.duplicates_tree.clear()
+            
+            # Add header if not already set
+            if self.duplicates_tree.header().count() == 0:
+                self.duplicates_tree.setHeaderLabels([
+                    self.tr("File Path"),
+                    self.tr("Size"),
+                    self.tr("Modified"),
+                    self.tr("Similarity")
+                ])
+            
+            # Add duplicate groups to the tree
+            for group_idx, group in enumerate(self.last_scan_duplicates, 1):
+                group_item = QTreeWidgetItem([
+                    self.tr("Group {}").format(group_idx),
+                    "", "", ""
+                ])
+                group_item.setExpanded(True)
+                
+                for file_info in group:
+                    file_item = QTreeWidgetItem([
+                        file_info.get('path', ''),
+                        self._format_file_size(file_info.get('size', 0)),
+                        self._format_timestamp(file_info.get('modified', 0)),
+                        f"{file_info.get('similarity', 0) * 100:.1f}%"
+                    ])
+                    group_item.addChild(file_item)
+                
+                self.duplicates_tree.addTopLevelItem(group_item)
+            
+            # Resize columns to fit content
+            for i in range(self.duplicates_tree.columnCount()):
+                self.duplicates_tree.resizeColumnToContents(i)
+                
+            logger.info(f"UI updated with {len(self.last_scan_duplicates)} duplicate groups")
+            
+        except Exception as e:
+            logger.error(f"Error updating scan results UI: {e}", exc_info=True)
+            
+    def _format_file_size(self, size_bytes: int) -> str:
+        """Format file size in a human-readable format."""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size_bytes < 1024.0 or unit == 'GB':
+                return f"{size_bytes:.1f} {unit}"
+            size_bytes /= 1024.0
+        return f"{size_bytes:.1f} B"
+        
+    def _format_timestamp(self, timestamp: float) -> str:
+        """Format timestamp in a human-readable format."""
+        if not timestamp:
+            return ""
+        return QDateTime.fromSecsSinceEpoch(int(timestamp)).toString(Qt.DateFormat.SystemLocaleShortDate)
+    
+    def _on_duplicates_found(self, duplicates: List[List[Dict[str, Any]]]):
+        """Handle the event when duplicates are found during a scan.
+        
+        Args:
+            duplicates: List of duplicate file groups, where each group is a list of file info dicts
+        """
+        try:
+            logger.info(f"Found {len(duplicates)} groups of duplicate files")
+            self.last_scan_duplicates = duplicates
+            
+            # Update the UI with the found duplicates
+            if hasattr(self, 'update_duplicates_list'):
+                self.update_duplicates_list(duplicates)
+                
+            # Enable relevant UI elements
+            if hasattr(self, 'action_export_csv') and hasattr(self.action_export_csv, 'setEnabled'):
+                self.action_export_csv.setEnabled(True)
+                
+        except Exception as e:
+            logger.error(f"Error processing found duplicates: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("An error occurred while processing duplicate files.")
+            )
     
     def _on_scan_status(self, message: str, current: int, total: int):
         """Handle scan status updates."""
-        if self.progress_dialog and not self.progress_dialog._cancelled:
-            self.progress_dialog.update_message(message)
+        if hasattr(self, 'status_bar') and hasattr(self.status_bar, 'showMessage'):
+            self.status_bar.showMessage(message)
             self.progress_dialog.update_progress(current, total)
         
         # Update status bar less frequently to improve performance
@@ -629,6 +718,37 @@ class PDFDuplicateFinder(MainWindow):
                 self.tr("Scan Error"),
                 self.tr("Failed to start scan: {}".format(str(e)))
             )
+    
+    def _scan_worker(self, folder_path: str):
+        """Worker method that runs in a separate thread to perform the actual scanning.
+        
+        Args:
+            folder_path: Path to the folder to scan
+        """
+        try:
+            logger.info(f"Starting scan in worker thread for: {folder_path}")
+            
+            # Ensure the scanner is initialized
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                self._init_scanner()
+            
+            # Start the scan using scan_directory
+            self._scanner.scan_directory(
+                directory=folder_path,
+                recursive=True,
+                min_file_size=self.current_filters['min_size'],
+                max_file_size=self.current_filters['max_size'],
+                min_similarity=self.current_filters['min_similarity'],
+                enable_text_compare=self.current_filters['enable_text_compare']
+            )
+            
+            logger.info("Scan completed successfully in worker thread")
+            
+        except Exception as e:
+            logger.error(f"Error in scan worker: {e}", exc_info=True)
+            # Emit error signal if available
+            if hasattr(self, 'error_occurred'):
+                self.error_occurred.emit(str(e))
     
     def scan_folder(self, folder_path: str):
         """Scan a folder for duplicate PDF files.
