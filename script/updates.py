@@ -198,13 +198,14 @@ class UpdateChecker(QObject):
 
 
 class UpdateDialog(QDialog):
-    def __init__(self, current_version, language_manager=None, parent=None):
+    def __init__(self, current_version, language_manager=None, config_dir: str = "config", parent=None):
         super().__init__(parent)
         self.current_version = current_version
         self.latest_version = None
         self.update_url = ""
         self.language_manager = language_manager
         self.tr = language_manager.tr if language_manager else lambda key, default: default
+        self.config_dir = config_dir
         
         self.setWindowTitle(self.tr("updates.window_title", "Check for Updates"))
         self.setMinimumSize(500, 300)
@@ -242,8 +243,8 @@ class UpdateDialog(QDialog):
         
         layout.addLayout(self.button_box)
         
-        # Initialize the data manager
-        self.data_manager = UpdateDataManager()
+        # Initialize the data manager with the config directory
+        self.data_manager = UpdateDataManager(self.config_dir)
         
         # Check if we already know about an available update
         if self.data_manager.is_update_available():

@@ -1350,7 +1350,7 @@ class PDFDuplicateFinder(MainWindow):
             )
     
     def check_for_updates(self):
-        """Check for application updates."""
+        """Check for application updates using the UpdateDialog."""
         try:
             # Get current version
             from script.version import __version__ as current_version
@@ -1358,58 +1358,20 @@ class PDFDuplicateFinder(MainWindow):
             # Show checking message
             self.status_bar.showMessage(self.tr("Checking for updates..."), 5000)
             
-            # In a real application, you would check for updates from a server
-            # For now, we'll just show a message that no updates are available
-            QMessageBox.information(
-                self,
-                self.tr("Check for Updates"),
-                self.tr("You are using the latest version: v{}").format(current_version)
-            )
+            # Import UpdateDialog here to avoid circular imports
+            from script.updates import UpdateDialog
             
-            # Example of how to check for updates (commented out for reference):
-            """
-            import requests
-            try:
-                response = requests.get("https://api.github.com/repos/Nsfr750/PDF_Finder/releases/latest", timeout=10)
-                if response.status_code == 200:
-                    latest_release = response.json()
-                    latest_version = latest_release['tag_name'].lstrip('v')
-                    
-                    if latest_version > current_version:
-                        # New version available
-                        reply = QMessageBox.information(
-                            self,
-                            self.tr("Update Available"),
-                            self.tr("A new version (v{}) is available. Would you like to download it now?").format(latest_version),
-                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                        )
-                        
-                        if reply == QMessageBox.StandardButton.Yes:
-                            # Open download URL in default browser
-                            download_url = latest_release.get('html_url', '')
-                            if download_url:
-                                import webbrowser
-                                webbrowser.open(download_url)
-                    else:
-                        QMessageBox.information(
-                            self,
-                            self.tr("No Updates"),
-                            self.tr("You are using the latest version: v{}").format(current_version)
-                        )
-                else:
-                    QMessageBox.warning(
-                        self,
-                        self.tr("Update Check Failed"),
-                        self.tr("Failed to check for updates. Please try again later.")
-                    )
-            except Exception as e:
-                logger.error(f"Error checking for updates: {e}", exc_info=True)
-                QMessageBox.warning(
-                    self,
-                    self.tr("Update Error"),
-                    self.tr("An error occurred while checking for updates: {}").format(str(e))
-                )
-            """
+            # Get the config directory from settings
+            config_dir = getattr(self.settings, '_config_path', Path("config")).parent
+            
+            # Create and show the update dialog
+            update_dialog = UpdateDialog(
+                current_version=current_version,
+                language_manager=self.language_manager,
+                config_dir=str(config_dir),
+                parent=self
+            )
+            update_dialog.exec()
             
         except Exception as e:
             logger.error(f"Error in check_for_updates: {e}", exc_info=True)
