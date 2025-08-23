@@ -111,14 +111,11 @@ $RECYCLE.BIN/
 *.exe
 /venv_new
 
-Compila.bat
-/main.dist
 /logs
-install-scripts/PDF_Finder Setup.txt
 Setup.txt
-installer.nsi
 /PDF-TEST
-get-pip.py
-*.code-workspace
+PDF.code-workspace
 build_nuitka.py
 nuitka.config.toml
+nix.spec
+lin.bat
