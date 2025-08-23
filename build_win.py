@@ -40,7 +40,7 @@ def main():
         "--standalone",
         "--onefile",
         "--output-dir=dist",
-        "--output-filename=PDF-Finder",
+        "--output-filename=PDFDuplicateFinder-{version_str}",
         "--windows-icon-from-ico=assets/icon.ico",
         "--company-name=Tuxxle",
         "--product-name=PDF Duplicate Finder",
