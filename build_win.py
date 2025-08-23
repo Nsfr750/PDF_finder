@@ -28,8 +28,8 @@ def main():
     except Exception as e:
         print(f"Warning: Could not read version: {e}")
         # Fallback to default version
-        version_str = "2.10.0"
-        display_version = "2.10.0"
+        version_str = "2.11.0"
+        display_version = "2.11.0"
     
     print(f"Building version: {display_version} (using build version: {version_str})")
     
