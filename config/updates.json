@@ -1,8 +1,11 @@
 {
-  "last_check": "2025-08-22T11:00:45.419667",
+  "last_check": "2025-08-23T17:47:55.104418",
   "last_version": "2.10.0",
-  "update_available": false,
-  "update_data": {},
-  "release_notes": "",
-  "download_url":""
+  "update_available": true,
+  "update_data": {
+    "version": "1.1.0",
+    "release_notes": "New features and improvements",
+    "download_url": "https://github.com/yourusername/yourrepo/releases/latest",
+    "release_date": "2025-08-22"
+  }
 }

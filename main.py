@@ -32,7 +32,7 @@ from PyQt6.QtCore import (
     Qt, QSize, QTimer, QThread, pyqtSignal, pyqtSlot,
     QObject, QEvent, QPoint, QRect, QRectF, QUrl,
     QLocale, QTranslator, QLibraryInfo, QMetaObject, Q_ARG,
-    QMutex, QMutexLocker
+    QMutex, QMutexLocker, QCoreApplication
 )
 
 from datetime import datetime
@@ -672,11 +672,22 @@ class PDFDuplicateFinder(MainWindow):
                     self.tr("Preparing to scan: {}").format(folder_path)
                 )
                 self.progress_dialog.cancelled.connect(self.cancel_scan)
-            
-            # Show the dialog
-            self.progress_dialog.show()
-            self.progress_dialog.raise_()
-            self.progress_dialog.activateWindow()
+                
+                # Configure dialog properties
+                self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+                self.progress_dialog.setWindowFlags(
+                    self.progress_dialog.windowFlags() & 
+                    ~Qt.WindowType.WindowContextHelpButtonHint |
+                    Qt.WindowType.WindowStaysOnTopHint
+                )
+                
+                # Show the dialog
+                self.progress_dialog.show()
+                self.progress_dialog.raise_()
+                self.progress_dialog.activateWindow()
+                
+                # Force update to ensure the dialog is visible
+                QCoreApplication.processEvents()
             
             # Initialize scanner if needed
             if not hasattr(self, '_scanner') or self._scanner is None:
@@ -700,7 +711,7 @@ class PDFDuplicateFinder(MainWindow):
             self._cleanup_scan()
             QMessageBox.critical(
                 self,
-                self.tr("Scan Error"),
+                self.tr("Error"),
                 self.tr("Failed to start scan: {}".format(str(e)))
             )
     

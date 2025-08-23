@@ -98,8 +98,9 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
                 log_dir_path = Path(log_dir)
                 log_dir_path.mkdir(parents=True, exist_ok=True)
             
-            # Create log file in the logs directory
-            log_file = log_dir_path / f"{name}.log"
+            # Create log file with current date in the logs directory
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            log_file = log_dir_path / f"{name}_{current_date}.log"
             
             # Create rotating file handler with error handling
             file_handler = logging.handlers.RotatingFileHandler(

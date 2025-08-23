@@ -455,8 +455,8 @@ class LogViewer(QDialog):
         """Check if a log entry should be included based on filters."""
         # Check level filter
         if level != "ALL":
-            # Match the actual log format: "YYYY-MM-DD HH:MM:SS - APPNAME - LEVEL - "
-            level_pattern = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - [^-]+ - ' + re.escape(level) + r' - '
+            # Match the actual log format: "YYYY-MM-DD HH:MM:SS.SSS - PID - ThreadName - APPNAME - LEVEL - "
+            level_pattern = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} - \d+ - \w+ - [^-]+ - ' + re.escape(level) + r' - '
             level_match = re.search(level_pattern, entry_text)
             if not level_match:
                 # For multi-line entries (like tracebacks), check the first line

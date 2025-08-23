@@ -5,6 +5,16 @@ All notable changes to PDF Duplicate Finder will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2025-08-23
+
+### Added in 2.11.0
+
+- Integrated PDF viewer for previewing files directly in the application
+- Added duplicate file list in the main tab for better accessibility
+- Enhanced error handling and logging for PDF operations
+- Added visual feedback when opening PDF files
+- Improved file path handling for cross-platform compatibility
+
 ## [2.10.0] - 2025-08-21
 
 ### Added in 2.10.0

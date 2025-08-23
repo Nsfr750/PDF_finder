@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (2, 10, 0)
+VERSION = (2, 11, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
