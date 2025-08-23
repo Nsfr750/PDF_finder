@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
     QListWidget, QLabel, QFrame, QStatusBar, QTreeWidget,
     QTreeWidgetItem, QHeaderView, QSizePolicy, QMenuBar, QToolBar,
-    QApplication, QTabWidget, QStackedWidget
+    QApplication, QTabWidget, QStackedWidget, QMenu, QPushButton
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QAction, QIcon
@@ -58,9 +58,21 @@ class MainUI(QWidget):
         file_list_label.setStyleSheet("font-weight: bold; padding: 4px;")
         file_list_layout.addWidget(file_list_label)
         
+        # Create file list with extended selection mode
         self.file_list = QListWidget()
-        self.file_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Enable multi-selection with Shift/Ctrl
         self.file_list.itemDoubleClicked.connect(self.on_file_double_clicked)
+        
+        # Enable keyboard navigation
+        self.file_list.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.file_list.setDragEnabled(True)
+        self.file_list.setDefaultDropAction(Qt.DropAction.CopyAction)
+        self.file_list.setSelectionBehavior(QListWidget.SelectionBehavior.SelectItems)
+        
+        # Add select/deselect all context menu
+        self.file_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.file_list.customContextMenuRequested.connect(self.show_context_menu)
+        
         file_list_layout.addWidget(self.file_list)
         
         # Right panel - Preview (70% width)
@@ -86,10 +98,30 @@ class MainUI(QWidget):
         tab2_layout.setContentsMargins(0, 0, 0, 0)
         tab2_layout.setSpacing(4)
         
-        # Duplicates tree widget
+        # Duplicates header with buttons
+        duplicates_header = QWidget()
+        duplicates_header_layout = QHBoxLayout(duplicates_header)
+        duplicates_header_layout.setContentsMargins(0, 0, 0, 0)
+        
         duplicates_label = QLabel(self.tr("Duplicate Files"))
         duplicates_label.setStyleSheet("font-weight: bold; padding: 4px;")
-        tab2_layout.addWidget(duplicates_label)
+        
+        # Add expand/collapse buttons
+        btn_expand = QPushButton(self.tr("Expand All"))
+        btn_expand.clicked.connect(lambda: self.duplicates_tree.expandAll())
+        btn_expand.setMaximumWidth(100)
+        
+        btn_collapse = QPushButton(self.tr("Collapse All"))
+        btn_collapse.clicked.connect(lambda: self.duplicates_tree.collapseAll())
+        btn_collapse.setMaximumWidth(100)
+        
+        # Add stretch to push buttons to the right
+        duplicates_header_layout.addWidget(duplicates_label)
+        duplicates_header_layout.addStretch()
+        duplicates_header_layout.addWidget(btn_expand)
+        duplicates_header_layout.addWidget(btn_collapse)
+        
+        tab2_layout.addWidget(duplicates_header)
         
         # Create the tree widget for duplicates
         self.duplicates_tree = QTreeWidget()
@@ -127,6 +159,28 @@ class MainUI(QWidget):
         
         # Initialize the preview widget with placeholder
         self.preview_widget.set_placeholder(self.tr("No preview available"))
+    
+    def show_context_menu(self, position):
+        """Show context menu for file list with select/deselect options."""
+        menu = QMenu()
+        
+        select_all_action = QAction(self.tr("Select All"), self)
+        select_all_action.triggered.connect(self.select_all_files)
+        menu.addAction(select_all_action)
+        
+        deselect_all_action = QAction(self.tr("Deselect All"), self)
+        deselect_all_action.triggered.connect(self.deselect_all_files)
+        menu.addAction(deselect_all_action)
+        
+        menu.exec(self.file_list.viewport().mapToGlobal(position))
+    
+    def select_all_files(self):
+        """Select all files in the file list."""
+        self.file_list.selectAll()
+    
+    def deselect_all_files(self):
+        """Deselect all files in the file list."""
+        self.file_list.clearSelection()
     
     def on_file_double_clicked(self, item):
         """Handle double-click on a file in the file list."""

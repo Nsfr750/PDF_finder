@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (2, 11, 0)
+VERSION = (2, 12, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
@@ -17,7 +17,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-08-21"
+__date__ = "2025-08-23"
 
 # Version description
 __description__ = "A tool to find and manage duplicate PDF files on your computer."
@@ -36,6 +36,36 @@ __requires__ = [
 
 # Changelog
 __changelog__ = """
+## [2.12.0] - 2025-08-23
+### Added
+- Multi-selection support in file list (Shift+Click, Ctrl+Click)
+- Context menu with Select All/Deselect All options
+- Expand All/Collapse All buttons in Duplicates tab
+- Improved keyboard navigation in file list
+- Visual feedback for selection actions
+
+### Fixed
+- QAction import issue in PyQt6
+- Improved UI responsiveness during file operations
+
+## [2.11.0] - 2025-08-23
+### Added
+- Integrated PDF viewer for previewing files
+- Duplicate file list in the main tab
+- Enhanced error handling for PDF operations
+- Visual feedback when opening PDF files
+- Improved file path handling
+
+### Fixed
+- CSV export functionality
+
+## [2.10.0] - 2025-08-21
+### Added
+- Text-based PDF comparison
+- Advanced filtering options
+- Performance optimizations
+- Keyboard shortcuts
+
 ## [2.9.0] - 2025-08-20
 ### Added
 - Export scan results to CSV from Tools menu
@@ -85,6 +115,41 @@ def get_version_history():
     """Return the version history."""
     return [
         {
+            "version": "2.12.0",
+            "date": "2025-08-23",
+            "changes": [
+                "Added multi-selection support in file list (Shift+Click, Ctrl+Click)",
+                "Added context menu with Select All/Deselect All options",
+                "Added Expand All/Collapse All buttons in Duplicates tab",
+                "Improved keyboard navigation in file list",
+                "Added visual feedback for selection actions",
+                "Fixed QAction import issue in PyQt6",
+                "Improved UI responsiveness during file operations"
+            ]
+        },
+        {
+            "version": "2.11.0",
+            "date": "2025-08-23",
+            "changes": [
+                "Integrated PDF viewer for previewing files",
+                "Added duplicate file list in the main tab",
+                "Enhanced error handling and logging for PDF operations",
+                "Added visual feedback when opening PDF files",
+                "Improved file path handling for cross-platform compatibility",
+                "Fixed CSV export functionality"
+            ]
+        },
+        {
+            "version": "2.10.0",
+            "date": "2025-08-21",
+            "changes": [
+                "Added text-based PDF comparison",
+                "Added advanced filtering options",
+                "Performance optimizations for large PDF collections",
+                "Added keyboard shortcuts for common actions"
+            ]
+        },
+        {
             "version": "2.9.0",
             "date": "2025-08-20",
             "changes": [
@@ -96,15 +161,11 @@ def get_version_history():
             "version": "2.7.3",
             "date": "2025-07-09",
             "changes": [
-                "Migrated from PySide6 to PyQt6 for better compatibility and performance",
-                "Added utility functions for consistent file path handling",
-                "Improved error handling and logging",
-                "Updated all UI components to use PyQt6 APIs",
-                "Refactored file info handling to be more robust",
-                "Updated dependencies to latest stable versions",
-                "Fixed QPainter warnings and rendering issues",
-                "Resolved file path handling inconsistencies",
-                "Fixed log viewer filtering"
+                "Migrated from PySide6 to PyQt6",
+                "Improved file path handling",
+                "Enhanced error handling and logging",
+                "Updated UI components to PyQt6",
+                "Fixed various rendering and performance issues"
             ]
         }
     ]
