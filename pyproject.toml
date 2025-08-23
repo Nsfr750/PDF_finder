@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-finder"
-version = "2.9.1"  # Updated version
+version = "2.10.0"  # Updated version
 maintainers = [
     {name = "Nsfr750", email = "nsfr750@yandex.com"}
 ]
@@ -36,7 +36,6 @@ dependencies = [
     "imagehash>=4.3.1",
     "numpy>=1.24.0",
     "pdf2image>=1.16.3",
-    "pillow>=9.5.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
     "scikit-image>=0.21.0",
