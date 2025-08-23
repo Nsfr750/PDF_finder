@@ -9,7 +9,7 @@ from setuptools import setup
 # Create version_info.txt in the assets folder
 def create_version_info():
     """Generate version info file with build information."""
-    version = "2.9.1"  # Default version if not found
+    version = "2.10.0"  # Default version if not found
     try:
         with open("script/version.py", encoding="utf-8") as fp:
             for line in fp:
@@ -59,7 +59,6 @@ def read_requirements():
             "imagehash>=4.3.1",
             "numpy>=1.24.0",
             "pdf2image>=1.16.3",
-            "pillow>=9.5.0",
             "python-dotenv>=1.0.0",
             "requests>=2.31.0",
             "scikit-image>=0.21.0",
