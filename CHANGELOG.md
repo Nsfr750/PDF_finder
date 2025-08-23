@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added visual feedback when opening PDF files
 - Improved file path handling for cross-platform compatibility
 
+### Know BUG
+
+- CSV export does not work
+- Language switch does not work fully
+- Check for updates work only on startup
+ 
 ## [2.10.0] - 2025-08-21
 
 ### Added in 2.10.0

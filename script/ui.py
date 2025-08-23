@@ -77,8 +77,8 @@ class MainUI(QWidget):
         preview_layout.addWidget(self.preview_widget)
         
         # Add file list and preview to tab1
-        tab1_layout.addWidget(file_list_container, 30)  # 30% width
-        tab1_layout.addWidget(preview_container, 70)    # 70% width
+        tab1_layout.addWidget(file_list_container, 70)  # 70% width
+        tab1_layout.addWidget(preview_container, 30)    # 30% width
         
         # Tab 2: Duplicates Tree
         tab2 = QWidget()
