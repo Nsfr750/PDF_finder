@@ -136,9 +136,10 @@ class LanguageManager(QObject):
         Args:
             lang: Language code to set
         """
-        if lang != self._current_lang and lang in self.translations:
+        if lang != self._current_lang and (lang in self.translations or lang == self.default_lang):
             self._current_lang = lang
             self.language_changed.emit(lang)
+            logger.info(f"Language changed to: {lang}")
     
     def get_current_language(self) -> str:
         """Get the current language code.

@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
     
     # Signal emitted when the language is changed
-    language_changed = Signal()
+    language_changed = Signal(str)  # Emits the new language code
     # Scan-related signals (thread-safe updates)
     scan_progress = Signal(int, int, str)  # current, total, path
     scan_status = Signal(str, int, int)    # message, current, total
@@ -88,10 +88,71 @@ class MainWindow(QMainWindow):
         # Connect to language change signals
         if hasattr(self.language_manager, 'language_changed'):
             self.language_manager.language_changed.connect(self.on_language_changed)
+        
+        # Connect the language_changed signal to the on_language_changed slot
+        self.language_changed.connect(self.on_language_changed)
             
         # Initialize update manager and check for updates on startup
         self.update_manager = UpdateDataManager("config")
         self.check_for_updates()
+    
+    def change_language(self, lang_code: str) -> bool:
+        """Change the application language.
+        
+        Args:
+            lang_code: The language code to change to (e.g., 'en', 'it')
+            
+        Returns:
+            bool: True if the language was changed successfully, False otherwise
+        """
+        if self.language_manager.set_language(lang_code):
+            # Save the language preference
+            self.settings.set('app.language', lang_code)
+            # Emit the language changed signal with the language code
+            self.language_changed.emit(lang_code)
+            return True
+        return False
+    
+    def on_language_changed(self, language_code: str = None):
+        """Handle language change events.
+        
+        This method is called when the application language is changed.
+        It updates all UI elements to reflect the new language.
+        
+        Args:
+            language_code: The language code that was changed to (e.g., 'en', 'it')
+        """
+        try:
+            # Update the language in the language manager if a new code is provided
+            if language_code and language_code != self.language_manager.current_lang:
+                self.language_manager.current_lang = language_code
+                
+            # Retranslate the UI
+            if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+                self.menu_bar.retranslate_ui()
+                
+            # Update the window title
+            self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
+            
+            # Update status bar
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.status_ready", "Ready")
+                )
+                
+            # Update toolbar
+            if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
+                self.toolbar.retranslate_ui()
+                
+            # Update any other UI elements that need translation
+            # ...
+            
+            logger.info(f"Language changed to: {self.language_manager.current_lang}")
+            
+        except Exception as e:
+            logger.error(f"Error updating UI for language change: {e}")
+            import traceback
+            traceback.print_exc()
     
     def check_for_updates(self):
         """Check for application updates."""
@@ -571,28 +632,158 @@ class MainWindow(QMainWindow):
             )
     
     def on_show_settings(self):
-        """Open the settings dialog and wire its signals."""
+        """Show the settings dialog and handle language changes."""
         try:
-            dialog = SettingsDialog(self)  # Pass parent directly
+            # Store current language to detect changes
+            current_lang = self.language_manager.current_lang
+            language_changed = False
             
-            # Connect settings changed signal
-            callback = getattr(self, 'on_settings_changed', self.apply_settings)
-            dialog.settings_changed.connect(callback)
+            # Create and show the settings dialog
+            dialog = SettingsDialog(self, self.language_manager)
             
-            # Connect language changed signal
-            def lang_changed():
-                if hasattr(dialog, 'language_combo'):
-                    self.change_language(dialog.language_combo.currentData())
+            # Connect to the language_changed signal
+            def on_language_changed(lang_code):
+                nonlocal language_changed
+                if lang_code and lang_code != self.language_manager.current_lang:
+                    logger.debug(f"Language changed to: {lang_code}")
+                    if self.change_language(lang_code):
+                        language_changed = True
+                        # Update the UI immediately
+                        self.on_language_changed(lang_code)
             
-            dialog.language_changed.connect(lang_changed)
-            dialog.requires_restart.connect(lambda: None)
+            # Connect signals
+            dialog.language_changed.connect(on_language_changed)
             
-            dialog.exec()
+            # Show the dialog
+            result = dialog.exec()
+            
+            # If settings were saved and language changed, ensure UI is updated
+            if result == QDialog.DialogCode.Accepted and language_changed:
+                logger.debug("Settings saved with language change")
+                # The UI is already updated via the signal handler
+                # Just show a message to the user
+                QMessageBox.information(
+                    self,
+                    self.language_manager.tr("settings_dialog.language_changed", "Language Changed"),
+                    self.language_manager.tr(
+                        "settings_dialog.restart_for_full_effect",
+                        "The application language has been changed. Some changes may require a restart to take full effect."
+                    )
+                )
             
         except Exception as e:
-            logger.error("Error in settings dialog: %s", e, exc_info=True)
+            logger.error(f"Error showing settings dialog: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
-                self.tr("Error"),
-                f"Could not open settings: {e}"
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.settings_open_failed", "Could not open settings: %s") % str(e)
             )
+        
+def _update_duplicates_list(self):
+    """Update the duplicates list widget with the current duplicate groups."""
+    if not hasattr(self, 'duplicates_list'):
+        return
+        
+    self.duplicates_list.clear()
+    
+    for i, group in enumerate(self.duplicate_groups, 1):
+        # Create a group item
+        group_item = QListWidgetItem()
+        group_item.setData(Qt.ItemDataRole.UserRole, group)
+        
+        # Format the group header with enhanced information
+        group_type = group.get('type', 'unknown')
+        files_count = len(group['files'])
+        
+        # Create a more informative header
+        header_parts = [f"Group {i}: {files_count} "]
+        
+        # Add type-specific information
+        if group_type == 'content':
+            header_parts.append(self.tr("main.duplicate_content", "duplicate files (exact content match)"))
+        elif group_type == 'image':
+            header_parts.append(self.tr("main.duplicate_images", "similar files (image comparison)"))
+        elif group_type == 'searchable':
+            header_parts.append(self.tr("main.duplicate_text", "similar text documents"))
+        else:
+            header_parts.append(self.tr("main.duplicate_files", "similar files"))
+        
+        # Add comparison method if available
+        method = group.get('method', '')
+        if method:
+            method_display = {
+                'content_hash': self.tr("main.method_content_hash", "content hash"),
+                'image_hash': self.tr("main.method_image_hash", "image hash"),
+                'direct_comparison': self.tr("main.method_direct", "direct comparison")
+            }.get(method, method)
+            header_parts.append(f" ({method_display})")
+        
+        # Add similarity if available
+        if 'similarity' in group:
+            similarity = group['similarity']
+            similarity_text = f" - {similarity*100:.1f}% {self.tr('main.similarity', 'similar')}"
+            
+            # Color code based on similarity
+            if similarity > 0.9:
+                similarity_text = f"<span style='color: #2ecc71;'>{similarity_text}</span>"
+            elif similarity > 0.7:
+                similarity_text = f"<span style='color: #f39c12;'>{similarity_text}</span>"
+            else:
+                similarity_text = f"<span style='color: #e74c3c;'>{similarity_text}</span>"
+            
+            header_parts.append(similarity_text)
+        
+        # Set the formatted text
+        group_item.setText("".join(header_parts))
+        
+        # Add tooltip with more details
+        tooltip_parts = [
+            f"<b>{self.tr('main.group', 'Group')} {i}: {files_count} {self.tr('main.files', 'files')}</b>",
+            f"<b>{self.tr('main.type', 'Type')}:</b> {group_type}",
+            f"<b>{self.tr('main.method', 'Method')}:</b> {method}"
+        ]
+        
+        if 'similarity' in group:
+            tooltip_parts.append(f"<b>{self.tr('main.similarity', 'Similarity')}:</b> {group['similarity']*100:.1f}%")
+        
+        if 'details' in group and 'message' in group['details']:
+            tooltip_parts.append(f"<b>{self.tr('main.notes', 'Notes')}:</b> {group['details']['message']}")
+        
+        group_item.setToolTip("<br>".join(tooltip_parts))
+        
+        # Add the item to the list
+        self.duplicates_list.addItem(group_item)
+        # Save all settings to disk
+        self.settings._save_settings()
+        
+
+def on_language_changed(self):
+    """Handle language change events.
+    
+    This method is called when the application language is changed.
+    It updates all UI elements to reflect the new language.
+    """
+    try:
+        # Retranslate the UI
+        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+            self.menu_bar.retranslate_ui()
+            
+        # Update the window title
+        self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
+        
+        # Update status bar
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage(
+                self.language_manager.tr("ui.status_ready", "Ready")
+            )
+            
+        # Update any other UI elements that need to be retranslated
+        if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
+            self.toolbar.retranslate_ui()
+            
+        logger.info(f"Language changed to: {self.language_manager.current_lang}")
+        
+    except Exception as e:
+        logger.error(f"Error updating UI for language change: {e}")
+        import traceback
+        traceback.print_exc()

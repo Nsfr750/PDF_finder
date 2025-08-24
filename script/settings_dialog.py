@@ -21,7 +21,8 @@ class SettingsDialog(QDialog):
     """Settings dialog for the application."""
     
     settings_changed = pyqtSignal()
-    language_changed = pyqtSignal()
+    # Signal emitted when the language is changed, with the new language code
+    language_changed = pyqtSignal(str)
     requires_restart = pyqtSignal()
     
     def __init__(self, parent=None, language_manager=None):
@@ -311,11 +312,12 @@ class SettingsDialog(QDialog):
             if idx >= 0:
                 self.backend_combo.setCurrentIndex(idx)
             self.ghostscript_path_edit.setText(settings.get('pdf.ghostscript_path', '') or '')
+            
             # Pre-fill backend status on load (best-effort, non-blocking)
             try:
                 self.test_backends(inline_only=True)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Could not test backends on load: {e}")
             
             logger.debug("Settings loaded")
             
@@ -323,91 +325,86 @@ class SettingsDialog(QDialog):
             logger.error(f"ERROR in load_settings: {e}")
             import traceback
             traceback.print_exc()
-            raise
     
     def save_settings(self):
         """Save settings from the dialog."""
         logger.debug("Saving settings")
         try:
-            # Get the selected language
-            new_language = self.language_combo.currentData()
+            # Get the selected language code
+            lang_code = self.language_combo.currentData()
             
-            # Save language
-            settings.set('app.language', new_language)
-            
+            # Check if language was changed
+            if lang_code and lang_code != settings.get('app.language'):
+                settings.set('app.language', lang_code)
+                # Emit the language_changed signal with the new language code
+                self.language_changed.emit(lang_code)
+                logger.debug(f"Language changed to: {lang_code}")
+                self._language_was_changed = True
+                
             # Save theme
-            settings.set('app.theme', self.theme_combo.currentData())
+            theme = self.theme_combo.currentData()
+            settings.set('app.theme', theme)
             
-            # Save other settings
+            # Save application settings
             settings.set('app.check_updates', self.check_updates.isChecked())
             settings.set('app.auto_save', self.auto_save.isChecked())
             
-            # Save PDF backend settings
+            # Save PDF settings
             settings.set('pdf.backend', self.backend_combo.currentData())
             settings.set('pdf.ghostscript_path', self.ghostscript_path_edit.text().strip())
             
-            # Emit signal that settings have changed
-            self.settings_changed.emit()
-            
-            # If language changed, emit a specific signal
-            if new_language != self.initial_language:
-                self.language_changed.emit()
-                self._language_was_changed = True
-            
-            logger.debug("Settings saved")
+            logger.debug("Settings saved successfully")
+            return True
             
         except Exception as e:
-            logger.error(f"ERROR in save_settings: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+            logger.error(f"Error saving settings: {e}", exc_info=True)
+            return False
     
     def apply_settings(self):
         """Apply settings without closing the dialog."""
         logger.debug("Applying settings")
         try:
-            self.save_settings()
-            QMessageBox.information(
-                self,
-                self.tr("settings_dialog.saved", "Settings Saved"),
-                self.tr("settings_dialog.saved_message", "Your settings have been saved.")
-            )
-            
-            logger.debug("Settings applied")
+            if self.save_settings():
+                QMessageBox.information(
+                    self,
+                    self.tr("settings_dialog.saved", "Settings Saved"),
+                    self.tr("settings_dialog.saved_message", "Your settings have been saved.")
+                )
+                logger.debug("Settings applied")
             
         except Exception as e:
             logger.error(f"ERROR in apply_settings: {e}")
             import traceback
             traceback.print_exc()
-            raise
+            QMessageBox.critical(
+                self,
+                self.tr("settings_dialog.error", "Error"),
+                self.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
+            )
     
     def accept(self):
         """Handle OK button click."""
         logger.debug("Accepting settings")
         try:
-            self.save_settings()
-            
-            # If language was changed, we need to restart the application
-            if hasattr(self, '_language_was_changed') and self._language_was_changed:
-                reply = QMessageBox.information(
-                    self,
-                    self.tr("settings_dialog.restart_required", "Restart Required"),
-                    self.tr("settings_dialog.restart_message", 
-                          "The application needs to be restarted for language changes to take effect.\n"
-                          "Do you want to restart now?"),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
+            if self.save_settings():
+                # If language was changed, inform the user that a restart is needed
+                if hasattr(self, '_language_was_changed') and self._language_was_changed:
+                    QMessageBox.information(
+                        self,
+                        self.tr("settings_dialog.restart_required", "Restart Required"),
+                        self.tr("settings_dialog.restart_message", 
+                              "The application needs to restart for language changes to take effect.")
+                    )
+                super().accept()
                 
-                if reply == QMessageBox.StandardButton.Yes:
-                    # Emit a signal that the application needs to restart
-                    self.requires_restart.emit()
-            
-            super().accept()
-            
-            logger.debug("Settings accepted")
-            
         except Exception as e:
             logger.error(f"ERROR in accept: {e}")
             import traceback
             traceback.print_exc()
-            raise
+            QMessageBox.critical(
+                self,
+                self.tr("settings_dialog.error", "Error"),
+                self.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
+            )
+    
+    # End of SettingsDialog class

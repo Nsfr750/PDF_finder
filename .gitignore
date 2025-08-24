@@ -125,3 +125,4 @@ nuitka_build_win.py
 os
 sys
 build_linux.sh
+config/settings.json

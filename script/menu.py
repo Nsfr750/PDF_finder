@@ -72,16 +72,20 @@ class MenuBar(QObject):
     
     def retranslate_ui(self):
         """Retranslate all menu items when the language changes."""
-        # Rebuild all menus with the new language
-        self.setup_menus()
-        
-        # Update recent files menu if it exists
-        if hasattr(self.parent, 'recent_files_manager'):
-            self.update_recent_files(self.parent.recent_files_manager.get_recent_files())
-        
-        # Notify parent that the language has changed
-        if hasattr(self.parent, 'on_language_changed'):
-            self.parent.on_language_changed()
+        try:
+            # Rebuild all menus with the new language
+            self.setup_menus()
+            
+            # Update recent files menu if it exists
+            if hasattr(self.parent, 'recent_files_manager'):
+                self.update_recent_files(self.parent.recent_files_manager.get_recent_files())
+            
+            logger.debug("Menu bar retranslated successfully")
+            
+        except Exception as e:
+            logger.error(f"Error retranslating menu bar: {e}")
+            import traceback
+            traceback.print_exc()
     
     def update_recent_files(self, recent_files):
         """Update the recent files menu with the given list of files.
@@ -143,9 +147,19 @@ class MenuBar(QObject):
         if hasattr(self.parent, 'recent_files_manager'):
             self.parent.recent_files_manager.clear()
     
-    def on_language_changed(self):
-        """Handle language change event."""
-        self.retranslate_ui()
+    def on_language_changed(self, language_code: str):
+        """Handle language change events.
+        
+        Args:
+            language_code: The new language code (e.g., 'en', 'it')
+        """
+        try:
+            logger.debug(f"Language changed to: {language_code}")
+            self.retranslate_ui()
+        except Exception as e:
+            logger.error(f"Error in on_language_changed: {e}")
+            import traceback
+            traceback.print_exc()
     
     def create_file_menu(self) -> QMenu:
         """Create the File menu.
