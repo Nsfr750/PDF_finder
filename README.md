@@ -13,7 +13,7 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 🔍 **Smart PDF Comparison**: Find duplicate PDFs based on content, not just file names or sizes
 - 📝 **Text-based Comparison**: Identify duplicates even with minor visual differences using advanced text analysis
 - 👁 **Built-in PDF Viewer**: Preview PDFs directly within the application
-- 📋 **Dual-View Interface**: View both file list and duplicates in separate tabs
+- 📋 **Dual-View Interface**: View both file list and duplicates groups in separate tabs
 - 🎯 **Advanced Filtering**: Filter by file size, modification date, and name patterns
 - 🚀 **Fast Scanning**: Optimized algorithms for quick scanning of large PDF collections
 - 🎨 **Intuitive UI**: Clean and user-friendly interface with light/dark theme support
