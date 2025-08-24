@@ -121,6 +121,10 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 - Thanks to all contributors who have helped improve PDF Duplicate Finder
 - Built with ❤️ using Python and PyQt6
 
+## 🐞 Known Bugs
+
+- Language selection doesn't work
+
 ---
 
 📅 **Last Updated**: August 2025  
