@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
     QListWidget, QLabel, QFrame, QStatusBar, QTreeWidget,
     QTreeWidgetItem, QHeaderView, QSizePolicy, QMenuBar, QToolBar,
-    QApplication
+    QApplication, QTabWidget, QStackedWidget, QMenu, QPushButton, QListWidgetItem
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QAction, QIcon
@@ -39,10 +39,16 @@ class MainUI(QWidget):
         self.main_layout.setContentsMargins(4, 4, 4, 4)
         self.main_layout.setSpacing(4)
         
-        # Create main horizontal splitter for file list and preview
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        # Create tab widget for file list and duplicates
+        self.tab_widget = QTabWidget()
         
-        # Left panel - File list with label (30% width)
+        # Tab 1: File List and Preview
+        tab1 = QWidget()
+        tab1_layout = QHBoxLayout(tab1)
+        tab1_layout.setContentsMargins(0, 0, 0, 0)
+        tab1_layout.setSpacing(4)
+        
+        # Left panel - File list (30% width)
         file_list_container = QWidget()
         file_list_layout = QVBoxLayout(file_list_container)
         file_list_layout.setContentsMargins(0, 0, 4, 0)
@@ -52,12 +58,24 @@ class MainUI(QWidget):
         file_list_label.setStyleSheet("font-weight: bold; padding: 4px;")
         file_list_layout.addWidget(file_list_label)
         
+        # Create file list with extended selection mode
         self.file_list = QListWidget()
-        self.file_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Enable multi-selection with Shift/Ctrl
         self.file_list.itemDoubleClicked.connect(self.on_file_double_clicked)
+        
+        # Enable keyboard navigation
+        self.file_list.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.file_list.setDragEnabled(True)
+        self.file_list.setDefaultDropAction(Qt.DropAction.CopyAction)
+        self.file_list.setSelectionBehavior(QListWidget.SelectionBehavior.SelectItems)
+        
+        # Add select/deselect all context menu
+        self.file_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.file_list.customContextMenuRequested.connect(self.show_context_menu)
+        
         file_list_layout.addWidget(self.file_list)
         
-        # Right panel - Preview with label (70% width)
+        # Right panel - Preview (70% width)
         preview_container = QWidget()
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(4, 0, 0, 0)
@@ -70,32 +88,150 @@ class MainUI(QWidget):
         self.preview_widget = PreviewWidget()
         preview_layout.addWidget(self.preview_widget)
         
-        # Add file list and preview to main splitter
-        main_splitter.addWidget(file_list_container)
-        main_splitter.addWidget(preview_container)
+        # Add file list and preview to tab1
+        tab1_layout.addWidget(file_list_container, 70)  # 70% width
+        tab1_layout.addWidget(preview_container, 30)    # 30% width
         
-        # Set stretch factors (30% for file list, 70% for preview)
-        main_splitter.setStretchFactor(0, 30)
-        main_splitter.setStretchFactor(1, 70)
+        # Tab 2: Duplicates Tree
+        tab2 = QWidget()
+        tab2_layout = QVBoxLayout(tab2)
+        tab2_layout.setContentsMargins(0, 0, 0, 0)
+        tab2_layout.setSpacing(4)
         
-        # Add splitter to main layout
-        self.main_layout.addWidget(main_splitter, 1)  # Takes all available space
+        # Duplicates header with buttons
+        duplicates_header = QWidget()
+        duplicates_header_layout = QHBoxLayout(duplicates_header)
+        duplicates_header_layout.setContentsMargins(0, 0, 0, 0)
+        
+        duplicates_label = QLabel(self.tr("Duplicate Files"))
+        duplicates_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        
+        # Add expand/collapse buttons
+        btn_expand = QPushButton(self.tr("Expand All"))
+        btn_expand.clicked.connect(lambda: self.duplicates_tree.expandAll())
+        btn_expand.setMaximumWidth(100)
+        
+        btn_collapse = QPushButton(self.tr("Collapse All"))
+        btn_collapse.clicked.connect(lambda: self.duplicates_tree.collapseAll())
+        btn_collapse.setMaximumWidth(100)
+        
+        # Add stretch to push buttons to the right
+        duplicates_header_layout.addWidget(duplicates_label)
+        duplicates_header_layout.addStretch()
+        duplicates_header_layout.addWidget(btn_expand)
+        duplicates_header_layout.addWidget(btn_collapse)
+        
+        tab2_layout.addWidget(duplicates_header)
+        
+        # Create the tree widget for duplicates
+        self.duplicates_tree = QTreeWidget()
+        self.duplicates_tree.setHeaderLabels([
+            self.tr("File"), 
+            self.tr("Size"), 
+            self.tr("Modified"), 
+            self.tr("Similarity")
+        ])
+        self.duplicates_tree.setColumnCount(4)
+        self.duplicates_tree.setSortingEnabled(True)
+        self.duplicates_tree.setAlternatingRowColors(True)
+        self.duplicates_tree.setAnimated(True)
+        self.duplicates_tree.setIndentation(20)
+        self.duplicates_tree.setWordWrap(True)
+        self.duplicates_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.duplicates_tree.itemDoubleClicked.connect(self.on_duplicate_double_clicked)
+        
+        # Set header properties
+        header = self.duplicates_tree.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # File path
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Size
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Modified
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Similarity
+        
+        tab2_layout.addWidget(self.duplicates_tree)
+        
+        # Add tabs to tab widget
+        self.tab_widget.addTab(tab1, self.tr("Files"))
+        self.tab_widget.addTab(tab2, self.tr("Duplicates"))
+        
+        # Add tab widget to main layout
+        self.main_layout.addWidget(self.tab_widget)
         
         # Initialize the preview widget with placeholder
         self.preview_widget.set_placeholder(self.tr("No preview available"))
+    
+    def show_context_menu(self, position):
+        """Show context menu for file list with select/deselect/delete options."""
+        menu = QMenu()
+        
+        # Add select/deselect actions
+        select_all_action = QAction(self.tr("Select All"), self)
+        select_all_action.triggered.connect(self.select_all_files)
+        menu.addAction(select_all_action)
+        
+        deselect_all_action = QAction(self.tr("Deselect All"), self)
+        deselect_all_action.triggered.connect(self.deselect_all_files)
+        menu.addAction(deselect_all_action)
+        
+        # Add separator
+        menu.addSeparator()
+        
+        # Add delete action if items are selected
+        if self.file_list.selectedItems():
+            delete_action = QAction(self.tr("Delete Selected"), self)
+            delete_action.triggered.connect(self._on_delete_selected)
+            delete_action.setIcon(QApplication.style().standardIcon(
+                QStyle.StandardPixmap.SP_TrashIcon
+            ))
+            menu.addAction(delete_action)
+        
+        menu.exec(self.file_list.viewport().mapToGlobal(position))
+    
+    def _on_delete_selected(self):
+        """Handle delete selected action from context menu."""
+        if hasattr(self.parent(), 'on_delete_selected'):
+            self.parent().on_delete_selected()
+    
+    def select_all_files(self):
+        """Select all files in the file list."""
+        self.file_list.selectAll()
+    
+    def deselect_all_files(self):
+        """Deselect all files in the file list."""
+        self.file_list.clearSelection()
     
     def on_file_double_clicked(self, item):
         """Handle double-click on a file in the file list."""
         file_path = item.text()
         if file_path and os.path.exists(file_path):
-            self.preview_widget.load_pdf(file_path)
+            try:
+                # First try to open with the PDF viewer
+                from script.PDF_viewer import PDFViewer, show_pdf_viewer
+                
+                # Usa la funzione show_pdf_viewer invece di creare direttamente l'istanza
+                show_pdf_viewer(file_path=file_path, parent=self, language_manager=self.language_manager)
+            except Exception as e:
+                # Fall back to preview widget if viewer fails
+                import logging
+                logging.error(f"Failed to open PDF viewer: {e}", exc_info=True)
+                if hasattr(self, 'preview_widget'):
+                    self.preview_widget.load_pdf(file_path)
     
     def on_duplicate_double_clicked(self, item, column):
         """Handle double-click on a duplicate file in the tree."""
         if item.parent():  # This is a file item (not a group header)
             file_path = item.text(0)  # Get the file path from the first column
             if file_path and os.path.exists(file_path):
-                self.preview_widget.load_pdf(file_path)
+                try:
+                    # Use the show_pdf_viewer function instead of creating the instance directly
+                    from script.PDF_viewer import show_pdf_viewer
+                    show_pdf_viewer(file_path=file_path, parent=self, language_manager=self.language_manager)
+                except Exception as e:
+                    # Fall back to preview widget if viewer fails
+                    import logging
+                    logging.error(f"Failed to open PDF viewer: {e}", exc_info=True)
+                    if hasattr(self, 'preview_widget'):
+                        self.preview_widget.load_pdf(file_path)
     
     def update_preview(self, file_path):
         """Update the preview with the selected file.
@@ -131,45 +267,104 @@ class MainUI(QWidget):
         Args:
             duplicates: List of duplicate file groups, where each group is a list of file info dicts or strings
         """
-        if not hasattr(self, 'duplicates_tree'):
-            return
-            
-        self.duplicates_tree.clear()
+        import logging
+        logger = logging.getLogger(__name__)
         
-        for group_idx, group in enumerate(duplicates, 1):
-            # Skip if group is not iterable
-            if not hasattr(group, '__iter__') or isinstance(group, str):
-                logger.warning(f"Skipping invalid group {group_idx}: not iterable or is a string")
-                continue
+        try:
+            if not hasattr(self, 'duplicates_tree'):
+                logger.error("duplicates_tree widget not found in UI")
+                return
                 
-            # Create a group item
-            group_item = QTreeWidgetItem([
-                self.tr("Group {}").format(group_idx),
-                "", "", ""
-            ])
-            group_item.setExpanded(True)
+            logger.info(f"Updating duplicates tree with {len(duplicates)} groups")
+            self.duplicates_tree.clear()
+            self.file_list.clear()  # Clear the file list in tab1
             
-            # Add files to the group
-            for file_info in group:
-                if isinstance(file_info, str):
-                    # If file_info is a string, treat it as the path
-                    file_item = QTreeWidgetItem([file_info, "", "", ""])
-                elif isinstance(file_info, dict):
-                    # If file_info is a dictionary, extract the values
-                    file_item = QTreeWidgetItem([
-                        str(file_info.get('path', '')),
-                        self._format_file_size(file_info.get('size', 0)),
-                        self._format_timestamp(file_info.get('modified', 0)),
-                        f"{file_info.get('similarity', 0) * 100:.1f}%" if 'similarity' in file_info else ""
-                    ])
-                else:
-                    # Skip invalid file info
-                    logger.warning(f"Skipping invalid file info: {file_info}")
+            if not duplicates:
+                no_duplicates = QTreeWidgetItem([self.tr("No duplicate files found."), "", "", ""])
+                self.duplicates_tree.addTopLevelItem(no_duplicates)
+                self.file_list.addItem(self.tr("No duplicate files found."))
+                return
+            
+            # Set to store all unique file paths to avoid duplicates in the file list
+            all_files = set()
+            
+            for group_idx, group in enumerate(duplicates, 1):
+                if not group:
                     continue
-                    
-                group_item.addChild(file_item)
                 
-            self.duplicates_tree.addTopLevelItem(group_item)
+                # Create a group header
+                group_item = QTreeWidgetItem([f"Group {group_idx} - {len(group)} files"])
+                group_item.setData(0, Qt.ItemDataRole.UserRole, group_idx)
+                group_item.setExpanded(True)
+                
+                valid_files = 0
+                
+                # Add files to the group
+                for file_info in group:
+                    try:
+                        if isinstance(file_info, str):
+                            # If file_info is a string, treat it as the path
+                            file_path = file_info
+                            file_item = QTreeWidgetItem([file_path, "", "", ""])
+                            valid_files += 1
+                        elif isinstance(file_info, dict):
+                            # If file_info is a dictionary, extract the values
+                            file_path = str(file_info.get('path', ''))
+                            file_item = QTreeWidgetItem([
+                                file_path,
+                                self._format_file_size(file_info.get('size', 0)),
+                                self._format_timestamp(file_info.get('modified', 0)),
+                                f"{file_info.get('similarity', 0) * 100:.1f}%" if 'similarity' in file_info else ""
+                            ])
+                            valid_files += 1
+                        else:
+                            logger.warning(f"Skipping invalid file info type: {type(file_info).__name__}")
+                            continue
+                        
+                        # Add to the tree
+                        group_item.addChild(file_item)
+                        
+                        # Add to the set of all files (if not already present)
+                        if file_path and file_path not in all_files:
+                            all_files.add(file_path)
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing file info: {e}", exc_info=True)
+                        continue
+                
+                # Only add the group if it contains valid files
+                if valid_files > 0:
+                    self.duplicates_tree.addTopLevelItem(group_item)
+                    logger.debug(f"Added group {group_idx} with {valid_files} files")
+            
+            # Add all unique files to the file list in tab1
+            self.file_list.clear()
+            for file_path in sorted(all_files):
+                item = QListWidgetItem(file_path)
+                item.setData(Qt.ItemDataRole.UserRole, file_path)
+                self.file_list.addItem(item)
+                
+            # If no files were added, show a message
+            if self.file_list.count() == 0:
+                self.file_list.addItem(self.tr("No files to display"))
+                
+            # Expand all groups by default
+            self.duplicates_tree.expandAll()
+            
+            # Resize columns to fit content
+            for i in range(self.duplicates_tree.columnCount()):
+                self.duplicates_tree.resizeColumnToContents(i)
+                
+            logger.info(f"Duplicates tree updated with {self.duplicates_tree.topLevelItemCount()} groups and {len(all_files)} unique files in the list")
+            
+            # Switch to the duplicates tab to show results
+            if hasattr(self, 'tab_widget') and self.duplicates_tree.topLevelItemCount() > 0:
+                self.tab_widget.setCurrentIndex(1)  # Switch to Duplicates tab
+            
+        except Exception as e:
+            logger.error(f"Error updating duplicates tree: {e}", exc_info=True)
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage(self.tr("Error updating file list"), 5000)
     
     def _format_file_size(self, size_bytes):
         """Format file size in bytes to human-readable format."""

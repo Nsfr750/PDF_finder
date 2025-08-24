@@ -15,7 +15,7 @@ from .settings_dialog import SettingsDialog
 from .help import HelpDialog
 
 # Version information
-__version__ = '2.10.0'
+__version__ = '2.12.0'
 __author__ = 'Nsfr750'
 __email__ = 'nsfr750@yandex.com'
 

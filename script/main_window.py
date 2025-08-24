@@ -352,6 +352,59 @@ class MainWindow(QMainWindow):
             if hasattr(self, 'on_toggle_toolbar'):
                 self.menu_bar.actions.get('toggle_toolbar').toggled.connect(self.on_toggle_toolbar)
 
+    def on_delete_selected(self):
+        """Handle deletion of selected files."""
+        try:
+            selected_items = self.main_ui.file_list.selectedItems()
+            if not selected_items:
+                return
+
+            file_paths = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items if item.data(Qt.ItemDataRole.UserRole)]
+            if not file_paths:
+                return
+
+            # Import delete function
+            from script.delete import delete_files
+
+            # Let delete_files handle the confirmation dialog
+            success, failed = delete_files(
+                file_paths,
+                parent=self,
+                use_recycle_bin=self.settings.get('deletion.use_recycle_bin', True)
+            )
+
+            # Update UI based on results
+            if success > 0:
+                self.status_bar.showMessage(
+                    self.language_manager.tr(
+                        "status.deleted_success",
+                        "Successfully moved {count} file(s) to Recycle Bin"
+                    ).format(count=success)
+                )
+                # A more robust way to remove items from the list
+                for item in list(selected_items): # Make a copy for safe iteration
+                    row = self.main_ui.file_list.row(item)
+                    if row >= 0:
+                        self.main_ui.file_list.takeItem(row)
+
+            if failed > 0:
+                QMessageBox.warning(
+                    self,
+                    self.language_manager.tr("dialog.delete_error_title", "Deletion Incomplete"),
+                    self.language_manager.tr(
+                        "dialog.delete_error_msg",
+                        "Failed to delete {failed} of {total} file(s)."
+                    ).format(failed=failed, total=len(file_paths))
+                )
+
+        except Exception as e:
+            logger.error(f"Error during file deletion: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.delete_failed", "An unexpected error occurred: %s") % str(e)
+            )
+    
     def on_file_selection_changed(self):
         """Update preview and status when file selection changes."""
         try:

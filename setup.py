@@ -11,12 +11,13 @@ def create_version_info():
     """Generate version info file with build information."""
     version = "2.10.0"  # Default version if not found
     try:
-        with open("script/version.py", encoding="utf-8") as fp:
-            for line in fp:
-                if line.startswith("__version__"):
-                    version = line.split('=')[1].strip().strip('\"\'')
-                    break
-    except (FileNotFoundError, Exception) as e:
+        # Import the version module directly to get the version
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent / "script"))
+        from version import __version__
+        version = __version__
+    except (ImportError, Exception) as e:
         print(f"Warning: Could not read version from script/version.py: {e}")
     
     assets_dir = Path("assets")

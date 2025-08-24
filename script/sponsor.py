@@ -60,8 +60,8 @@ class SponsorDialog(QDialog):
         # Monero
         monero_address = "47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF"
         monero_label = QLabel(self.tr("sponsor.monero.label", "Monero:"))
-        monero_address_label = QLabel(monero_address)
-        monero_address_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        monero_xmr= "XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR XMR"
+        monero_address_label = QLabel(monero_xmr)
         monero_address_label.setStyleSheet("""
             QLabel {
                 font-family: monospace;

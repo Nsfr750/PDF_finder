@@ -244,10 +244,10 @@ class DocsDialog(QDialog):
                 font-family: Arial, sans-serif; 
                 line-height: 1.6;
                 margin: 20px;
-                color: #333;
+                color: white;
             }
-            h1 { color: #2c3e50; }
-            h2 { color: #3498db; margin-top: 20px; }
+            h1 { color: #white; }
+            h2 { color: #white; margin-top: 20px; }
             code { 
                 background-color: #f5f5f5; 
                 padding: 2px 5px; 

@@ -119,3 +119,9 @@ build_nuitka.py
 nuitka.config.toml
 nix.spec
 lin.bat
+pyinstaller_build_win.py
+pyinstaller_build_linux.py
+nuitka_build_win.py
+os
+sys
+build_linux.sh

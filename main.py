@@ -32,7 +32,7 @@ from PyQt6.QtCore import (
     Qt, QSize, QTimer, QThread, pyqtSignal, pyqtSlot,
     QObject, QEvent, QPoint, QRect, QRectF, QUrl,
     QLocale, QTranslator, QLibraryInfo, QMetaObject, Q_ARG,
-    QMutex, QMutexLocker
+    QMutex, QMutexLocker, QCoreApplication
 )
 
 from datetime import datetime
@@ -672,11 +672,22 @@ class PDFDuplicateFinder(MainWindow):
                     self.tr("Preparing to scan: {}").format(folder_path)
                 )
                 self.progress_dialog.cancelled.connect(self.cancel_scan)
-            
-            # Show the dialog
-            self.progress_dialog.show()
-            self.progress_dialog.raise_()
-            self.progress_dialog.activateWindow()
+                
+                # Configure dialog properties
+                self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+                self.progress_dialog.setWindowFlags(
+                    self.progress_dialog.windowFlags() & 
+                    ~Qt.WindowType.WindowContextHelpButtonHint |
+                    Qt.WindowType.WindowStaysOnTopHint
+                )
+                
+                # Show the dialog
+                self.progress_dialog.show()
+                self.progress_dialog.raise_()
+                self.progress_dialog.activateWindow()
+                
+                # Force update to ensure the dialog is visible
+                QCoreApplication.processEvents()
             
             # Initialize scanner if needed
             if not hasattr(self, '_scanner') or self._scanner is None:
@@ -700,7 +711,7 @@ class PDFDuplicateFinder(MainWindow):
             self._cleanup_scan()
             QMessageBox.critical(
                 self,
-                self.tr("Scan Error"),
+                self.tr("Error"),
                 self.tr("Failed to start scan: {}".format(str(e)))
             )
     
@@ -855,14 +866,54 @@ class PDFDuplicateFinder(MainWindow):
     def on_export_csv(self):
         """Export the latest scan results to a CSV file."""
         try:
-            results = getattr(self, 'last_scan_duplicates', [])
-            if not results:
+            # Get the duplicates from last scan
+            if not hasattr(self, 'last_scan_duplicates') or not self.last_scan_duplicates:
                 QMessageBox.information(
                     self,
                     self.tr("Export CSV"),
                     self.tr("No results to export. Please run a scan first.")
                 )
                 return
+                
+            duplicate_groups = self.last_scan_duplicates
+            if not duplicate_groups:
+                QMessageBox.information(
+                    self,
+                    self.tr("Export CSV"),
+                    self.tr("No results to export. Please run a scan first.")
+                )
+                return
+            
+            # Function to extract files from a group
+            def get_files_from_group(group):
+                if isinstance(group, dict):
+                    if 'files' in group and hasattr(group['files'], '__iter__'):
+                        return group['files']
+                    return group  # Assume the dict itself contains file info
+                elif hasattr(group, 'files') and hasattr(group.files, '__iter__'):
+                    return group.files
+                elif hasattr(group, '__iter__') and not isinstance(group, (str, bytes)):
+                    return group  # Assume it's already a list of files
+                return [group]  # Single file
+            
+            # Collect all files from all groups
+            all_files = []
+            for group in duplicate_groups:
+                try:
+                    files = get_files_from_group(group)
+                    if files:
+                        all_files.extend(files)
+                except Exception as e:
+                    logger.error(f"Error processing group: {e}", exc_info=True)
+            
+            if not all_files:
+                QMessageBox.warning(
+                    self,
+                    self.tr("Export CSV"),
+                    self.tr("No files found in scan results to export.")
+                )
+                return
+                
             # Ask for destination file
             dest_path, _ = QFileDialog.getSaveFileName(
                 self,
@@ -870,36 +921,85 @@ class PDFDuplicateFinder(MainWindow):
                 "duplicates.csv",
                 self.tr("CSV Files (*.csv)")
             )
+            
             if not dest_path:
+                return  # User cancelled
+                
+            # Ensure the file has .csv extension
+            if not dest_path.lower().endswith('.csv'):
+                dest_path += '.csv'
+                
+            # Function to get file info
+            def get_file_info(file_obj):
+                if isinstance(file_obj, dict):
+                    return {
+                        'path': str(file_obj.get('path', '')),
+                        'size': str(file_obj.get('size', '')),
+                        'modified': str(file_obj.get('modified', ''))
+                    }
+                elif hasattr(file_obj, 'path') and hasattr(file_obj, 'size'):
+                    return {
+                        'path': str(file_obj.path),
+                        'size': str(file_obj.size),
+                        'modified': str(getattr(file_obj, 'modified', ''))
+                    }
+                return {'path': str(file_obj), 'size': '', 'modified': ''}
+                
+            # Prepare data for CSV
+            csv_data = []
+            for file_obj in all_files:
+                try:
+                    file_info = get_file_info(file_obj)
+                    csv_data.append([
+                        file_info['path'],
+                        file_info['size'],
+                        file_info['modified']
+                    ])
+                except Exception as e:
+                    logger.error(f"Error processing file {file_obj}: {e}")
+                    continue
+                    
+            if not csv_data:
+                QMessageBox.warning(
+                    self,
+                    self.tr("Export CSV"),
+                    self.tr("No valid file data found to export.")
+                )
                 return
-            # Write CSV
-            with open(dest_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(["group", "path", "filename", "size_bytes", "size_kb", "modified_epoch", "md5"]) 
-                for group_idx, group in enumerate(results, start=1):
-                    for info in group or []:
-                        if not isinstance(info, dict):
-                            continue
-                        path = info.get('path', '')
-                        filename = info.get('filename', os.path.basename(path))
-                        size = int(info.get('size', 0) or 0)
-                        size_kb = f"{size/1024:.1f}"
-                        modified = info.get('modified', 0)
-                        md5 = info.get('md5', '')
-                        writer.writerow([group_idx, path, filename, size, size_kb, modified, md5])
-            QMessageBox.information(
-                self,
-                self.tr("Export CSV"),
-                self.tr("Export completed: %s") % dest_path
-            )
+                
+            # Write to CSV
+            try:
+                with open(dest_path, 'w', encoding='utf-8') as f:
+                    # Write header
+                    f.write('File Path,Size (bytes),Last Modified\n')
+                    # Write data
+                    for row in csv_data:
+                        # Escape commas and quotes in the data
+                        escaped_row = ['"' + str(field).replace('"', '""') + '"' for field in row]
+                        f.write(','.join(escaped_row) + '\n')
+                        
+                QMessageBox.information(
+                    self,
+                    self.tr("Export Successful"),
+                    self.tr(f"Successfully exported {len(csv_data)} files to:\n{dest_path}")
+                )
+                
+            except Exception as e:
+                logger.error(f"Error writing to CSV: {e}", exc_info=True)
+                QMessageBox.critical(
+                    self,
+                    self.tr("Export Failed"),
+                    self.tr(f"Failed to export to CSV: {str(e)}")
+                )
+            
         except Exception as e:
-            logger.error(f"Error exporting CSV: {e}", exc_info=True)
+            logger.error(f"Unexpected error in export: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
-                self.tr("Error"),
-                self.tr("Failed to export CSV: %s") % str(e)
+                self.tr("Export Error"),
+                self.tr(f"An unexpected error occurred: {str(e)}")
             )
-    
+
 def main():
     """Main entry point for the application."""
     # Create the application first

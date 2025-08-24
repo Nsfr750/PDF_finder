@@ -98,8 +98,9 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
                 log_dir_path = Path(log_dir)
                 log_dir_path.mkdir(parents=True, exist_ok=True)
             
-            # Create log file in the logs directory
-            log_file = log_dir_path / f"{name}.log"
+            # Create log file with current date in the logs directory
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            log_file = log_dir_path / f"{name}_{current_date}.log"
             
             # Create rotating file handler with error handling
             file_handler = logging.handlers.RotatingFileHandler(
@@ -133,102 +134,211 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
     original_excepthook = sys.excepthook
     original_threading_excepthook = threading.excepthook if hasattr(threading, 'excepthook') else None
     
+    # Flag to prevent recursive error logging
+    _handling_exception = False
+    
     def handle_exception(exc_type: Type[BaseException], exc_value: BaseException, 
                         exc_traceback: Optional[TracebackType]) -> None:
         """Handle uncaught exceptions with full traceback and context information."""
-        # Skip keyboard interrupt to allow the program to exit
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        global _handling_exception
+        
+        # Prevent recursive error handling
+        if _handling_exception:
+            if original_excepthook:
+                return original_excepthook(exc_type, exc_value, exc_traceback)
             return
+            
+        _handling_exception = True
         
-        # Get the full traceback
-        tb_text = format_traceback(exc_type, exc_value, exc_traceback)
-        
-        # Log the exception with full traceback
-        logger.critical(
-            "Unhandled exception: %s\nFull traceback:\n%s",
-            str(exc_value),
-            tb_text,
-            exc_info=(exc_type, exc_value, exc_traceback)
-        )
-        
-        # Also log the current thread information
         try:
-            current_thread = threading.current_thread()
-            logger.debug(
-                "Exception in thread %s (alive=%s, daemon=%s, ident=%s)",
-                current_thread.name,
-                current_thread.is_alive(),
-                current_thread.daemon,
-                current_thread.ident
-            )
-        except Exception as e:
-            logger.error("Error while gathering thread info: %s", e, exc_info=True)
+            # Skip keyboard interrupt to allow the program to exit
+            if exc_type is not None and issubclass(exc_type, KeyboardInterrupt):
+                if original_excepthook:
+                    return original_excepthook(exc_type, exc_value, exc_traceback)
+                return
+            
+            # Get the full traceback
+            tb_text = format_traceback(exc_type, exc_value, exc_traceback)
+            
+            # Log the exception with full traceback, but handle potential logging errors
+            try:
+                logger.critical(
+                    "Unhandled exception: %s\nFull traceback:\n%s",
+                    str(exc_value) if exc_value else 'No error message',
+                    tb_text
+                )
+            except Exception as log_err:
+                # If logging fails, write to stderr as last resort
+                sys.stderr.write(f"Error in logging system: {log_err}\n")
+                sys.stderr.write(f"Original error: {exc_type.__name__}: {exc_value}\n")
+                sys.stderr.write(f"{tb_text}\n")
         
-        # Also log to stderr if not already going there
-        if not any(isinstance(h, logging.StreamHandler) and h.stream == sys.stderr 
-                  for h in logger.handlers):
-            sys.stderr.write(f"\nUnhandled exception: {tb_text}\n")
+            # Also log the current thread information
+            try:
+                current_thread = threading.current_thread()
+                logger.debug(
+                    "Exception in thread %s (alive=%s, daemon=%s, ident=%s)",
+                    getattr(current_thread, 'name', 'unknown'),
+                    getattr(current_thread, 'is_alive', lambda: 'N/A')(),
+                    getattr(current_thread, 'daemon', 'N/A'),
+                    getattr(current_thread, 'ident', 'N/A')
+                )
+            except Exception as e:
+                try:
+                    logger.error("Error while gathering thread info: %s", str(e))
+                except:
+                    sys.stderr.write(f"Error while gathering thread info: {e}\n")
+            
+            # Also log to stderr if not already going there
+            try:
+                if not any(isinstance(h, logging.StreamHandler) and h.stream == sys.stderr 
+                          for h in logger.handlers):
+                    sys.stderr.write(f"\nUnhandled exception: {tb_text}\n")
+            except Exception as e:
+                sys.stderr.write(f"Error writing to stderr: {e}\n")
+                
+        finally:
+            _handling_exception = False
+            
+        # Call the original exception handler if available
+        if original_excepthook and original_excepthook != sys.__excepthook__:
+            original_excepthook(exc_type, exc_value, exc_traceback)
     
     def handle_thread_exception(args: threading.ExceptHookArgs) -> None:
         """Handle uncaught exceptions in threads with full context."""
+        global _handling_exception
+        
+        # Prevent recursive error handling
+        if _handling_exception:
+            if original_threading_excepthook:
+                return original_threading_excepthook(args)
+            return
+            
+        _handling_exception = True
+        
         try:
             thread_name = 'unknown'
             if hasattr(args, 'thread') and args.thread:
                 thread = args.thread
                 thread_name = getattr(thread, 'name', 'unnamed')
-                
-            tb_text = format_traceback(args.exc_type, args.exc_value, args.exc_traceback)
             
-            logger.error(
-                "Unhandled exception in thread %s: %s\nFull traceback:\n%s",
-                thread_name,
-                str(args.exc_value),
-                tb_text,
-                exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
-            )
+            # Safely get exception info from args
+            exc_type = getattr(args, 'exc_type', type(args.exc_value) if hasattr(args, 'exc_value') else type(None))
+            exc_value = getattr(args, 'exc_value', None)
+            exc_traceback = getattr(args, 'exc_traceback', None)
+                
+            tb_text = format_traceback(exc_type, exc_value, exc_traceback)
+            
+            # Safely log the error
+            try:
+                logger.error(
+                    "Unhandled exception in thread %s: %s\nFull traceback:\n%s",
+                    thread_name,
+                    str(exc_value) if exc_value else 'No error message',
+                    tb_text
+                )
+            except Exception as log_err:
+                sys.stderr.write(f"Error in thread exception handler logging: {log_err}\n")
+                sys.stderr.write(f"Original error in thread {thread_name}: {exc_type.__name__}: {exc_value}\n")
+                sys.stderr.write(f"{tb_text}\n")
+                
         except Exception as e:
-            logger.critical("Error in thread exception handler: %s", e, exc_info=True)
+            try:
+                logger.critical("Critical error in thread exception handler: %s", str(e))
+            except:
+                sys.stderr.write(f"Critical error in thread exception handler: {e}\n")
+        finally:
+            _handling_exception = False
+            
+            # Call the original exception handler if available
+            if original_threading_excepthook and original_threading_excepthook != threading.excepthook:
+                original_threading_excepthook(args)
     
-    # Set the exception handlers
-    sys.excepthook = handle_exception
+    # Set the exception handlers only if they haven't been overridden by something else
+    if sys.excepthook == sys.__excepthook__:
+        sys.excepthook = handle_exception
+    
+    # Check for threading.excepthook and threading.__excepthook__ safely
     if hasattr(threading, 'excepthook'):
-        threading.excepthook = handle_thread_exception
+        original_threading_excepthook = getattr(threading, 'excepthook', None)
+        threading_excepthook_default = getattr(threading, '__excepthook__', None)
+        
+        # Only set the excepthook if it hasn't been overridden
+        if original_threading_excepthook == threading_excepthook_default:
+            threading.excepthook = handle_thread_exception
     
     # Redirect stdout and stderr to logger with thread safety
     class StreamToLogger:
-        """Thread-safe stream redirection to logger."""
+        """Thread-safe stream redirection to logger with protection against recursion."""
         def __init__(self, logger_instance: logging.Logger, log_level: int = logging.INFO):
             self.logger = logger_instance
             self.log_level = log_level
             self.linebuf = ''
             self._lock = threading.RLock()  # Thread lock for thread safety
+            self._in_write = False  # Flag to prevent recursion (nn True)
             
         def write(self, buf: str) -> None:
-            """Safely write buffer to logger, handling thread safety."""
-            if not buf.strip():
+            """Safely write buffer to logger, handling thread safety and preventing recursion."""
+            # Skip empty buffers and prevent recursive calls
+            if not buf.strip() or self._in_write:
                 return
                 
-            with self._lock:
-                try:
-                    # Filter out empty lines and control characters
-                    lines = [line for line in buf.rstrip().splitlines() if line.strip()]
-                    for line in lines:
-                        # Skip common control messages
-                        if line in ('Not in scanner thread!',):
-                            continue
+            self._in_write = True
+            try:
+                with self._lock:
+                    try:
+                        # Safely get the buffer content
                         try:
-                            self.logger.log(self.log_level, line.rstrip())
+                            buf_str = str(buf) if buf else ''
                         except Exception as e:
-                            # If logging fails, write to original stderr as last resort
-                            sys.__stderr__.write(f"Logging failed: {e}\n")
-                            sys.__stderr__.write(f"Original message: {line}\n")
-                except Exception as e:
-                    sys.__stderr__.write(f"Critical error in StreamToLogger: {e}\n")
+                            sys.__stderr__.write(f"Error converting buffer to string: {e}\n")
+                            return
+                            
+                        # Filter out empty lines and control characters
+                        lines = []
+                        try:
+                            lines = [line for line in buf_str.rstrip().splitlines() if line.strip()]
+                        except Exception as e:
+                            sys.__stderr__.write(f"Error processing log lines: {e}\n")
+                            return
+                            
+                        for line in lines:
+                            # Skip common control messages and potential recursive patterns
+                            skip_patterns = (
+                                'Not in scanner thread!',
+                                'Error in logging system:',
+                                'Error while gathering thread info:',
+                                'Error writing to stderr:',
+                                'Error in thread exception handler logging:',
+                                'Critical error in thread exception handler:'
+                            )
+                            
+                            if any(pattern in line for pattern in skip_patterns):
+                                continue
+                                
+                            try:
+                                self.logger.log(self.log_level, line.rstrip())
+                            except Exception as e:
+                                # If logging fails, write to original stderr as last resort
+                                # Use direct write to avoid recursion
+                                try:
+                                    sys.__stderr__.write(f"[Logging Error] {e}: {line}\n")
+                                except:
+                                    pass  # If even this fails, we're out of options
+                    except Exception as e:
+                        try:
+                            sys.__stderr__.write(f"[Critical Logging Error] {e}\n")
+                        except:
+                            pass  # If we can't write to stderr, there's nothing more we can do
+            finally:
+                self._in_write = False
                 
         def flush(self) -> None:
             """Flush the stream (no-op as we write immediately)."""
-            pass
+            try:
+                sys.__stderr__.flush()
+            except:
+                pass
     
     # Only redirect if not already redirected to avoid infinite recursion
     # and only in the main thread to prevent Qt thread issues
