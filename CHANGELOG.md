@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added in 2.12.0
 
+- Added Recent Files panel in the right sidebar for quick access to recently opened files
+- Implemented context menu for recent files with Open, Remove, and Show in Explorer options
+- Added Clear All button to clear recent files history
+- Files are automatically added to recent list when opened
+- Limited to 10 most recent files for better performance
 - Added multi-selection support in file list (Shift+Click, Ctrl+Click)
 - Added context menu with Select All/Deselect All options
 - Added Expand All/Collapse All buttons in Duplicates tab
@@ -17,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved update dialog with collapsible release notes
 
 ### Fixed
+- Improved UI layout with proper splitter between file list and recent files
+- Fixed tooltips to show full file paths in recent files list
+- Better handling of file paths with special characters
 - Fixed QAction import issue in PyQt6
 - Improved UI responsiveness during file operations
 - Fixed update dialog layout and spacing issues

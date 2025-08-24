@@ -14,9 +14,6 @@ from PyQt6.QtGui import QAction, QIcon
 # Import language manager
 from script.lang_mgr import LanguageManager
 
-# Import preview widget
-from script.preview_widget import PDFPreviewWidget as PreviewWidget
-
 class MainUI(QWidget):
     """Main UI components for the application."""
     
@@ -48,7 +45,7 @@ class MainUI(QWidget):
         tab1_layout.setContentsMargins(0, 0, 0, 0)
         tab1_layout.setSpacing(4)
         
-        # Left panel - File list (30% width)
+        # Left panel - File list (70% width)
         file_list_container = QWidget()
         file_list_layout = QVBoxLayout(file_list_container)
         file_list_layout.setContentsMargins(0, 0, 4, 0)
@@ -75,22 +72,33 @@ class MainUI(QWidget):
         
         file_list_layout.addWidget(self.file_list)
         
-        # Right panel - Preview (70% width)
-        preview_container = QWidget()
-        preview_layout = QVBoxLayout(preview_container)
-        preview_layout.setContentsMargins(4, 0, 0, 0)
-        preview_layout.setSpacing(4)
+        # Right panel - Recent Files (30% width)
+        recent_files_container = QWidget()
+        recent_files_layout = QVBoxLayout(recent_files_container)
+        recent_files_layout.setContentsMargins(4, 0, 0, 0)
+        recent_files_layout.setSpacing(4)
         
-        preview_label = QLabel(self.tr("Preview"))
-        preview_label.setStyleSheet("font-weight: bold; padding: 4px;")
-        preview_layout.addWidget(preview_label)
+        # Recent files label
+        recent_label = QLabel(self.tr("Recent Files"))
+        recent_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        recent_files_layout.addWidget(recent_label)
         
-        self.preview_widget = PreviewWidget()
-        preview_layout.addWidget(self.preview_widget)
+        # Recent files list
+        self.recent_files_list = QListWidget()
+        self.recent_files_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.recent_files_list.itemDoubleClicked.connect(self.on_recent_file_double_clicked)
+        self.recent_files_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.recent_files_list.customContextMenuRequested.connect(self.show_recent_files_context_menu)
+        recent_files_layout.addWidget(self.recent_files_list)
         
-        # Add file list and preview to tab1
+        # Add a clear button
+        clear_button = QPushButton(self.tr("Clear Recent Files"))
+        clear_button.clicked.connect(self.clear_recent_files)
+        recent_files_layout.addWidget(clear_button)
+
+        # Add file list and recent files to tab1
         tab1_layout.addWidget(file_list_container, 70)  # 70% width
-        tab1_layout.addWidget(preview_container, 30)    # 30% width
+        tab1_layout.addWidget(recent_files_container, 30)  # 30% width
         
         # Tab 2: Duplicates Tree
         tab2 = QWidget()
@@ -156,9 +164,6 @@ class MainUI(QWidget):
         
         # Add tab widget to main layout
         self.main_layout.addWidget(self.tab_widget)
-        
-        # Initialize the preview widget with placeholder
-        self.preview_widget.set_placeholder(self.tr("No preview available"))
     
     def show_context_menu(self, position):
         """Show context menu for file list with select/deselect/delete options."""
@@ -187,6 +192,57 @@ class MainUI(QWidget):
         
         menu.exec(self.file_list.viewport().mapToGlobal(position))
     
+    def on_recent_file_double_clicked(self, item):
+        """Handle double-click on a recent file."""
+        file_path = item.data(Qt.ItemDataRole.UserRole)
+        if file_path and os.path.exists(file_path):
+            # Move the clicked item to the top
+            self.add_to_recent_files(file_path)
+            # Open the file
+            if hasattr(self.parent(), 'open_file'):
+                self.parent().open_file(file_path)
+    
+    def show_recent_files_context_menu(self, position):
+        """Show context menu for recent files list."""
+        item = self.recent_files_list.itemAt(position)
+        if not item:
+            return
+            
+        menu = QMenu()
+        
+        # Open file action
+        open_action = QAction(self.tr("Open"), self)
+        open_action.triggered.connect(lambda: self.on_recent_file_double_clicked(item))
+        menu.addAction(open_action)
+        
+        # Remove from list action
+        remove_action = QAction(self.tr("Remove from list"), self)
+        remove_action.triggered.connect(lambda: self.recent_files_list.takeItem(self.recent_files_list.row(item)))
+        menu.addAction(remove_action)
+        
+        # Show in file explorer
+        show_in_explorer = QAction(self.tr("Show in Explorer"), self)
+        show_in_explorer.triggered.connect(lambda: self.show_in_explorer(item.data(Qt.ItemDataRole.UserRole)))
+        menu.addAction(show_in_explorer)
+        
+        menu.exec(self.recent_files_list.viewport().mapToGlobal(position))
+    
+    def show_in_explorer(self, file_path):
+        """Show the file in system file explorer."""
+        if os.path.exists(file_path):
+            import subprocess
+            try:
+                if os.name == 'nt':  # Windows
+                    os.startfile(os.path.dirname(file_path))
+                else:  # macOS and Linux
+                    subprocess.Popen(['xdg-open', os.path.dirname(file_path)])
+            except Exception as e:
+                print(f"Error opening file explorer: {e}")
+    
+    def clear_recent_files(self):
+        """Clear the recent files list."""
+        self.recent_files_list.clear()
+    
     def _on_delete_selected(self):
         """Handle delete selected action from context menu."""
         if hasattr(self.parent(), 'on_delete_selected'):
@@ -200,10 +256,32 @@ class MainUI(QWidget):
         """Deselect all files in the file list."""
         self.file_list.clearSelection()
     
+    def add_to_recent_files(self, file_path):
+        """Add a file to the recent files list."""
+        if not file_path or not os.path.exists(file_path):
+            return
+            
+        # Remove if already exists
+        for i in range(self.recent_files_list.count()):
+            if self.recent_files_list.item(i).data(Qt.ItemDataRole.UserRole) == file_path:
+                self.recent_files_list.takeItem(i)
+                break
+                
+        # Add to top of the list
+        item = QListWidgetItem(os.path.basename(file_path))
+        item.setData(Qt.ItemDataRole.ToolTipRole, file_path)  # Full path in tooltip
+        item.setData(Qt.ItemDataRole.UserRole, file_path)  # Store full path in user data
+        self.recent_files_list.insertItem(0, item)
+        
+        # Limit to 10 recent files
+        if self.recent_files_list.count() > 10:
+            self.recent_files_list.takeItem(self.recent_files_list.count() - 1)
+    
     def on_file_double_clicked(self, item):
         """Handle double-click on a file in the file list."""
         file_path = item.text()
         if file_path and os.path.exists(file_path):
+            self.add_to_recent_files(file_path)
             try:
                 # First try to open with the PDF viewer
                 from script.PDF_viewer import PDFViewer, show_pdf_viewer
@@ -232,25 +310,6 @@ class MainUI(QWidget):
                     logging.error(f"Failed to open PDF viewer: {e}", exc_info=True)
                     if hasattr(self, 'preview_widget'):
                         self.preview_widget.load_pdf(file_path)
-    
-    def update_preview(self, file_path):
-        """Update the preview with the selected file.
-        
-        Args:
-            file_path: Path to the file to preview.
-        """
-        if not file_path or not hasattr(self, 'preview_widget'):
-            return
-        
-        # Load the PDF in the preview widget
-        self.preview_widget.load_pdf(file_path)
-    
-    def clear_preview(self):
-        """Clear the preview area."""
-        if hasattr(self, 'preview_widget'):
-            self.preview_widget.set_placeholder(
-                self.tr("preview.no_preview", "No preview available")
-            )
     
     def update_status(self, message):
         """Update the status bar with a message.

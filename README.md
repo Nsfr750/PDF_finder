@@ -22,6 +22,7 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 🛠 **Advanced Tools**: Multiple selection modes, filtering, and sorting options
 - 🌍 **Multi-language Support**: Available in multiple languages
 - 📊 **Progress Tracking**: Real-time progress bar for file processing operations
+- ⏱ **Recent Files**: Quick access to recently opened files with context menu options
 
 ## 📦 Installation
 
