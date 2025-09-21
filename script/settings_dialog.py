@@ -32,38 +32,54 @@ class SettingsDialog(QDialog):
             parent: Parent widget
             language_manager: Language manager for translations
         """
+        print("DEBUG: SettingsDialog.__init__() called")
+        logger.debug("SettingsDialog.__init__() called")
         logger.debug("Initializing SettingsDialog")
         try:
+            print("DEBUG: Calling super().__init__(parent)")
             super().__init__(parent)
+            print("DEBUG: QDialog initialized")
             logger.debug("QDialog initialized")
             
+            print("DEBUG: Setting language_manager")
             self.language_manager = language_manager
             self.tr = language_manager.tr if language_manager else lambda key, default: default
+            print("DEBUG: language_manager set")
             
+            print("DEBUG: Getting initial_language")
             # Store the initial language to detect changes
             self.initial_language = settings.get('app.language', 'en')
+            print(f"DEBUG: initial_language: {self.initial_language}")
             
+            print("DEBUG: Setting window properties")
             # Set window properties
             self.setWindowTitle(self.tr("settings_dialog.title", "Settings"))
             self.setMinimumSize(600, 400)
+            print("DEBUG: Window properties set")
             logger.debug("Window properties set")
             
             # Set window flags to ensure it stays on top
+            print("DEBUG: Setting window flags")
             self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            print("DEBUG: Window flags set")
             logger.debug("Window flags set")
             
             # Set up the UI
+            print("DEBUG: Setting up UI")
             logger.debug("Setting up UI")
             self.setup_ui()
             
             # Load settings
+            print("DEBUG: Loading settings")
             logger.debug("Loading settings")
             self.load_settings()
             
             # Ensure the dialog is visible
+            print("DEBUG: Ensuring dialog is visible")
             self.setVisible(True)
             self.raise_()
             self.activateWindow()
+            print("DEBUG: Dialog should now be visible")
             logger.debug("Dialog should now be visible")
             
         except Exception as e:
@@ -201,6 +217,7 @@ class SettingsDialog(QDialog):
             self.language_combo = QComboBox()
             self.language_combo.addItem("English", "en")
             self.language_combo.addItem("Italiano", "it")
+            logger.debug(f"Language combo initialized with items: {self.language_combo.count()}")
             # Add more languages as needed
             
             appearance_layout.addRow(
@@ -288,13 +305,18 @@ class SettingsDialog(QDialog):
     
     def load_settings(self):
         """Load settings into the dialog."""
-        logger.debug("Loading settings")
+        logger.debug("SettingsDialog.load_settings() called")
         try:
             # Load language
             current_lang = settings.get('app.language', 'en')
+            logger.debug(f"Current language from settings: {current_lang}")
             index = self.language_combo.findData(current_lang)
+            logger.debug(f"Language combo index for '{current_lang}': {index}")
             if index >= 0:
                 self.language_combo.setCurrentIndex(index)
+                logger.debug(f"Language combo set to index {index}: {self.language_combo.currentText()}")
+            else:
+                logger.debug(f"Language '{current_lang}' not found in combo, keeping default")
             
             # Load theme
             current_theme = settings.get('app.theme', 'system')
@@ -332,14 +354,20 @@ class SettingsDialog(QDialog):
         try:
             # Get the selected language code
             lang_code = self.language_combo.currentData()
+            logger.debug(f"Selected language code: {lang_code}")
+            logger.debug(f"Current language in settings: {settings.get('app.language')}")
             
             # Check if language was changed
             if lang_code and lang_code != settings.get('app.language'):
+                logger.debug(f"Language changed from {settings.get('app.language')} to {lang_code}")
                 settings.set('app.language', lang_code)
                 # Emit the language_changed signal with the new language code
+                logger.debug(f"Emitting language_changed signal with: {lang_code}")
                 self.language_changed.emit(lang_code)
-                logger.debug(f"Language changed to: {lang_code}")
+                logger.debug(f"Language changed signal emitted for: {lang_code}")
                 self._language_was_changed = True
+            else:
+                logger.debug("Language not changed or invalid language code")
                 
             # Save theme
             theme = self.theme_combo.currentData()
@@ -362,7 +390,7 @@ class SettingsDialog(QDialog):
     
     def apply_settings(self):
         """Apply settings without closing the dialog."""
-        logger.debug("Applying settings")
+        logger.debug("SettingsDialog.apply_settings() called")
         try:
             if self.save_settings():
                 QMessageBox.information(
@@ -384,7 +412,7 @@ class SettingsDialog(QDialog):
     
     def accept(self):
         """Handle OK button click."""
-        logger.debug("Accepting settings")
+        logger.debug("SettingsDialog.accept() called")
         try:
             if self.save_settings():
                 # If language was changed, inform the user that a restart is needed

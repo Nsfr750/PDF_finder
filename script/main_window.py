@@ -105,13 +105,20 @@ class MainWindow(QMainWindow):
         Returns:
             bool: True if the language was changed successfully, False otherwise
         """
+        logger.debug(f"MainWindow.change_language called with: {lang_code}")
+        logger.debug(f"Current language_manager language: {self.language_manager.current_lang}")
+        
         if self.language_manager.set_language(lang_code):
+            logger.debug(f"LanguageManager.set_language succeeded for: {lang_code}")
             # Save the language preference
             self.settings.set('app.language', lang_code)
             # Emit the language changed signal with the language code
+            logger.debug(f"Emitting MainWindow.language_changed signal with: {lang_code}")
             self.language_changed.emit(lang_code)
             return True
-        return False
+        else:
+            logger.debug(f"LanguageManager.set_language failed for: {lang_code}")
+            return False
     
     def on_language_changed(self, language_code: str = None):
         """Handle language change events.
@@ -123,30 +130,40 @@ class MainWindow(QMainWindow):
             language_code: The language code that was changed to (e.g., 'en', 'it')
         """
         try:
+            logger.debug(f"MainWindow.on_language_changed called with: {language_code}")
+            logger.debug(f"Current language_manager language: {self.language_manager.current_lang}")
+            
             # Update the language in the language manager if a new code is provided
             if language_code and language_code != self.language_manager.current_lang:
+                logger.debug(f"Updating language_manager from {self.language_manager.current_lang} to {language_code}")
                 self.language_manager.current_lang = language_code
                 
             # Retranslate the UI
             if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
+                logger.debug("Calling menu_bar.retranslate_ui()")
                 self.menu_bar.retranslate_ui()
                 
             # Update the window title
+            logger.debug("Updating window title")
             self.setWindowTitle(self.language_manager.tr("main_window.title", "PDF Duplicate Finder"))
             
             # Update status bar
             if hasattr(self, 'status_bar'):
+                logger.debug("Updating status bar")
                 self.status_bar.showMessage(
                     self.language_manager.tr("ui.status_ready", "Ready")
                 )
                 
             # Update toolbar
             if hasattr(self, 'toolbar') and hasattr(self.toolbar, 'retranslate_ui'):
+                logger.debug("Calling toolbar.retranslate_ui()")
                 self.toolbar.retranslate_ui()
                 
-            # Update any other UI elements that need translation
-            # ...
-            
+            # Update main UI
+            if hasattr(self, 'main_ui') and hasattr(self.main_ui, 'on_language_changed'):
+                logger.debug("Calling main_ui.on_language_changed()")
+                self.main_ui.on_language_changed()
+                
             logger.info(f"Language changed to: {self.language_manager.current_lang}")
             
         except Exception as e:
@@ -365,8 +382,8 @@ class MainWindow(QMainWindow):
         self.toolbar.setObjectName("mainToolBar")
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         
-        # Create the main UI with the central widget as parent
-        self.main_ui = MainUI(central_widget)
+        # Create the main UI with the central widget as parent and shared language manager
+        self.main_ui = MainUI(central_widget, self.language_manager)
         
         # Add the main UI to the main layout
         main_layout.addWidget(self.main_ui)
@@ -524,7 +541,7 @@ class MainWindow(QMainWindow):
         """Update the duplicates list widget with the current duplicate groups."""
         if not hasattr(self, 'duplicates_list'):
             return
-            
+        
         self.duplicates_list.clear()
         
         for i, group in enumerate(self.duplicate_groups, 1):
@@ -630,13 +647,21 @@ class MainWindow(QMainWindow):
     
     def on_show_settings(self):
         """Show the settings dialog and handle language changes."""
+        print("DEBUG: MainWindow.on_show_settings() called")
+        logger.debug("MainWindow.on_show_settings() called")
         try:
             # Store current language to detect changes
             current_lang = self.language_manager.current_lang
+            print(f"DEBUG: Current language before opening settings: {current_lang}")
+            logger.debug(f"Current language before opening settings: {current_lang}")
             language_changed = False
             
             # Create and show the settings dialog
+            print("DEBUG: Creating SettingsDialog")
+            logger.debug("Creating SettingsDialog")
             dialog = SettingsDialog(self, self.language_manager)
+            print("DEBUG: SettingsDialog created")
+            logger.debug("SettingsDialog created")
             
             # Connect to the language_changed signal
             def on_language_changed(lang_code):

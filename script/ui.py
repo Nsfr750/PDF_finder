@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItem, QHeaderView, QSizePolicy, QMenuBar, QToolBar,
     QApplication, QTabWidget, QStackedWidget, QMenu, QPushButton, QListWidgetItem
 )
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
 
 # Import language manager
@@ -17,16 +17,22 @@ from script.lang_mgr import LanguageManager
 class MainUI(QWidget):
     """Main UI components for the application."""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language_manager=None):
         """Initialize the UI components.
         
         Args:
             parent: Parent widget (main window).
+            language_manager: Shared LanguageManager instance for translations.
         """
         super().__init__(parent)
-        # Initialize language manager
-        self.language_manager = LanguageManager()
+        # Use shared language manager or create default one
+        self.language_manager = language_manager or LanguageManager()
         self.tr = self.language_manager.tr
+        
+        # Connect to language change signal
+        if hasattr(self.language_manager, 'language_changed'):
+            self.language_manager.language_changed.connect(self.on_language_changed)
+        
         self.setup_ui()
     
     def setup_ui(self):
@@ -443,3 +449,32 @@ class MainUI(QWidget):
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError, OverflowError):
             return ""
+    
+    def on_language_changed(self):
+        """Update UI translations when language changes."""
+        # Update tab titles
+        self.tab_widget.setTabText(0, self.tr("Files"))
+        self.tab_widget.setTabText(1, self.tr("Duplicates"))
+        
+        # Update labels and buttons
+        for widget in self.findChildren((QLabel, QPushButton)):
+            if hasattr(widget, 'text'):
+                widget.setText(self.tr(widget.text()))
+        
+        # Update file list and recent files list
+        for i in range(self.file_list.count()):
+            item = self.file_list.item(i)
+            item.setText(self.tr(item.text()))
+        
+        for i in range(self.recent_files_list.count()):
+            item = self.recent_files_list.item(i)
+            item.setText(self.tr(item.text()))
+        
+        # Update duplicates tree
+        for i in range(self.duplicates_tree.topLevelItemCount()):
+            item = self.duplicates_tree.topLevelItem(i)
+            item.setText(0, self.tr(item.text(0)))
+            
+            for j in range(item.childCount()):
+                child_item = item.child(j)
+                child_item.setText(0, self.tr(child_item.text(0)))

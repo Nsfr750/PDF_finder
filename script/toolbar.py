@@ -194,24 +194,29 @@ class MainToolBar(QToolBar):
                 first_group_added = True
     
     def on_language_changed(self):
-        """Handle language change event."""
+        """Handle language change events."""
         self.retranslate_ui()
-        self.update_toolbar_actions()
     
+    def retranslate_ui(self):
+        """Retranslate toolbar actions when language changes."""
+        try:
+            # Rebuild toolbar with updated translations
+            if hasattr(self, 'menu_actions') and self.menu_actions:
+                self._build_toolbar()
+            
+            logger.debug("Toolbar retranslated successfully")
+            
+        except Exception as e:
+            logger.error(f"Error retranslating toolbar: {e}")
+            import traceback
+            traceback.print_exc()
+
     def update_toolbar_actions(self):
         """Update the toolbar with the current actions and translations."""
         # Rebuild from stored actions to reflect latest translations
         self.clear()
         self._build_toolbar()
         logger.debug(f"Toolbar actions after update: {[a.text() for a in self.actions()]}")
-
-    def retranslate_ui(self):
-        """Retranslate the toolbar UI elements when the language changes."""
-        logger.debug("Retranslating toolbar UI")
-        # Rebuild using existing actions (texts are owned by actions)
-        self.update_toolbar_actions()
-        # Re-apply style to ensure consistent visuals on theme/language change
-        self.apply_visual_style()
 
     def apply_visual_style(self):
         """Apply a consistent visual style to toolbar buttons."""
