@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added in 3.0.0
 
-- Converted Italian translations from JSON format (it.json) to Python module (it.py) for better performance and maintainability
+- Converted translations from JSON format (en.json/it.json) to Python module (translations.py) for better performance and maintainability
 - Enhanced translation system with improved structure and organization
 - Updated build date to September 21, 2025
 
@@ -60,9 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed update dialog layout and spacing issues
 - Removed progress bar from update dialog for cleaner UI
 
-### Known Bugs
-- Language selection doesn't work
-
 ## [2.11.0] - 2025-08-23
 
 ### Added in 2.11.0
@@ -73,14 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added visual feedback when opening PDF files
 - Improved file path handling for cross-platform compatibility
 
-### Fixed
+### Fixed in 2.11.0
+
 - Fixed CSV export
 
-### Know BUG
-
-- Language switch does not work fully
-- Check for updates work only on startup
- 
 ## [2.10.0] - 2025-08-21
 
 ### Added in 2.10.0
@@ -128,13 +121,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toolbar visual improvements: spacing, padding, right-aligned help actions, consistent stylesheet
 - Scanner.py: Added Callable to typing imports
 
-### Fixed
+### Fixed in 2.9.0
 
 - Propagated backend fallback messages from PDF processing to the UI status bar
 - Stabilized PDF rendering to avoid QPainter/QImage invalid paint device errors
-- Fixed language manager
-  - Fixed en.json
-  - Fixed it.json
 - Fixed delete selected files
 - Fixed toggle permanent delete
 - Fixed progress bar appearance
