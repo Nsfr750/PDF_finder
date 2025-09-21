@@ -394,9 +394,6 @@ class MainWindow(QMainWindow):
         # Connect file list selection change if the UI has a file list
         if hasattr(self.main_ui, 'file_list'):
             self.main_ui.file_list.itemSelectionChanged.connect(self.on_file_selection_changed)
-            # Open in viewer on double-click or Enter/Activation
-            self.main_ui.file_list.itemDoubleClicked.connect(self.on_open_selected_in_viewer)
-            self.main_ui.file_list.itemActivated.connect(self.on_open_selected_in_viewer)
         
         # Connect menu actions to toolbar
         if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):

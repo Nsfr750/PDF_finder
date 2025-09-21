@@ -9,7 +9,7 @@ from setuptools import setup
 # Create version_info.txt in the assets folder
 def create_version_info():
     """Generate version info file with build information."""
-    version = "2.10.0"  # Default version if not found
+    version = "3.0.0"  # Default version if not found
     try:
         # Import the version module directly to get the version
         import sys

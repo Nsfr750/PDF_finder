@@ -5,6 +5,35 @@ All notable changes to PDF Duplicate Finder will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-09-21
+
+### Added in 3.0.0
+
+- Converted Italian translations from JSON format (it.json) to Python module (it.py) for better performance and maintainability
+- Enhanced translation system with improved structure and organization
+- Updated build date to September 21, 2025
+
+### Fixed in 3.0.0
+
+- Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
+  - Resolved problem where _update_duplicates_list method was trying to populate non-existent 'duplicates_list' (QListWidget)
+  - Fixed by properly using 'duplicates_tree' (QTreeWidget) defined in ui.py
+  - Removed duplicate standalone _update_duplicates_list function outside MainWindow class
+  - Added proper initialization of self.duplicate_groups = [] in MainWindow __init__ method
+  - Updated method to call self.main_ui.update_duplicates_tree(self.duplicate_groups) correctly
+
+- Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1
+  - Resolved duplicate signal connections that were triggering multiple handlers
+  - Removed duplicate itemDoubleClicked and itemActivated connections in main_window.py
+  - UI layer now properly handles double-click events without conflicts
+  - Fixed signal connections at lines 61 (ui.py) and 149 (ui.py) vs 398-399 (main_window.py)
+
+### Changed in 3.0.0
+
+- Improved translation loading performance by using Python modules instead of JSON files
+- Enhanced code maintainability with better-structured translation data
+- Updated version information and build metadata
+
 ## [2.12.0] - 2025-08-23
 
 ### Added in 2.12.0
@@ -22,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved update dialog with collapsible release notes
 
 ### Fixed
+
 - Improved UI layout with proper splitter between file list and recent files
 - Fixed tooltips to show full file paths in recent files list
 - Better handling of file paths with special characters

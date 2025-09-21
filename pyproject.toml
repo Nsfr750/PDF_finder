@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-finder"
-version = "2.10.0"  # Updated version
+version = "3.0.0"  # Updated version
 maintainers = [
     {name = "Nsfr750", email = "nsfr750@yandex.com"}
 ]

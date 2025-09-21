@@ -1,17 +1,17 @@
 """
-Language Manager for handling application translations using JSON files.
+Language Manager for handling application translations using Python module.
 """
-import json
-import os
 import logging
-from pathlib import Path
 from typing import Dict, Optional, Any
 from PyQt6.QtCore import QObject, pyqtSignal
+
+# Import translations from the translations module
+from .translations import TRANSLATIONS
 
 logger = logging.getLogger(__name__)
 
 class LanguageManager(QObject):
-    """Manages application translations loaded from JSON files."""
+    """Manages application translations loaded from Python module."""
     
     # Signal emitted when the language is changed
     language_changed = pyqtSignal(str)
@@ -27,26 +27,20 @@ class LanguageManager(QObject):
         self.translations: Dict[str, Dict[str, str]] = {}
         self._current_lang = default_lang
         self.default_lang = default_lang
-        self.lang_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lang')
         
-        # Load translations
+        # Load translations from the Python module
         self._load_translations()
     
     def _load_translations(self) -> None:
-        """Load all available translations from JSON files."""
+        """Load all available translations from the translations module."""
         try:
-            # Look for all JSON files in the lang directory
-            for file in Path(self.lang_dir).glob('*.json'):
-                lang_code = file.stem
-                try:
-                    with open(file, 'r', encoding='utf-8') as f:
-                        self.translations[lang_code] = json.load(f)
-                    logger.info(f"Loaded translations for language: {lang_code}")
-                except (json.JSONDecodeError, IOError) as e:
-                    logger.error(f"Error loading {file}: {e}")
+            # Load translations from the imported TRANSLATIONS dictionary
+            for lang_code, translations_data in TRANSLATIONS.items():
+                self.translations[lang_code] = translations_data
+                logger.info(f"Loaded translations for language: {lang_code}")
             
             if not self.translations:
-                logger.warning("No translation files found in the lang directory")
+                logger.warning("No translations found in the translations module")
                 
         except Exception as e:
             logger.error(f"Error loading translations: {e}")

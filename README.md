@@ -3,6 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Version: 3.0.0](https://img.shields.io/badge/version-3.0.0-brightgreen.svg)](https://github.com/Nsfr750/PDF_finder/releases)
 
 A powerful tool to find and manage duplicate PDF files on your computer. PDF Duplicate Finder helps you identify and remove duplicate PDF documents, saving disk space and organizing your files more efficiently.
 
@@ -20,9 +21,10 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 🔄 **Batch Processing**: Process multiple files or entire folders at once
 - 📊 **Detailed Analysis**: View file details, previews, and comparison results
 - 🛠 **Advanced Tools**: Multiple selection modes, filtering, and sorting options
-- 🌍 **Multi-language Support**: Available in multiple languages
+- 🌍 **Multi-language Support**: Available in multiple languages with improved translation system
 - 📊 **Progress Tracking**: Real-time progress bar for file processing operations
 - ⏱ **Recent Files**: Quick access to recently opened files with context menu options
+- 🐛 **Enhanced Stability**: Fixed critical bugs including duplicate tree population and PDF viewer issues
 
 ## 📦 Installation
 

@@ -3,7 +3,7 @@ Version information for PDF Duplicate Finder.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (2, 12, 0)
+VERSION = (3, 0, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
@@ -17,7 +17,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-08-23"
+__date__ = "2025-09-21"
 
 # Version description
 __description__ = "A tool to find and manage duplicate PDF files on your computer."
@@ -36,6 +36,23 @@ __requires__ = [
 
 # Changelog
 __changelog__ = """
+## [3.0.0] - 2025-09-21
+### Added
+- Converted Italian translations from JSON format (it.json) to Python module (it.py)
+- Enhanced translation system with improved structure and organization
+- Updated build date to September 21, 2025
+
+### Fixed
+- Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
+- Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1
+- Resolved duplicate signal connections that were triggering multiple handlers
+- Improved UI stability and signal handling for better user experience
+
+### Changed
+- Improved translation loading performance by using Python modules instead of JSON files
+- Enhanced code maintainability with better-structured translation data
+- Updated version information and build metadata
+
 ## [2.12.0] - 2025-08-23
 ### Added
 - Multi-selection support in file list (Shift+Click, Ctrl+Click)
@@ -114,6 +131,22 @@ def get_version_info():
 def get_version_history():
     """Return the version history."""
     return [
+        {
+            "version": "3.0.0",
+            "date": "2025-09-21",
+            "changes": [
+                "Converted Italian translations from JSON format (it.json) to Python module (it.py)",
+                "Enhanced translation system with improved structure and organization",
+                "Updated build date to September 21, 2025",
+                "Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated",
+                "Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1",
+                "Resolved duplicate signal connections that were triggering multiple handlers",
+                "Improved UI stability and signal handling for better user experience",
+                "Improved translation loading performance by using Python modules instead of JSON files",
+                "Enhanced code maintainability with better-structured translation data",
+                "Updated version information and build metadata"
+            ]
+        },
         {
             "version": "2.12.0",
             "date": "2025-08-23",
