@@ -7,9 +7,6 @@
 # Specific ownership
 /tests/                 @Nsfr750
 /script/                @Nsfr750
-/lang/                  @Nsfr750
-/script/text_processor/ @Nsfr750
-/script/filters/        @Nsfr750
 /config/    @Nsfr750
 /assets/    @Nsfr750
 /README.md  @Nsfr750
