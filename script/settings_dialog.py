@@ -5,7 +5,8 @@ import logging
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
     QTabWidget, QWidget, QFormLayout, QSpinBox, QCheckBox,
-    QComboBox, QFileDialog, QLineEdit, QMessageBox, QGroupBox
+    QComboBox, QFileDialog, QLineEdit, QMessageBox, QGroupBox,
+    QDialogButtonBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -155,63 +156,80 @@ class SettingsDialog(QDialog):
             pass
     
     def setup_ui(self):
-        """Set up the user interface."""
-        logger.debug("Setting up UI components")
+        """Set up the user interface for the settings dialog."""
+        print("DEBUG: SettingsDialog.setup_ui() called")
+        logger.debug("SettingsDialog.setup_ui() called")
         try:
-            layout = QVBoxLayout(self)
+            print("DEBUG: Creating main layout")
+            # Create main layout and widget
+            layout = QVBoxLayout()
+            self.setLayout(layout)
             
+            print("DEBUG: Creating tab widget")
             # Create tab widget
-            logger.debug("Creating tab widget")
-            self.tab_widget = QTabWidget()
+            tabs = QTabWidget()
+            layout.addWidget(tabs)
             
-            # General tab
-            logger.debug("Setting up general tab")
-            self.general_tab = QWidget()
-            self.setup_general_tab()
-            self.tab_widget.addTab(self.general_tab, self.tr("settings_dialog.general", "General"))
+            print("DEBUG: Creating tabs")
+            # Create tabs
+            general_tab = QWidget()
+            pdf_tab = QWidget()
             
-            # Add more tabs here as needed
+            print("DEBUG: Adding tabs to tab widget")
+            # Add tabs
+            tabs.addTab(general_tab, self.tr("settings_dialog.general", "General"))
+            tabs.addTab(pdf_tab, self.tr("settings_dialog.pdf", "PDF"))
             
-            # Add tab widget to layout
-            layout.addWidget(self.tab_widget)
+            print("DEBUG: Calling setup_general_tab")
+            # Set up general tab
+            self.setup_general_tab(general_tab)
             
-            # Add buttons
-            logger.debug("Adding buttons")
-            button_box = QHBoxLayout()
+            print("DEBUG: Calling setup_pdf_tab")
+            # Set up PDF tab
+            self.setup_pdf_tab(pdf_tab)
             
-            self.ok_button = QPushButton(self.tr("common.ok", "OK"))
-            self.ok_button.clicked.connect(self.accept)
+            print("DEBUG: Creating button box")
+            # Create button box
+            from PyQt6.QtWidgets import QDialogButtonBox
+            button_box = QDialogButtonBox(
+                QDialogButtonBox.StandardButton.Ok | 
+                QDialogButtonBox.StandardButton.Cancel | 
+                QDialogButtonBox.StandardButton.Apply
+            )
             
-            self.cancel_button = QPushButton(self.tr("common.cancel", "Cancel"))
-            self.cancel_button.clicked.connect(self.reject)
+            print("DEBUG: Connecting button signals")
+            # Connect buttons
+            logger.debug("Connecting button signals")
+            button_box.accepted.connect(self.accept)
+            button_box.rejected.connect(self.reject)
+            apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
+            if apply_button:
+                logger.debug("Apply button found, connecting to apply_settings")
+                apply_button.clicked.connect(self.apply_settings)
+            else:
+                logger.debug("Apply button not found")
             
-            self.apply_button = QPushButton(self.tr("common.apply", "Apply"))
-            self.apply_button.clicked.connect(self.apply_settings)
-            
-            button_box.addStretch()
-            button_box.addWidget(self.ok_button)
-            button_box.addWidget(self.cancel_button)
-            button_box.addWidget(self.apply_button)
-            
-            layout.addLayout(button_box)
-            
-            logger.debug("UI setup complete")
+            print("DEBUG: Adding button box to layout")
+            layout.addWidget(button_box)
+            print("DEBUG: UI setup completed")
+            logger.debug("UI setup completed")
             
         except Exception as e:
+            print(f"ERROR in setup_ui: {e}")
             logger.error(f"ERROR in setup_ui: {e}")
             import traceback
             traceback.print_exc()
             raise
     
-    def setup_general_tab(self):
-        """Set up the general settings tab."""
-        logger.debug("Setting up general tab components")
+    def setup_general_tab(self, tab):
+        """Set up the general settings tab.
+        
+        Args:
+            tab: The tab widget to set up
+        """
+        logger.debug("SettingsDialog.setup_general_tab() called")
         try:
-            layout = QVBoxLayout(self.general_tab)
-            
-            # Appearance group
-            appearance_group = QGroupBox(self.tr("settings_dialog.appearance", "Appearance"))
-            appearance_layout = QFormLayout()
+            layout = QFormLayout(tab)
             
             # Language selection
             self.language_combo = QComboBox()
@@ -220,41 +238,47 @@ class SettingsDialog(QDialog):
             logger.debug(f"Language combo initialized with items: {self.language_combo.count()}")
             # Add more languages as needed
             
-            appearance_layout.addRow(
-                QLabel(self.tr("settings_dialog.language", "Language:")),
+            layout.addRow(
+                QLabel(self.tr("settings_dialog.language", "Language:")), 
                 self.language_combo
             )
             
             # Theme selection
             self.theme_combo = QComboBox()
-            self.theme_combo.addItem(self.tr("settings_dialog.theme_system", "System Default"), "system")
+            self.theme_combo.addItem(self.tr("settings_dialog.theme_system", "System"), "system")
+            self.theme_combo.addItem(self.tr("settings_dialog.theme_light", "Light"), "light")
             self.theme_combo.addItem(self.tr("settings_dialog.theme_dark", "Dark"), "dark")
             
-            appearance_layout.addRow(
-                QLabel(self.tr("settings_dialog.theme", "Theme:")),
+            layout.addRow(
+                QLabel(self.tr("settings_dialog.theme", "Theme:")), 
                 self.theme_combo
             )
             
-            appearance_group.setLayout(appearance_layout)
-            
-            # Application group
-            app_group = QGroupBox(self.tr("settings_dialog.application", "Application"))
-            app_layout = QFormLayout()
-            
-            # Check for updates on startup
+            # Application settings
             self.check_updates = QCheckBox(self.tr("settings_dialog.check_updates", "Check for updates on startup"))
-            app_layout.addRow(self.check_updates)
-            
-            # Auto-save settings
             self.auto_save = QCheckBox(self.tr("settings_dialog.auto_save", "Auto-save settings"))
-            app_layout.addRow(self.auto_save)
             
-            app_group.setLayout(app_layout)
-
-            # Add groups to layout
-            layout.addWidget(appearance_group)
-            layout.addWidget(app_group)
-
+            layout.addRow(self.check_updates)
+            layout.addRow(self.auto_save)
+            
+            logger.debug("General tab setup complete")
+            
+        except Exception as e:
+            logger.error(f"ERROR in setup_general_tab: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+    
+    def setup_pdf_tab(self, tab):
+        """Set up the PDF settings tab.
+        
+        Args:
+            tab: The tab widget to set up
+        """
+        logger.debug("SettingsDialog.setup_pdf_tab() called")
+        try:
+            layout = QVBoxLayout(tab)
+            
             # PDF rendering backend group
             pdf_group = QGroupBox(self.tr("settings_dialog.pdf", "PDF Rendering"))
             pdf_layout = QFormLayout()
@@ -295,10 +319,10 @@ class SettingsDialog(QDialog):
             layout.addWidget(pdf_group)
             layout.addStretch()
             
-            logger.debug("General tab setup complete")
+            logger.debug("PDF tab setup complete")
             
         except Exception as e:
-            logger.error(f"ERROR in setup_general_tab: {e}")
+            logger.error(f"ERROR in setup_pdf_tab: {e}")
             import traceback
             traceback.print_exc()
             raise
