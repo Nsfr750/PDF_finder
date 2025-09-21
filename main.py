@@ -1,5 +1,5 @@
 """
-PDF Duplicate Finder - Main Application Module
+PDF Duplicate Finder - Main Module
 """
 import os
 import sys
