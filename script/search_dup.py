@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 class DuplicateFileItem:
     """Represents a duplicate file item in the model."""
@@ -23,7 +23,7 @@ class DuplicateFileItem:
         self.size = size
         self.modified = modified
         self.is_original = is_original
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
     
     def data(self, role: int = Qt.ItemDataRole.DisplayRole):
@@ -61,7 +61,7 @@ class DuplicateGroup:
     def __init__(self, files: List[DuplicateFileItem]):
         self.files = files
         self.is_expanded = False
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
     
     def data(self, role: int = Qt.ItemDataRole.DisplayRole):
@@ -94,7 +94,7 @@ class DuplicateFilesModel(QAbstractItemModel):
     def __init__(self, duplicate_groups: List[List[Dict[str, Any]]] = None, parent=None):
         super().__init__(parent)
         self.duplicate_groups = []
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
         self.set_duplicate_groups(duplicate_groups or [])
     
@@ -268,7 +268,7 @@ class DuplicateItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.margin = 4
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
     
     def paint(self, painter, option, index):

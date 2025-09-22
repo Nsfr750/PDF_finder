@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 import send2trash
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 
@@ -17,7 +17,7 @@ class DeleteConfirmationDialog(QDialog):
     """Dialog to confirm file deletion."""
     def __init__(self, file_paths, parent=None, title=None, message=None):
         super().__init__(parent)
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
         self.file_paths = file_paths if isinstance(file_paths, list) else [file_paths]
         self.permanently = False
@@ -89,7 +89,7 @@ class DeleteConfirmationDialog(QDialog):
 def _get_process_using_file(file_path):
     """Try to find which process is using the given file."""
     if not os.path.exists(file_path):
-        return LanguageManager().tr("delete.unknown_file_not_found", "Unknown (file not found)")
+        return SimpleLanguageManager().tr("delete.unknown_file_not_found", "Unknown (file not found)")
     
     try:
         for proc in psutil.process_iter(['pid', 'name', 'open_files']):
@@ -97,22 +97,22 @@ def _get_process_using_file(file_path):
                 if proc.info['open_files']:
                     for file in proc.info['open_files']:
                         if file.path.lower() == os.path.abspath(file_path).lower():
-                            return LanguageManager().tr(
+                            return SimpleLanguageManager().tr(
                                 "delete.process_using_file", 
                                 "{process_name} (PID: {pid})"
                             ).format(process_name=proc.info['name'], pid=proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
     except Exception as e:
-        logger.debug(LanguageManager().tr("delete.error_checking_processes", "Error checking processes for file {file_path}: {error}").format(
+        logger.debug(SimpleLanguageManager().tr("delete.error_checking_processes", "Error checking processes for file {file_path}: {error}").format(
             file_path=file_path, error=e
         ))
     
-    return LanguageManager().tr("delete.unknown_process", "Unknown process")
+    return SimpleLanguageManager().tr("delete.unknown_process", "Unknown process")
 
 def _show_file_in_use_dialog(parent, file_path, process_info):
     """Show a dialog when a file is in use."""
-    tr = LanguageManager().tr
+    tr = SimpleLanguageManager().tr
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Warning)
     msg.setWindowTitle(tr("delete.file_in_use_title", "File in Use"))
@@ -154,7 +154,7 @@ def delete_files(file_paths, parent=None, use_recycle_bin=True, max_retries=3, r
     Returns:
         tuple: (success_count, failed_count) - counts of successful and failed deletions
     """
-    tr = LanguageManager().tr
+    tr = SimpleLanguageManager().tr
     
     if not file_paths:
         return 0, 0

@@ -1,0 +1,120 @@
+"""
+Simple Language Manager for PDF Duplicate Finder.
+This provides a straightforward way to handle language switching.
+"""
+
+import logging
+from typing import Dict, Optional, Any
+from PyQt6.QtCore import QObject, pyqtSignal
+
+# Import translations
+from script.simple_translations import TRANSLATIONS, AVAILABLE_LANGUAGES
+
+logger = logging.getLogger(__name__)
+
+class SimpleLanguageManager(QObject):
+    """Simple language manager for the application."""
+
+    # Signal emitted when the language is changed
+    language_changed = pyqtSignal(str)
+
+    def __init__(self, default_lang: str = 'en', parent: Optional[QObject] = None):
+        """Initialize the language manager.
+
+        Args:
+            default_lang: Default language code (e.g., 'en', 'it')
+            parent: Optional parent QObject
+        """
+        super().__init__(parent)
+        self.current_lang = default_lang
+        self.default_lang = default_lang
+
+        # Validate that the language exists
+        if self.current_lang not in TRANSLATIONS:
+            logger.warning(f"Language {self.current_lang} not found, using default 'en'")
+            self.current_lang = 'en'
+
+        logger.info(f"Language manager initialized with language: {self.current_lang}")
+
+    def set_language(self, lang_code: str) -> bool:
+        """Set the current language.
+
+        Args:
+            lang_code: The language code to set (e.g., 'en', 'it')
+
+        Returns:
+            bool: True if the language was changed successfully, False otherwise
+        """
+        if lang_code not in TRANSLATIONS:
+            logger.warning(f"Language {lang_code} not found")
+            return False
+
+        if lang_code != self.current_lang:
+            old_lang = self.current_lang
+            self.current_lang = lang_code
+            logger.info(f"Language changed from {old_lang} to {lang_code}")
+
+            # Emit the signal
+            self.language_changed.emit(lang_code)
+            return True
+
+        return False
+
+    def get_language(self) -> str:
+        """Get the current language code.
+
+        Returns:
+            str: The current language code
+        """
+        return self.current_lang
+
+    def get_current_language(self) -> str:
+        """Get the current language code (alias for get_language for backward compatibility).
+
+        Returns:
+            str: The current language code
+        """
+        return self.get_language()
+
+    def get_available_languages(self) -> Dict[str, str]:
+        """Get the available languages.
+
+        Returns:
+            Dict[str, str]: Dictionary of language codes to language names
+        """
+        return AVAILABLE_LANGUAGES.copy()
+
+    def tr(self, key: str, default: str = None) -> str:
+        """Translate a key to the current language.
+
+        Args:
+            key: The translation key
+            default: Default text if key not found (optional)
+
+        Returns:
+            str: The translated text or default/key if not found
+        """
+        # Try to get the translation for the current language
+        if self.current_lang in TRANSLATIONS:
+            translation = TRANSLATIONS[self.current_lang]
+            if key in translation:
+                return translation[key]
+
+        # If not found, try the default language
+        if self.default_lang in TRANSLATIONS:
+            translation = TRANSLATIONS[self.default_lang]
+            if key in translation:
+                return translation[key]
+
+        # If still not found, try English as fallback
+        if 'en' in TRANSLATIONS and self.default_lang != 'en':
+            translation = TRANSLATIONS['en']
+            if key in translation:
+                return translation[key]
+
+        # If not found anywhere, return default or key
+        if default is not None:
+            return default
+
+        logger.warning(f"Translation key not found: {key}")
+        return key

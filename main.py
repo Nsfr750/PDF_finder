@@ -41,7 +41,6 @@ import csv
 # Import our custom modules
 from script.main_window import MainWindow
 from script.settings import AppSettings
-from script.lang_mgr import LanguageManager
 from script.logger import get_logger
 from script.settings_dialog import SettingsDialog
 from script.scanner import PDFScanner
@@ -65,7 +64,8 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize language manager with saved language
         language = self.settings.get_language()
-        self.language_manager = LanguageManager(
+        from script.simple_lang_manager import SimpleLanguageManager
+        self.language_manager = SimpleLanguageManager(
             default_lang=language
         )
         
@@ -194,8 +194,12 @@ class PDFDuplicateFinder(MainWindow):
             language_code: The new language code (e.g., 'en', 'it')
         """
         logger.info(f"Language changed to: {language_code}")
+        
         # Save the new language setting
         self.settings.set('language', language_code)
+        
+        # Call the parent class method to handle full UI updates
+        super().on_language_changed(language_code)
         
         # Update the UI to reflect the new language
         if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
@@ -203,7 +207,7 @@ class PDFDuplicateFinder(MainWindow):
             
         # Update window title if it exists
         if hasattr(self, 'setWindowTitle'):
-            self.setWindowTitle(self.tr("PDF Duplicate Finder"))
+            self.setWindowTitle(self.language_manager.tr("main_window.title"))
     
     def center_on_screen(self):
         """Center the window on the screen."""

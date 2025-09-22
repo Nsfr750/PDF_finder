@@ -13,8 +13,8 @@ import logging
 from typing import Optional, Dict, Any, List, Callable
 from script.updates import UpdateDialog
 
-# Import language manager
-from script.lang_mgr import LanguageManager
+# Import translations
+from script.simple_lang_manager import SimpleLanguageManager
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -22,16 +22,16 @@ logger = logging.getLogger(__name__)
 class MenuBar(QObject):
     """Menu bar for the PDF Duplicate Finder application."""
     
-    def __init__(self, parent=None, language_manager: Optional[LanguageManager] = None):
+    def __init__(self, parent=None, language_manager: Optional[SimpleLanguageManager] = None):
         """Initialize the menu bar.
         
         Args:
             parent: Parent widget.
-            language_manager: Optional LanguageManager instance for translations.
+            language_manager: Optional SimpleLanguageManager instance for translations.
         """
         super().__init__(parent)
         self.parent = parent
-        self.language_manager = language_manager or LanguageManager()
+        self.language_manager = language_manager or SimpleLanguageManager()
         self.menubar = QMenuBar()
         self.actions = {}
         self.menus = {}
@@ -667,7 +667,7 @@ class MenuBar(QObject):
             )
     
     def tr(self, text: str) -> str:
-        """Translate text using the parent's translator.
+        """Translate text using the language manager.
         
         Args:
             text: Text to translate.
@@ -675,6 +675,4 @@ class MenuBar(QObject):
         Returns:
             str: Translated text.
         """
-        if hasattr(self.parent, 'tr'):
-            return self.parent.tr(text)
-        return QCoreApplication.translate('MenuBar', text)
+        return self.language_manager.tr(text)

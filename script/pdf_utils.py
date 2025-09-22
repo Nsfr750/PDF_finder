@@ -11,7 +11,7 @@ import numpy as np
 from wand.image import Image as WandImage
 import fitz  # PyMuPDF
 from tqdm import tqdm
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 from script.settings import settings
 
 # Set up logger (child of the configured 'PDFDuplicateFinder' logger)

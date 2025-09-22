@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QToolBar, QWidget, QStyle, QApplication
 from PyQt6.QtWidgets import QSizePolicy
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MainToolBar(QToolBar):
     """Main toolbar for the application."""
     
-    def __init__(self, parent=None, language_manager: Optional[LanguageManager] = None):
+    def __init__(self, parent=None, language_manager: Optional[SimpleLanguageManager] = None):
         """Initialize the toolbar.
         
         Args:
@@ -28,7 +28,7 @@ class MainToolBar(QToolBar):
         super().__init__(parent)
         self.setObjectName("mainToolBar")
         self.setMovable(False)
-        self.language_manager = language_manager or LanguageManager()
+        self.language_manager = language_manager or SimpleLanguageManager()
         self.menu_actions = {}
         self.setup_ui()
     

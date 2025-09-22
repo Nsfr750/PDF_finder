@@ -13,7 +13,7 @@ from wand.drawing import Drawing
 from wand.color import Color
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger(__name__)
 

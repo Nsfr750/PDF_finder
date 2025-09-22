@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import List, Optional, Callable
 from PyQt6.QtCore import QSettings, pyqtSignal as Signal, QObject
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 class RecentFoldersManager(QObject):
     """Manages the list of recently used folders."""
@@ -23,7 +23,7 @@ class RecentFoldersManager(QObject):
         self.max_recent = max_recent
         self.settings_key = settings_key
         self._recent_folders: List[str] = []
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
         self.load_recent_folders()
     

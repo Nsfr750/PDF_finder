@@ -12,7 +12,7 @@ from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 class MainUI(QWidget):
     """Main UI components for the application."""
@@ -22,12 +22,15 @@ class MainUI(QWidget):
         
         Args:
             parent: Parent widget (main window).
-            language_manager: Shared LanguageManager instance for translations.
+            language_manager: Shared SimpleLanguageManager instance for translations.
         """
         super().__init__(parent)
         # Use shared language manager or create default one
-        self.language_manager = language_manager or LanguageManager()
+        self.language_manager = language_manager or SimpleLanguageManager()
         self.tr = self.language_manager.tr
+        
+        # Store translation keys for UI elements
+        self.translation_keys = {}
         
         # Connect to language change signal
         if hasattr(self.language_manager, 'language_changed'):
@@ -59,6 +62,7 @@ class MainUI(QWidget):
         
         file_list_label = QLabel(self.tr("Files"))
         file_list_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        self.translation_keys['file_list_label'] = "Files"
         file_list_layout.addWidget(file_list_label)
         
         # Create file list with extended selection mode
@@ -87,6 +91,7 @@ class MainUI(QWidget):
         # Recent files label
         recent_label = QLabel(self.tr("Recent Files"))
         recent_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        self.translation_keys['recent_label'] = "Recent Files"
         recent_files_layout.addWidget(recent_label)
         
         # Recent files list
@@ -100,6 +105,7 @@ class MainUI(QWidget):
         # Add a clear button
         clear_button = QPushButton(self.tr("Clear Recent Files"))
         clear_button.clicked.connect(self.clear_recent_files)
+        self.translation_keys['clear_button'] = "Clear Recent Files"
         recent_files_layout.addWidget(clear_button)
 
         # Add file list and recent files to tab1
@@ -119,15 +125,18 @@ class MainUI(QWidget):
         
         duplicates_label = QLabel(self.tr("Duplicate Files"))
         duplicates_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        self.translation_keys['duplicates_label'] = "Duplicate Files"
         
         # Add expand/collapse buttons
         btn_expand = QPushButton(self.tr("Expand All"))
         btn_expand.clicked.connect(lambda: self.duplicates_tree.expandAll())
         btn_expand.setMaximumWidth(100)
+        self.translation_keys['btn_expand'] = "Expand All"
         
         btn_collapse = QPushButton(self.tr("Collapse All"))
         btn_collapse.clicked.connect(lambda: self.duplicates_tree.collapseAll())
         btn_collapse.setMaximumWidth(100)
+        self.translation_keys['btn_collapse'] = "Collapse All"
         
         # Add stretch to push buttons to the right
         duplicates_header_layout.addWidget(duplicates_label)
@@ -166,7 +175,9 @@ class MainUI(QWidget):
         
         # Add tabs to tab widget
         self.tab_widget.addTab(tab1, self.tr("Files"))
+        self.translation_keys['tab_widget_files'] = "Files"
         self.tab_widget.addTab(tab2, self.tr("Duplicates"))
+        self.translation_keys['tab_widget_duplicates'] = "Duplicates"
         
         # Add tab widget to main layout
         self.main_layout.addWidget(self.tab_widget)
@@ -178,10 +189,12 @@ class MainUI(QWidget):
         # Add select/deselect actions
         select_all_action = QAction(self.tr("Select All"), self)
         select_all_action.triggered.connect(self.select_all_files)
+        self.translation_keys['select_all_action'] = "Select All"
         menu.addAction(select_all_action)
         
         deselect_all_action = QAction(self.tr("Deselect All"), self)
         deselect_all_action.triggered.connect(self.deselect_all_files)
+        self.translation_keys['deselect_all_action'] = "Deselect All"
         menu.addAction(deselect_all_action)
         
         # Add separator
@@ -194,6 +207,7 @@ class MainUI(QWidget):
             delete_action.setIcon(QApplication.style().standardIcon(
                 QStyle.StandardPixmap.SP_TrashIcon
             ))
+            self.translation_keys['delete_action'] = "Delete Selected"
             menu.addAction(delete_action)
         
         menu.exec(self.file_list.viewport().mapToGlobal(position))
@@ -219,16 +233,19 @@ class MainUI(QWidget):
         # Open file action
         open_action = QAction(self.tr("Open"), self)
         open_action.triggered.connect(lambda: self.on_recent_file_double_clicked(item))
+        self.translation_keys['open_action'] = "Open"
         menu.addAction(open_action)
         
         # Remove from list action
         remove_action = QAction(self.tr("Remove from list"), self)
         remove_action.triggered.connect(lambda: self.recent_files_list.takeItem(self.recent_files_list.row(item)))
+        self.translation_keys['remove_action'] = "Remove from list"
         menu.addAction(remove_action)
         
         # Show in file explorer
         show_in_explorer = QAction(self.tr("Show in Explorer"), self)
         show_in_explorer.triggered.connect(lambda: self.show_in_explorer(item.data(Qt.ItemDataRole.UserRole)))
+        self.translation_keys['show_in_explorer'] = "Show in Explorer"
         menu.addAction(show_in_explorer)
         
         menu.exec(self.recent_files_list.viewport().mapToGlobal(position))
@@ -453,13 +470,15 @@ class MainUI(QWidget):
     def on_language_changed(self):
         """Update UI translations when language changes."""
         # Update tab titles
-        self.tab_widget.setTabText(0, self.tr("Files"))
-        self.tab_widget.setTabText(1, self.tr("Duplicates"))
+        self.tab_widget.setTabText(0, self.tr(self.translation_keys['tab_widget_files']))
+        self.tab_widget.setTabText(1, self.tr(self.translation_keys['tab_widget_duplicates']))
         
         # Update labels and buttons
         for widget in self.findChildren((QLabel, QPushButton)):
             if hasattr(widget, 'text'):
-                widget.setText(self.tr(widget.text()))
+                for key, value in self.translation_keys.items():
+                    if widget.text() == value:
+                        widget.setText(self.tr(value))
         
         # Update file list and recent files list
         for i in range(self.file_list.count()):

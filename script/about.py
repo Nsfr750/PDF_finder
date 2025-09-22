@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QSize, QUrl, QT_VERSION_STR, PYQT_VERSION_STR
 from PyQt6.QtGui import QPixmap, QIcon, QDesktopServices
 from .version import get_version
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 import os
 import sys
 import platform
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.setWindowTitle(self.tr("About PDF Duplicate Finder"))
         self.setMinimumSize(500, 400)
         
@@ -90,7 +90,7 @@ class AboutDialog(QDialog):
         # Copyright and license
         copyright = QLabel(
             self.tr(
-                "© {year} Nsfr750\n"
+                " {year} Nsfr750\n"
                 "This software is licensed under the GPL3 License."
             ).format(year="2025")
         )
@@ -137,7 +137,7 @@ class AboutDialog(QDialog):
             elif "This software is licensed" in widget.text():
                 widget.setText(
                     self.tr(
-                        "© {year} Nsfr750\n"
+                        " {year} Nsfr750\n"
                         "This software is licensed under the GPL3 License."
                     ).format(year="2025")
                 )

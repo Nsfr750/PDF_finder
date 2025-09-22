@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal as Signal, QSize, QSettings
 from PyQt6.QtGui import QDesktopServices, QIcon
 
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget as QWidgetType
@@ -40,7 +40,7 @@ def _tr(key: str, default_text: str) -> str:
         Translated string
     """
     try:
-        return LanguageManager().tr(key, default_text)
+        return SimpleLanguageManager().tr(key, default_text)
     except Exception as e:
         logger.warning(f"Translation failed for key '{key}': {e}")
         return default_text
@@ -73,7 +73,7 @@ class DocsDialog(QDialog):
         
         # Initialize instance variables
         self.current_lang = current_lang
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.settings = QSettings("PDFDuplicateFinder", "Documentation")
         self.text_browser = None
         
@@ -355,8 +355,8 @@ class DocsDialog(QDialog):
         <h3>Opzioni di Scansione</h3>
         <p>Personalizza la tua scansione con varie opzioni:</p>
         <ul>
-            <li><strong>Confronta per contenuto</strong>: Confronta il contenuto effettivo dei file (più lento ma più accurato)</li>
-            <li><strong>Confronta per metadati</strong>: Confronta i metadati come titolo, autore, ecc.</li>
+            <li><strong>Confronta per contenuto</strong>: Confronta il contenuto effettivo dei PDF (più lento ma più accurato)</li>
+            <li><strong>Confronta per metadati</strong>: Confronta i metadati dei file come titolo, autore, ecc.</li>
             <li><strong>Soglia dimensione file</strong>: Imposta la dimensione minima dei file da confrontare</li>
         </ul>
         

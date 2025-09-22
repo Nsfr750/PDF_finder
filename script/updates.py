@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class UpdateChecker(QObject):
     no_update = Signal()
     error_occurred = Signal(str)
     
-    def __init__(self, language_manager: Optional[LanguageManager] = None, config_dir: str = "config"):
+    def __init__(self, language_manager: Optional[SimpleLanguageManager] = None, config_dir: str = "config"):
         """Initialize the update checker.
         
         Args:

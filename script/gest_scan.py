@@ -15,7 +15,7 @@ from app_qt.pdf_utils import (
     get_pdf_info, calculate_file_hash, extract_first_page_image,
     calculate_image_hash, find_duplicates
 )
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 
@@ -37,7 +37,7 @@ class ScanWorker(QRunnable):
         self._is_cancelled = False
         self.signals = ScanWorkerSignals()
         self.temp_dir = None
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
     
     @Slot()
@@ -202,7 +202,7 @@ class ScanManager(QObject):
         self.thread_pool = QThreadPool.globalInstance()
         self.current_worker = None
         self.progress_dialog = None
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.tr = self.language_manager.tr
     
     def start_scan(self, directories: List[str], min_similarity: float = 0.9):

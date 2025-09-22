@@ -15,13 +15,13 @@ import os
 import logging
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 logger = logging.getLogger('PDFDuplicateFinder')
 
 def _tr(key, default_text):
     """Helper function to translate text using the language manager."""
-    return LanguageManager().tr(key, default_text)
+    return SimpleLanguageManager().tr(key, default_text)
 
 class HelpDialog(QDialog):
     # Signal to notify language change
@@ -37,7 +37,7 @@ class HelpDialog(QDialog):
         """
         super().__init__(parent)
         self.current_lang = current_lang
-        self.language_manager = LanguageManager()
+        self.language_manager = SimpleLanguageManager()
         self.setMinimumSize(800, 600)
         self.setWindowTitle(self.tr("help.window_title", "Help"))
         

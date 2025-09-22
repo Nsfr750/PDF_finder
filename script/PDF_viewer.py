@@ -14,7 +14,7 @@ from PyQt6.QtGui import QPixmap, QImage, QAction, QPainter, QIcon, QKeySequence,
 import logging
 
 # Import language manager
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 class PDFViewer(QMainWindow):
     """Enhanced PDF viewer with navigation and zoom capabilities."""

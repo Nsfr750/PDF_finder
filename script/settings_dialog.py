@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 
 # Import settings
 from .settings import settings
@@ -22,8 +22,6 @@ class SettingsDialog(QDialog):
     """Settings dialog for the application."""
     
     settings_changed = pyqtSignal()
-    # Signal emitted when the language is changed, with the new language code
-    language_changed = pyqtSignal(str)
     requires_restart = pyqtSignal()
     
     def __init__(self, parent=None, language_manager=None):
@@ -33,54 +31,36 @@ class SettingsDialog(QDialog):
             parent: Parent widget
             language_manager: Language manager for translations
         """
-        print("DEBUG: SettingsDialog.__init__() called")
         logger.debug("SettingsDialog.__init__() called")
         logger.debug("Initializing SettingsDialog")
         try:
-            print("DEBUG: Calling super().__init__(parent)")
             super().__init__(parent)
-            print("DEBUG: QDialog initialized")
             logger.debug("QDialog initialized")
             
-            print("DEBUG: Setting language_manager")
             self.language_manager = language_manager
-            self.tr = language_manager.tr if language_manager else lambda key, default: default
-            print("DEBUG: language_manager set")
+            logger.debug("language_manager set")
             
-            print("DEBUG: Getting initial_language")
-            # Store the initial language to detect changes
-            self.initial_language = settings.get('app.language', 'en')
-            print(f"DEBUG: initial_language: {self.initial_language}")
-            
-            print("DEBUG: Setting window properties")
             # Set window properties
-            self.setWindowTitle(self.tr("settings_dialog.title", "Settings"))
+            self.setWindowTitle(self.tr("settings.title"))
             self.setMinimumSize(600, 400)
-            print("DEBUG: Window properties set")
             logger.debug("Window properties set")
             
             # Set window flags to ensure it stays on top
-            print("DEBUG: Setting window flags")
             self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-            print("DEBUG: Window flags set")
             logger.debug("Window flags set")
             
             # Set up the UI
-            print("DEBUG: Setting up UI")
             logger.debug("Setting up UI")
             self.setup_ui()
             
             # Load settings
-            print("DEBUG: Loading settings")
             logger.debug("Loading settings")
             self.load_settings()
             
             # Ensure the dialog is visible
-            print("DEBUG: Ensuring dialog is visible")
             self.setVisible(True)
             self.raise_()
             self.activateWindow()
-            print("DEBUG: Dialog should now be visible")
             logger.debug("Dialog should now be visible")
             
         except Exception as e:
@@ -118,7 +98,7 @@ class SettingsDialog(QDialog):
             pymupdf_ok = True
         except Exception as e:
             results.append(("PyMuPDF", False, str(e)))
-        self._set_status(self.status_pymupdf, pymupdf_ok, self.tr("settings_dialog.backend_ok", "OK") if pymupdf_ok else self.tr("settings_dialog.backend_missing", "Missing"))
+        self._set_status(self.status_pymupdf, pymupdf_ok, self.tr("settings_dialog.backend_ok") if pymupdf_ok else self.tr("settings_dialog.backend_missing"))
         if pymupdf_ok:
             results.append(("PyMuPDF", True, "OK"))
 
@@ -131,7 +111,7 @@ class SettingsDialog(QDialog):
                 wand_ok = True
         except Exception as e:
             results.append(("Wand/Ghostscript", False, str(e)))
-        self._set_status(self.status_wand, wand_ok, self.tr("settings_dialog.backend_ok", "OK") if wand_ok else self.tr("settings_dialog.backend_missing", "Missing or invalid path"))
+        self._set_status(self.status_wand, wand_ok, self.tr("settings_dialog.backend_ok") if wand_ok else self.tr("settings_dialog.backend_missing"))
         if wand_ok:
             results.append(("Wand/Ghostscript", True, "OK"))
 
@@ -141,15 +121,15 @@ class SettingsDialog(QDialog):
         # Compose message
         lines = []
         for name, ok, detail in results:
-            status = self.tr("settings_dialog.backend_ok", "OK") if ok else self.tr("settings_dialog.backend_missing", "Missing")
+            status = self.tr("settings_dialog.backend_ok") if ok else self.tr("settings_dialog.backend_missing")
             lines.append(f"{name}: {status}")
-        msg = "\n".join(lines) if lines else self.tr("settings_dialog.no_backends_tested", "No backends tested")
+        msg = "\n".join(lines) if lines else self.tr("settings_dialog.no_backends_tested")
 
         # Show dialog
         try:
             QMessageBox.information(
                 self,
-                self.tr("settings_dialog.test_results_title", "Backend Test Results"),
+                self.tr("settings_dialog.test_results_title"),
                 msg
             )
         except Exception:
@@ -157,47 +137,37 @@ class SettingsDialog(QDialog):
     
     def setup_ui(self):
         """Set up the user interface for the settings dialog."""
-        print("DEBUG: SettingsDialog.setup_ui() called")
         logger.debug("SettingsDialog.setup_ui() called")
         try:
-            print("DEBUG: Creating main layout")
             # Create main layout and widget
             layout = QVBoxLayout()
             self.setLayout(layout)
             
-            print("DEBUG: Creating tab widget")
             # Create tab widget
             tabs = QTabWidget()
             layout.addWidget(tabs)
             
-            print("DEBUG: Creating tabs")
             # Create tabs
             general_tab = QWidget()
             pdf_tab = QWidget()
             
-            print("DEBUG: Adding tabs to tab widget")
             # Add tabs
-            tabs.addTab(general_tab, self.tr("settings_dialog.general", "General"))
-            tabs.addTab(pdf_tab, self.tr("settings_dialog.pdf", "PDF"))
+            tabs.addTab(general_tab, self.tr("settings.general"))
+            tabs.addTab(pdf_tab, self.tr("settings.appearance"))
             
-            print("DEBUG: Calling setup_general_tab")
             # Set up general tab
             self.setup_general_tab(general_tab)
             
-            print("DEBUG: Calling setup_pdf_tab")
             # Set up PDF tab
             self.setup_pdf_tab(pdf_tab)
             
-            print("DEBUG: Creating button box")
             # Create button box
-            from PyQt6.QtWidgets import QDialogButtonBox
             button_box = QDialogButtonBox(
                 QDialogButtonBox.StandardButton.Ok | 
                 QDialogButtonBox.StandardButton.Cancel | 
                 QDialogButtonBox.StandardButton.Apply
             )
             
-            print("DEBUG: Connecting button signals")
             # Connect buttons
             logger.debug("Connecting button signals")
             button_box.accepted.connect(self.accept)
@@ -209,13 +179,11 @@ class SettingsDialog(QDialog):
             else:
                 logger.debug("Apply button not found")
             
-            print("DEBUG: Adding button box to layout")
+            # Add button box to layout
             layout.addWidget(button_box)
-            print("DEBUG: UI setup completed")
             logger.debug("UI setup completed")
             
         except Exception as e:
-            print(f"ERROR in setup_ui: {e}")
             logger.error(f"ERROR in setup_ui: {e}")
             import traceback
             traceback.print_exc()
@@ -231,32 +199,20 @@ class SettingsDialog(QDialog):
         try:
             layout = QFormLayout(tab)
             
-            # Language selection
-            self.language_combo = QComboBox()
-            self.language_combo.addItem("English", "en")
-            self.language_combo.addItem("Italiano", "it")
-            logger.debug(f"Language combo initialized with items: {self.language_combo.count()}")
-            # Add more languages as needed
-            
-            layout.addRow(
-                QLabel(self.tr("settings_dialog.language", "Language:")), 
-                self.language_combo
-            )
-            
             # Theme selection
             self.theme_combo = QComboBox()
-            self.theme_combo.addItem(self.tr("settings_dialog.theme_system", "System"), "system")
-            self.theme_combo.addItem(self.tr("settings_dialog.theme_light", "Light"), "light")
-            self.theme_combo.addItem(self.tr("settings_dialog.theme_dark", "Dark"), "dark")
+            self.theme_combo.addItem(self.tr("settings.theme_system"), "system")
+            self.theme_combo.addItem(self.tr("settings.theme_light"), "light")
+            self.theme_combo.addItem(self.tr("settings.theme_dark"), "dark")
             
             layout.addRow(
-                QLabel(self.tr("settings_dialog.theme", "Theme:")), 
+                QLabel("Theme:"), 
                 self.theme_combo
             )
             
             # Application settings
-            self.check_updates = QCheckBox(self.tr("settings_dialog.check_updates", "Check for updates on startup"))
-            self.auto_save = QCheckBox(self.tr("settings_dialog.auto_save", "Auto-save settings"))
+            self.check_updates = QCheckBox(self.tr("settings.check_updates"))
+            self.auto_save = QCheckBox(self.tr("settings.auto_save"))
             
             layout.addRow(self.check_updates)
             layout.addRow(self.auto_save)
@@ -280,38 +236,38 @@ class SettingsDialog(QDialog):
             layout = QVBoxLayout(tab)
             
             # PDF rendering backend group
-            pdf_group = QGroupBox(self.tr("settings_dialog.pdf", "PDF Rendering"))
+            pdf_group = QGroupBox(self.tr("settings_dialog.pdf"))
             pdf_layout = QFormLayout()
 
             # Backend selection
             self.backend_combo = QComboBox()
-            self.backend_combo.addItem(self.tr("settings_dialog.backend_auto", "Auto (recommended)"), "auto")
+            self.backend_combo.addItem(self.tr("settings.backend_auto"), "auto")
             self.backend_combo.addItem("PyMuPDF", "pymupdf")
             self.backend_combo.addItem("Wand / Ghostscript", "wand_ghostscript")
-            pdf_layout.addRow(QLabel(self.tr("settings_dialog.backend", "Backend:")), self.backend_combo)
+            pdf_layout.addRow(QLabel("Backend:"), self.backend_combo)
 
             # Ghostscript path
             gs_row = QHBoxLayout()
             self.ghostscript_path_edit = QLineEdit()
-            self.ghostscript_browse_btn = QPushButton(self.tr("settings_dialog.browse", "Browse"))
+            self.ghostscript_browse_btn = QPushButton(self.tr("settings.browse"))
             def _browse_gs():
-                f, _ = QFileDialog.getOpenFileName(self, self.tr("settings_dialog.select_gs", "Select Ghostscript executable"))
+                f, _ = QFileDialog.getOpenFileName(self, self.tr("settings.select_gs"))
                 if f:
                     self.ghostscript_path_edit.setText(f)
             self.ghostscript_browse_btn.clicked.connect(_browse_gs)
             gs_row.addWidget(self.ghostscript_path_edit)
             gs_row.addWidget(self.ghostscript_browse_btn)
-            pdf_layout.addRow(QLabel(self.tr("settings_dialog.ghostscript_path", "Ghostscript path:")), gs_row)
+            pdf_layout.addRow(QLabel(self.tr("settings.ghostscript_path")), gs_row)
 
             # Inline status labels for backends
             self.status_pymupdf = QLabel("")
             self.status_wand = QLabel("")
-            pdf_layout.addRow(QLabel(self.tr("settings_dialog.backend_status", "Backend status:")))
+            pdf_layout.addRow(QLabel(self.tr("settings.backend_status")))
             pdf_layout.addRow(QLabel("PyMuPDF:"), self.status_pymupdf)
             pdf_layout.addRow(QLabel("Wand / Ghostscript:"), self.status_wand)
 
             # Test backends button
-            self.test_backends_btn = QPushButton(self.tr("settings_dialog.test_backends", "Test backends"))
+            self.test_backends_btn = QPushButton(self.tr("settings.test_backends"))
             self.test_backends_btn.clicked.connect(self.test_backends)
             pdf_layout.addRow(self.test_backends_btn)
 
@@ -331,17 +287,6 @@ class SettingsDialog(QDialog):
         """Load settings into the dialog."""
         logger.debug("SettingsDialog.load_settings() called")
         try:
-            # Load language
-            current_lang = settings.get('app.language', 'en')
-            logger.debug(f"Current language from settings: {current_lang}")
-            index = self.language_combo.findData(current_lang)
-            logger.debug(f"Language combo index for '{current_lang}': {index}")
-            if index >= 0:
-                self.language_combo.setCurrentIndex(index)
-                logger.debug(f"Language combo set to index {index}: {self.language_combo.currentText()}")
-            else:
-                logger.debug(f"Language '{current_lang}' not found in combo, keeping default")
-            
             # Load theme
             current_theme = settings.get('app.theme', 'system')
             index = self.theme_combo.findData(current_theme)
@@ -371,28 +316,12 @@ class SettingsDialog(QDialog):
             logger.error(f"ERROR in load_settings: {e}")
             import traceback
             traceback.print_exc()
+            raise
     
     def save_settings(self):
         """Save settings from the dialog."""
         logger.debug("Saving settings")
         try:
-            # Get the selected language code
-            lang_code = self.language_combo.currentData()
-            logger.debug(f"Selected language code: {lang_code}")
-            logger.debug(f"Current language in settings: {settings.get('app.language')}")
-            
-            # Check if language was changed
-            if lang_code and lang_code != settings.get('app.language'):
-                logger.debug(f"Language changed from {settings.get('app.language')} to {lang_code}")
-                settings.set('app.language', lang_code)
-                # Emit the language_changed signal with the new language code
-                logger.debug(f"Emitting language_changed signal with: {lang_code}")
-                self.language_changed.emit(lang_code)
-                logger.debug(f"Language changed signal emitted for: {lang_code}")
-                self._language_was_changed = True
-            else:
-                logger.debug("Language not changed or invalid language code")
-                
             # Save theme
             theme = self.theme_combo.currentData()
             settings.set('app.theme', theme)
@@ -439,14 +368,6 @@ class SettingsDialog(QDialog):
         logger.debug("SettingsDialog.accept() called")
         try:
             if self.save_settings():
-                # If language was changed, inform the user that a restart is needed
-                if hasattr(self, '_language_was_changed') and self._language_was_changed:
-                    QMessageBox.information(
-                        self,
-                        self.tr("settings_dialog.restart_required", "Restart Required"),
-                        self.tr("settings_dialog.restart_message", 
-                              "The application needs to restart for language changes to take effect.")
-                    )
                 super().accept()
                 
         except Exception as e:
@@ -458,5 +379,18 @@ class SettingsDialog(QDialog):
                 self.tr("settings_dialog.error", "Error"),
                 self.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
             )
-    
+
+    def tr(self, key: str) -> str:
+        """Translate a key using the language manager.
+        
+        Args:
+            key: The translation key
+            
+        Returns:
+            str: The translated text
+        """
+        if self.language_manager:
+            return self.language_manager.tr(key)
+        return key
+
     # End of SettingsDialog class

@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-from script.lang_mgr import LanguageManager
+from script.simple_lang_manager import SimpleLanguageManager
 logger = logging.getLogger('settings')
 
 class AppSettings:
