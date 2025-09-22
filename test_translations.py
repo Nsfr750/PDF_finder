@@ -50,6 +50,60 @@ def test_translations():
             translation = lang_manager.tr(key)
             print(f"  {key}: '{translation}'")
         
+        # Test sponsor dialog translations
+        print("\n--- Testing Sponsor dialog translations ---")
+        sponsor_keys = [
+            "sponsor.window_title",
+            "sponsor.title", 
+            "sponsor.message",
+            "sponsor.links.github_sponsors",
+            "sponsor.links.paypal",
+            "sponsor.monero.label",
+            "sponsor.qr_tooltip",
+            "sponsor.ways_to_support",
+            "sponsor.other_ways.title",
+            "sponsor.other_ways.star",
+            "sponsor.other_ways.report",
+            "sponsor.other_ways.share",
+            "sponsor.buttons.donate_paypal",
+            "sponsor.buttons.copy_monero"
+        ]
+        
+        print("English sponsor translations:")
+        lang_manager.set_language('en')
+        for key in sponsor_keys:
+            translation = lang_manager.tr(key)
+            print(f"  {key}: '{translation}'")
+        
+        print("Italian sponsor translations:")
+        lang_manager.set_language('it')
+        for key in sponsor_keys:
+            translation = lang_manager.tr(key)
+            print(f"  {key}: '{translation}'")
+        
+        # Test about dialog translations
+        print("\n--- Testing About dialog translations ---")
+        about_keys = [
+            "about.title",
+            "about.version",
+            "about.description", 
+            "about.system_info",
+            "about.copyright",
+            "about.close"
+        ]
+        
+        print("English about translations:")
+        lang_manager.set_language('en')
+        for key in about_keys:
+            translation = lang_manager.tr(key)
+            print(f"  {key}: '{translation}'")
+        
+        print("Italian about translations:")
+        lang_manager.set_language('it')
+        for key in about_keys:
+            translation = lang_manager.tr(key)
+            print(f"  {key}: '{translation}'")
+        
         print("\n✓ All translation tests passed!")
         return True
         

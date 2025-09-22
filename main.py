@@ -104,7 +104,7 @@ class PDFDuplicateFinder(MainWindow):
     def on_show_about(self):
         """Show the about dialog."""
         from script.about import AboutDialog
-        about_dialog = AboutDialog(self)
+        about_dialog = AboutDialog(self, self.language_manager)
         about_dialog.exec()
         
     def on_view_logs(self):

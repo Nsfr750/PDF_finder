@@ -17,10 +17,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AboutDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language_manager=None):
         super().__init__(parent)
-        self.language_manager = SimpleLanguageManager()
-        self.setWindowTitle(self.tr("About PDF Duplicate Finder"))
+        self.language_manager = language_manager if language_manager else SimpleLanguageManager()
+        self.setWindowTitle(self.language_manager.tr("about.title", "About PDF Duplicate Finder"))
         self.setMinimumSize(500, 400)
         
         layout = QVBoxLayout(self)
@@ -51,10 +51,10 @@ class AboutDialog(QDialog):
         # App info
         app_info = QVBoxLayout()
         
-        title = QLabel(self.tr("PDF Duplicate Finder"))
+        title = QLabel(self.language_manager.tr("about.title", "PDF Duplicate Finder"))
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         
-        version_text = self.tr("Version {version}").format(version=get_version())
+        version_text = self.language_manager.tr("about.version", "Version {version}").format(version=get_version())
         version = QLabel(version_text)
         version.setStyleSheet("color: white;")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -70,7 +70,8 @@ class AboutDialog(QDialog):
         
         # Description
         description = QLabel(
-            self.tr(
+            self.language_manager.tr(
+                "about.description",
                 "A tool to find and manage duplicate PDF files on your computer.\n\n"
                 "PDF Duplicate Finder helps you save disk space by identifying and removing "
                 "duplicate PDF documents based on their content."
@@ -84,12 +85,13 @@ class AboutDialog(QDialog):
         sys_info.setOpenLinks(True)
         sys_info.setHtml(self.get_system_info())
         sys_info.setMaximumHeight(150)
-        layout.addWidget(QLabel(self.tr("<b>System Information:</b>")))
+        layout.addWidget(QLabel(self.language_manager.tr("about.system_info", "<b>System Information:</b>")))
         layout.addWidget(sys_info)
         
         # Copyright and license
         copyright = QLabel(
-            self.tr(
+            self.language_manager.tr(
+                "about.copyright",
                 " {year} Nsfr750\n"
                 "This software is licensed under the GPL3 License."
             ).format(year="2025")
@@ -107,7 +109,7 @@ class AboutDialog(QDialog):
             QUrl("https://github.com/Nsfr750/PDF_Finder")))
         
         # Close button
-        close_btn = QPushButton(self.tr("Close"))
+        close_btn = QPushButton(self.language_manager.tr("about.close", "Close"))
         close_btn.clicked.connect(self.accept)
         
         buttons.addStretch()
@@ -121,22 +123,23 @@ class AboutDialog(QDialog):
     
     def retranslate_ui(self):
         """Update the UI when the language changes."""
-        self.setWindowTitle(self.tr("About PDF Duplicate Finder"))
+        self.setWindowTitle(self.language_manager.tr("about.title", "About PDF Duplicate Finder"))
         
         # Update version text
         for i in range(self.layout().count()):
             widget = self.layout().itemAt(i).widget()
             if isinstance(widget, QLabel) and "Version" in widget.text():
-                widget.setText(self.tr("Version {version}").format(version=get_version()))
+                widget.setText(self.language_manager.tr("about.version", "Version {version}").format(version=get_version()))
                 break
         
         # Update description and other translatable text
         for widget in self.findChildren(QLabel):
             if widget.text() == "System Information:":
-                widget.setText(self.tr("<b>System Information:</b>"))
+                widget.setText(self.language_manager.tr("about.system_info", "<b>System Information:</b>"))
             elif "This software is licensed" in widget.text():
                 widget.setText(
-                    self.tr(
+                    self.language_manager.tr(
+                        "about.copyright",
                         " {year} Nsfr750\n"
                         "This software is licensed under the GPL3 License."
                     ).format(year="2025")
@@ -145,7 +148,7 @@ class AboutDialog(QDialog):
         # Update button text
         for button in self.findChildren(QPushButton):
             if button.text() == "Close":
-                button.setText(self.tr("Close"))
+                button.setText(self.language_manager.tr("about.close", "Close"))
     
     def get_system_info(self):
         import psutil

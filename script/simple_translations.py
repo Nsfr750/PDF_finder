@@ -462,7 +462,32 @@ TRANSLATIONS = {
         "language_manager.current_language_info": "Current language: {language} ({code})",
         "language_manager.default_language_info": "Default language: {language} ({code})",
         "language_manager.language_switch_success": "Successfully switched to {language}",
-        "language_manager.language_switch_failed": "Failed to switch to {language}: {error}"
+        "language_manager.language_switch_failed": "Failed to switch to {language}: {error}",
+        
+        # Sponsor dialog
+        "sponsor.window_title": "Support Development",
+        "sponsor.title": "Support PDF Duplicate Finder",
+        "sponsor.message": "If you find this application useful, please consider supporting its development.\n\nYour support helps cover hosting costs and encourages further development.",
+        "sponsor.links.github_sponsors": "GitHub Sponsors",
+        "sponsor.links.paypal": "PayPal Donation",
+        "sponsor.monero.label": "Monero:",
+        "sponsor.qr_tooltip": "Scan to donate XMR",
+        "sponsor.ways_to_support": "Ways to Support:",
+        "sponsor.other_ways.title": "Other Ways to Help:",
+        "sponsor.other_ways.star": "Star the project on",
+        "sponsor.other_ways.report": "Report bugs and suggest features",
+        "sponsor.other_ways.share": "Share with others who might find it useful",
+        "sponsor.buttons.donate_paypal": "Donate with PayPal",
+        "sponsor.buttons.copy_monero": "Copy Monero Address",
+        
+        # About dialog
+        "about.title": "About PDF Duplicate Finder",
+        "about.version": "Version {version}",
+        "about.description": "A tool to find and manage duplicate PDF files on your computer.\n\nPDF Duplicate Finder helps you save disk space by identifying and removing duplicate PDF documents based on their content.",
+        "about.system_info": "<b>System Information:</b>",
+        "about.copyright": " {year} Nsfr750\nThis software is licensed under the GPL3 License.",
+        "about.close": "Close",
+        "refresh_language": "Refresh Language"
     },
     "it": {
         # Main window
@@ -921,7 +946,32 @@ TRANSLATIONS = {
         "language_manager.current_language_info": "Current language: {language} ({code})",
         "language_manager.default_language_info": "Default language: {language} ({code})",
         "language_manager.language_switch_success": "Successfully switched to {language}",
-        "language_manager.language_switch_failed": "Failed to switch to {language}: {error}"
+        "language_manager.language_switch_failed": "Failed to switch to {language}: {error}",
+        
+        # Sponsor dialog
+        "sponsor.window_title": "Supporta lo sviluppo",
+        "sponsor.title": "Supporta PDF Duplicate Finder",
+        "sponsor.message": "Se trovi utile questa applicazione, considera di supportare il suo sviluppo.\n\nIl tuo supporto aiuta a coprire i costi di hosting e incoraggia ulteriori sviluppi.",
+        "sponsor.links.github_sponsors": "GitHub Sponsors",
+        "sponsor.links.paypal": "Donazione PayPal",
+        "sponsor.monero.label": "Monero:",
+        "sponsor.qr_tooltip": "Scansiona per donare XMR",
+        "sponsor.ways_to_support": "Modi per supportare:",
+        "sponsor.other_ways.title": "Altri modi per aiutare:",
+        "sponsor.other_ways.star": "Aggiungi una stella al progetto su",
+        "sponsor.other_ways.report": "Segnala bug e suggerisci funzionalità",
+        "sponsor.other_ways.share": "Condividi con altri che potrebbero trovare utile",
+        "sponsor.buttons.donate_paypal": "Donazione con PayPal",
+        "sponsor.buttons.copy_monero": "Copia l'indirizzo Monero",
+        
+        # About dialog
+        "about.title": "Informazioni su PDF Duplicate Finder",
+        "about.version": "Versione {version}",
+        "about.description": "Uno strumento per trovare e gestire i file PDF duplicati sul tuo computer.\n\nPDF Duplicate Finder ti aiuta a risparmiare spazio su disco identificando e rimuovendo i documenti PDF duplicati in base al loro contenuto.",
+        "about.system_info": "<b>Informazioni sul sistema:</b>",
+        "about.copyright": " {year} Nsfr750\nQuesto software è rilasciato sotto licenza GPL3.",
+        "about.close": "Chiudi",
+        "refresh_language": "Aggiorna lingua"
     }
 }
 
