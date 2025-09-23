@@ -217,3 +217,5 @@ Note: When changing PDF backend logic or settings, ensure documentation is updat
 - README: PDF Backends and Fallback section
 - PREREQUISITES.md: Poppler/Ghostscript install instructions
 - Add/update tests in `tests/` accordingly
+
+Last Update: September 2025

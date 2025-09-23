@@ -55,3 +55,5 @@ The app supports two backends. You can choose one in Settings → PDF Rendering.
 - Use Settings → “Test backends” to diagnose missing paths or installations
 - Ensure Ghostscript path points to the executable file
 - Check logs in `logs/` for detailed error messages
+
+Last Update: September 2025

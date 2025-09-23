@@ -115,132 +115,6 @@ class PDFDuplicateFinder(MainWindow):
         
     def _init_scanner(self):
         """Initialize the scanner with default settings and connect signals."""
-        # Initialize the scanner
-        self._scanner = PDFScanner()
-        
-        # Connect scanner signals to UI updates
-        self._scanner.status_updated.connect(self.on_scan_status)
-        self._scanner.progress_updated.connect(self.on_scan_progress)
-        self._scanner.duplicates_found.connect(self.on_duplicates_found)
-        self._scanner.finished.connect(self.on_scan_finished)
-        
-        # Initialize progress dialog
-        self.progress_dialog = None
-    
-    def update_recent_files_menu(self, recent_files):
-        """Update the recent files menu with the latest list of recent files.
-        
-        Args:
-            recent_files: List of recent file entries (dicts with 'path' key)
-        """
-        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'update_recent_files'):
-            self.menu_bar.update_recent_files(recent_files)
-    
-    def open_recent_file(self, file_path: str):
-        """Open a file or folder from the recent files list.
-        
-        Args:
-            file_path: Path to the file or folder to open
-        """
-        if os.path.exists(file_path):
-            if os.path.isdir(file_path):
-                self.scan_folder(file_path)
-            else:
-                # If it's a file, open its containing folder
-                folder_path = os.path.dirname(file_path)
-                if os.path.isdir(folder_path):
-                    self.scan_folder(folder_path)
-        else:
-            # Remove non-existent file from recent list
-            self.recent_files_manager.remove_file(file_path)
-            QMessageBox.warning(
-                self,
-                self.tr("File Not Found"),
-                self.tr("The selected file or directory does not exist anymore.")
-            )
-    
-    def load_window_state(self):
-        """Load window state and geometry from settings."""
-        try:
-            # Get the saved geometry and state
-            geometry = self.settings.get_window_geometry()
-            state = self.settings.get_window_state()
-            
-            if geometry is not None:
-                self.restoreGeometry(geometry)
-            if state is not None:
-                self.restoreState(state)
-                
-            # Ensure the window is on a visible screen
-            screen = QApplication.primaryScreen()
-            if screen is not None:
-                screen_geometry = screen.availableGeometry()
-                if not screen_geometry.intersects(self.frameGeometry()):
-                    # If window is outside visible area, move it to the center
-                    self.move(
-                        (screen_geometry.width() - self.width()) // 2,
-                        (screen_geometry.height() - self.height()) // 2
-                    )
-        except Exception as e:
-            logger.warning(f"Failed to load window state: {e}")
-            # Set default size if loading fails
-            self.resize(1024, 768)
-            self.center_on_screen()
-    
-    def on_language_changed(self, language_code: str):
-        """Handle language change event.
-        
-        Args:
-            language_code: The new language code (e.g., 'en', 'it')
-        """
-        logger.info(f"Language changed to: {language_code}")
-        
-        # Save the new language setting
-        self.settings.set('language', language_code)
-        
-        # Call the parent class method to handle full UI updates
-        super().on_language_changed(language_code)
-        
-        # Update the UI to reflect the new language
-        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
-            self.menu_bar.retranslate_ui()
-            
-        # Update window title if it exists
-        if hasattr(self, 'setWindowTitle'):
-            self.setWindowTitle(self.language_manager.tr("main_window.title"))
-    
-    def center_on_screen(self):
-        """Center the window on the screen."""
-        screen = QApplication.primaryScreen()
-        if screen is not None:
-            screen_geometry = screen.availableGeometry()
-            self.move(
-                (screen_geometry.width() - self.width()) // 2,
-                (screen_geometry.height() - self.height()) // 2
-            )
-    
-    def apply_settings(self):
-        """Apply application settings to the UI and components."""
-        logger.debug("Applying application settings")
-        
-        # Apply language settings
-        if hasattr(self, 'language_manager'):
-            language = self.settings.get_language()
-            if language and hasattr(self.language_manager, 'get_current_language') and \
-               language != self.language_manager.get_current_language():
-                self.language_manager.set_language(language)
-        
-        # Apply window state and geometry
-        self.load_window_state()
-        
-        # Apply any other settings that need to be set on startup
-        if hasattr(self, 'menu_bar') and hasattr(self.menu_bar, 'retranslate_ui'):
-            self.menu_bar.retranslate_ui()
-            
-        logger.debug("Application settings applied")
-    
-    def _init_scanner(self):
-        """Initialize the PDF scanner with default settings and connect signals."""
         logger.info("Initializing scanner...")
         
         # Make sure we're in the main thread for UI updates
@@ -296,13 +170,18 @@ class PDFDuplicateFinder(MainWindow):
             # Get settings for scanner with reasonable defaults
             comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
             dpi = int(self.settings.get('dpi', 150))
+            enable_hash_cache = bool(self.settings.get('enable_hash_cache', True))
+            cache_dir = self.settings.get('cache_dir', None)
             
-            logger.debug(f"Creating scanner with threshold={comparison_threshold}, dpi={dpi}")
+            logger.debug(f"Creating scanner with threshold={comparison_threshold}, dpi={dpi}, "
+                        f"hash_cache={'enabled' if enable_hash_cache else 'disabled'}")
             
-            # Create scanner with settings
+            # Create scanner with settings including hash cache
             self._scanner = PDFScanner(
                 threshold=comparison_threshold,
-                dpi=dpi
+                dpi=dpi,
+                enable_hash_cache=enable_hash_cache,
+                cache_dir=cache_dir
             )
             
             # Move scanner to thread
