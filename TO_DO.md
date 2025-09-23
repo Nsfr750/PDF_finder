@@ -34,31 +34,10 @@
   - [x] Display which backend is in use during scans in status bar
 
 - [ ] **Language System**
-  - [ ] Fix language selection functionality (currently not working)
   - [ ] Add support for more languages (Spanish, French, German, etc.)
-  - [ ] Implement dynamic language switching without restart
+  - [x] Implement dynamic language switching without restart
   - [ ] Add language detection based on system locale
-
-- [ ] **Advanced Features**
-  - [ ] Add batch rename functionality for duplicate files
-  - [ ] Implement automatic duplicate management rules
-  - [ ] Add support for cloud storage integration (Google Drive, Dropbox, etc.)
-  - [ ] Create portable version for USB drives
-  - [ ] Add command-line interface for batch operations
-
-- [ ] **Testing and Quality**
-  - [ ] Implement comprehensive unit tests
-  - [ ] Add integration tests for UI components
-  - [ ] Set up automated testing pipeline
-  - [ ] Improve error handling and logging
-  - [ ] Add performance benchmarks
-
-- [ ] **Documentation**
-  - [ ] Create user manual with detailed tutorials
-  - [ ] Add developer documentation for contributors
-  - [ ] Create video tutorials for key features
-  - [ ] Improve inline code documentation
-
+  
 ---
 
 Last Updated: September 2025
