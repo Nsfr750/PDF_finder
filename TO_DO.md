@@ -13,11 +13,9 @@
   - [x] Resolve duplicate signal connection conflicts
   - [x] Improve UI stability and signal handling
 
-## 🔄 Future Development
-
-- [ ] **Performance Optimization**
-  - [ ] Implement caching for file hashes to speed up rescans
-  - [ ] Optimize memory usage for large PDF collections
+- [x] **Performance Optimization**
+  - [x] Implement caching for file hashes to speed up rescans
+  - [x] Optimize memory usage for large PDF collections
   - [x] Add progress indicators for long-running operations (implemented in v2.8.0)
   - [x] Add quick filters for file size, date modified, etc. (implemented in v2.10.0)
 
@@ -33,9 +31,13 @@
   - [x] Add "Test backends" button and inline status in Settings
   - [x] Display which backend is in use during scans in status bar
 
+- [x] **Language System**
+  - [x] Implement dynamic language switching without restart
+
+## 🔄 Future Development
+
 - [ ] **Language System**
   - [ ] Add support for more languages (Spanish, French, German, etc.)
-  - [x] Implement dynamic language switching without restart
   - [ ] Add language detection based on system locale
   
 ---
