@@ -106,23 +106,15 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
-# Project specific (add your own project specific ignores here)
+# Project specific
 *.bat
 *.exe
-/venv_new
-
 /logs
 Setup.txt
-/PDF-TEST
-PDF.code-workspace
 build_nuitka.py
 nuitka.config.toml
-nix.spec
-lin.bat
 pyinstaller_build_win.py
 pyinstaller_build_linux.py
 nuitka_build_win.py
-os
-sys
 build_linux.sh
 config/settings.json
