@@ -62,6 +62,10 @@ class MenuBar(QObject):
         self.menus['view'] = self.create_view_menu()
         self.menubar.addMenu(self.menus['view'])
         
+        # Language menu (dedicated top-level menu)
+        self.menus['language'] = self.create_language_menu()
+        self.menubar.addMenu(self.menus['language'])
+        
         # Tools menu
         self.menus['tools'] = self.create_tools_menu()
         self.menubar.addMenu(self.menus['tools'])
@@ -332,6 +336,17 @@ class MenuBar(QObject):
             self.actions['filter_options'].triggered.connect(self.parent.on_show_filter_dialog)
         menu.addAction(self.actions['filter_options'])
         
+        # Cache Manager action with icon
+        self.actions['cache_manager'] = QAction(
+            QIcon.fromTheme("system-run", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserStop)),
+            self.tr("cache_manager.menu"),
+            self.parent
+        )
+        self.actions['cache_manager'].setStatusTip(self.tr("cache_manager.menu_description"))
+        if hasattr(self.parent, 'on_show_cache_manager'):
+            self.actions['cache_manager'].triggered.connect(self.parent.on_show_cache_manager)
+        menu.addAction(self.actions['cache_manager'])
+        
         # Add separator
         menu.addSeparator()
         
@@ -381,14 +396,6 @@ class MenuBar(QObject):
         
         self.actions['settings'].triggered.connect(on_settings_triggered)
         menu.addAction(self.actions['settings'])
-        
-        # Add separator
-        menu.addSeparator()
-        
-        # Language submenu
-        self.menus['language'] = QMenu(self.tr("Language"), self.parent)
-        self.setup_language_menu()
-        menu.addMenu(self.menus['language'])
         
         # Add separator
         menu.addSeparator()
@@ -496,54 +503,62 @@ class MenuBar(QObject):
         
         return menu
     
-    def setup_language_menu(self):
-        """Set up the language selection menu with country flags."""
-        if not hasattr(self, 'language_group'):
-            self.language_group = QActionGroup(self)
-            self.language_group.setExclusive(True)
+    def create_language_menu(self) -> QMenu:
+        """Create the Language menu.
+        
+        Returns:
+            QMenu: The configured Language menu.
+        """
+        menu = QMenu(self.tr("Language"), self.parent)
+        
+        # Create action group for language selection
+        self.language_group = QActionGroup(self)
+        self.language_group.setExclusive(True)
+        
+        # Language data with flag emojis
+        languages = [
+            ('English', 'en', '🇬🇧'),
+            ('Italiano', 'it', '🇮🇹'),
+            # Add more languages as needed: ('Language Name', 'code', 'flag_emoji')
+        ]
+        
+        for name, code, flag in languages:
+            # Create action with flag and language name
+            action = QAction(f"{flag} {self.tr(name)}", self.parent, checkable=True)
+            action.setData(code)
             
-            # Language data with flag emojis
-            languages = [
-                ('English', 'en', '🇬🇧'),
-                ('Italiano', 'it', '🇮🇹'),
-                # Add more languages as needed: ('Language Name', 'code', 'flag_emoji')
-            ]
+            # Set tooltip
+            action.setToolTip(self.tr(f"Switch to {name}"))
             
-            for name, code, flag in languages:
-                # Create action with flag and language name
-                action = QAction(f"{flag} {self.tr(name)}", self.parent, checkable=True)
-                action.setData(code)
-                
-                # Set tooltip
-                action.setToolTip(self.tr(f"Switch to {name}"))
-                
-                # Connect to the language manager's set_language method
-                action.triggered.connect(
-                    lambda checked, c=code: self.language_manager.set_language(c)
-                )
-                
-                self.language_group.addAction(action)
-                self.menus['language'].addAction(action)
-                
-                # Check the current language
-                if hasattr(self, 'language_manager') and code == self.language_manager.get_current_language():
-                    action.setChecked(True)
-            
-            # Add a separator
-            self.menus['language'].addSeparator()
-            
-            # Add a refresh action
-            refresh_action = QAction(
-                QIcon.fromTheme("view-refresh", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)),
-                self.tr("Refresh Language"),
-                self.parent
+            # Connect to the language manager's set_language method
+            action.triggered.connect(
+                lambda checked, c=code: self.language_manager.set_language(c)
             )
-            refresh_action.triggered.connect(self.retranslate_ui)
-            self.menus['language'].addAction(refresh_action)
             
-            # Connect to language changed signal to update the menu
-            if hasattr(self, 'language_manager'):
-                self.language_manager.language_changed.connect(self.update_language_menu)
+            self.language_group.addAction(action)
+            menu.addAction(action)
+            
+            # Check the current language
+            if hasattr(self, 'language_manager') and code == self.language_manager.get_current_language():
+                action.setChecked(True)
+                
+        # Add a separator
+        menu.addSeparator()
+        
+        # Add a refresh action
+        refresh_action = QAction(
+            QIcon.fromTheme("view-refresh", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)),
+            self.tr("refresh_language"),
+            self.parent
+        )
+        refresh_action.triggered.connect(self.retranslate_ui)
+        menu.addAction(refresh_action)
+        
+        # Connect to language changed signal to update the menu
+        if hasattr(self, 'language_manager'):
+            self.language_manager.language_changed.connect(self.update_language_menu)
+        
+        return menu
     
     def update_language_menu(self, language_code: str):
         """Update the language menu to reflect the current language.

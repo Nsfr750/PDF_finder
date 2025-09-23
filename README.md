@@ -21,10 +21,27 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 🔄 **Batch Processing**: Process multiple files or entire folders at once
 - 📊 **Detailed Analysis**: View file details, previews, and comparison results
 - 🛠 **Advanced Tools**: Multiple selection modes, filtering, and sorting options
-- 🌍 **Multi-language Support**: Available in multiple languages with improved translation system
+- 🌍 **Enhanced Multi-language Support**: Completely rewritten translation system using Python modules for better performance and maintainability
 - 📊 **Progress Tracking**: Real-time progress bar for file processing operations
 - ⏱ **Recent Files**: Quick access to recently opened files with context menu options
-- 🐛 **Enhanced Stability**: Fixed critical bugs including duplicate tree population and PDF viewer issues
+- 🐛 **Enhanced Stability**: Major bug fixes including duplicate tree population, PDF viewer issues, and signal handling improvements
+
+## 🆕 What's New in Version 3.0.0
+
+### Major Improvements
+
+- **Completely Rewritten Translation System**: Migrated from JSON files to Python modules for better performance, maintainability, and error handling
+- **Critical Bug Fixes**: Resolved major issues that were affecting user experience and application stability
+- **Enhanced UI Stability**: Fixed toolbar shifting, duplicate signal connections, and tree population issues
+- **Improved Error Handling**: Better handling of QPainter errors and system-level Qt issues
+
+### Key Bug Fixes
+
+- **Fixed Duplicates Tree Population**: Resolved issue where size, modified, and similarity columns were not being populated correctly
+- **Fixed PDF Viewer Double-Click Bug**: Eliminated problem where double-clicking opened 3 PDF viewers instead of 1
+- **Fixed Toolbar Shifting**: Resolved UI layout issues during language changes
+- **Fixed Translation System**: Eliminated "Translation key not found" errors and improved language switching
+- **Fixed Signal Handling**: Resolved duplicate signal connections that were causing multiple handler executions
 
 ## 📦 Installation
 
@@ -86,26 +103,27 @@ See [PREREQUISITES.md](PREREQUISITES.md) for platform-specific setup.
 - Detects similar documents even with different file names or metadata
 - Configurable similarity threshold for fine-tuned results
 
+### Enhanced Translation System (v3.0.0)
+
+- Completely rewritten using Python modules instead of JSON files
+- Improved performance and maintainability
+- Better error handling and fallback mechanisms
+- Support for dynamic language switching without application restart
+
 ### Performance Optimizations
 
 - Multi-threaded scanning for faster processing
 - Memory-efficient handling of large PDF files
 - Progress tracking and cancellation support
+- Optimized translation loading for better startup performance
 
 ### User Experience
 
-- Modern, responsive interface
-- Customizable view options
+- Modern, responsive interface with enhanced stability
+- Customizable view options with improved layout handling
 - Comprehensive keyboard shortcuts
 - Detailed file information and previews
-- Toolbar with improved spacing and visual clarity
-- Settings dialog includes a "Test backends" button to validate PyMuPDF and Ghostscript availability
-
-### PDF Backends and Fallback
-
-- Choose your preferred backend in Settings → PDF Rendering
-- Use "Test backends" to verify if Ghostscript are correctly configured
-- If the selected backend fails, the app falls back to an available backend and shows a status-bar warning (localized)
+- Better error handling and user feedback
 
 ## Version History
 

@@ -9,30 +9,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added in 3.0.0
 
-- Converted translations from JSON format (en.json/it.json) to Python module (translations.py) for better performance and maintainability
-- Enhanced translation system with improved structure and organization
-- Updated build date to September 21, 2025
+- **Complete Translation System Rewrite**
+  - Converted translations from JSON format (en.json/it.json) to Python module (simple_translations.py) for better performance and maintainability
+  - Created simple_lang_manager.py with enhanced SimpleLanguageManager class
+  - Improved translation loading performance and error handling
+  - Added backward compatibility method get_current_language() as alias to get_language()
+  - Enhanced translation system with better structure and organization
+
+- **Enhanced Error Handling**
+  - Added comprehensive error handling for QPainter errors in icon rendering
+  - Improved error handling around Qt style operations to gracefully handle system-level issues
+  - Added fallback mechanisms for translation key lookups with proper error logging
 
 ### Fixed in 3.0.0
 
-- Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
-  - Resolved problem where _update_duplicates_list method was trying to populate non-existent 'duplicates_list' (QListWidget)
-  - Fixed by properly using 'duplicates_tree' (QTreeWidget) defined in ui.py
-  - Removed duplicate standalone _update_duplicates_list function outside MainWindow class
-  - Added proper initialization of self.duplicate_groups = [] in MainWindow __init__ method
-  - Updated method to call self.main_ui.update_duplicates_tree(self.duplicate_groups) correctly
+- **Critical Bug Fixes**
+  - Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
+    - Resolved problem where _update_duplicates_list method was trying to populate non-existent 'duplicates_list' (QListWidget)
+    - Fixed by properly using 'duplicates_tree' (QTreeWidget) defined in ui.py
+    - Removed duplicate standalone _update_duplicates_list function outside MainWindow class
+    - Added proper initialization of self.duplicate_groups = [] in MainWindow __init__ method
+    - Updated method to call self.main_ui.update_duplicates_tree(self.duplicate_groups) correctly
 
-- Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1
-  - Resolved duplicate signal connections that were triggering multiple handlers
-  - Removed duplicate itemDoubleClicked and itemActivated connections in main_window.py
-  - UI layer now properly handles double-click events without conflicts
-  - Fixed signal connections at lines 61 (ui.py) and 149 (ui.py) vs 398-399 (main_window.py)
+  - Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1
+    - Resolved duplicate signal connections that were triggering multiple handlers
+    - Removed duplicate itemDoubleClicked and itemActivated connections in main_window.py
+    - UI layer now properly handles double-click events without conflicts
+    - Fixed signal connections at lines 61 (ui.py) and 149 (ui.py) vs 398-399 (main_window.py)
+
+  - Fixed toolbar shifting issue when changing languages
+    - Resolved problem where _build_toolbar() method added new spacer widgets without removing previous ones
+    - Added self.spacer_widget = None to track spacer widget in __init__ method
+    - Modified _build_toolbar() to properly remove existing spacer widget before creating new one
+    - Used removeWidget() and deleteLater() to properly clean up old spacer widgets
+
+- **Translation System Fixes**
+  - Fixed all "Translation key not found" errors by updating translation keys to match actual calls in code
+    - Removed "ui." prefix from translation keys to match direct calls in menu.py
+    - Added missing translation keys for all menu items, dialog messages, and status messages
+    - Added comprehensive translations for both English and Italian languages
+    - Fixed translation system to work without any "Translation key not found" warnings
+
+  - Fixed language translation issue where menu and UI elements were not being translated when language changed
+    - Added translation_keys dictionary to store original translation keys for all UI elements
+    - Modified UI setup to store translation keys for labels, buttons, tabs, and actions
+    - Updated on_language_changed method to use stored translation keys instead of retranslating existing text
+    - Added call to UI's on_language_changed method in main window's on_language_changed method
+
+  - Fixed AttributeError for 'get_current_language' method in SimpleLanguageManager
+    - Added get_current_language() as alias to get_language() for backward compatibility
+    - Ensured translation system works correctly with existing components expecting get_current_language() method
+
+  - Fixed ModuleNotFoundError for 'script.simple_lang_manager'
+    - Created missing simple_lang_manager.py file with complete SimpleLanguageManager functionality
+    - Added language initialization, validation, switching with signal emission
+    - Implemented translation lookup with fallback logic (current language -> default language -> English)
+    - Added available languages retrieval functionality
+
+  - Removed language selection from settings dialog as per requirements
+    - Removed language_changed signal from SettingsDialog class
+    - Removed language_combo from setup_general_tab method
+    - Removed language loading/saving code from load_settings and save_settings methods
+    - Removed initial_language variable and related initialization code
+    - Removed restart message when language was changed
+    - Simplified on_show_settings method by removing language change handling logic
 
 ### Changed in 3.0.0
 
-- Improved translation loading performance by using Python modules instead of JSON files
-- Enhanced code maintainability with better-structured translation data
-- Updated version information and build metadata
+- **Major Architecture Changes**
+  - Improved translation loading performance by using Python modules instead of JSON files
+  - Enhanced code maintainability with better-structured translation data
+  - Updated version information and build metadata to September 21, 2025
+  - Improved overall application stability and error handling
+
+- **Code Quality Improvements**
+  - Enhanced error handling throughout the application
+  - Improved signal connection management to prevent duplicate handlers
+  - Better resource management with proper widget cleanup
+  - Enhanced logging and debugging capabilities
+
+- **User Experience Improvements**
+  - More stable UI behavior during language changes
+  - Better error messages and user feedback
+  - Improved application responsiveness
+  - Enhanced stability for PDF viewer operations
 
 ## [2.12.0] - 2025-08-23
 

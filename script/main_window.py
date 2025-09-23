@@ -413,6 +413,32 @@ class MainWindow(QMainWindow):
         # Apply initial settings
         self.apply_settings()
     
+    def apply_settings(self):
+        """Apply initial settings to the main window."""
+        logger.debug("MainWindow.apply_settings() called")
+        try:
+            # Apply window settings
+            if hasattr(self.settings, 'get_window_geometry'):
+                geometry = self.settings.get_window_geometry()
+                if geometry:
+                    self.restoreGeometry(geometry)
+            
+            if hasattr(self.settings, 'get_window_state'):
+                state = self.settings.get_window_state()
+                if state:
+                    self.restoreState(state)
+            
+            # Apply theme settings if available
+            if hasattr(self.settings, 'get_theme'):
+                theme = self.settings.get_theme()
+                if theme:
+                    self.app.setStyle(theme)
+            
+            logger.debug("Settings applied successfully")
+            
+        except Exception as e:
+            logger.error(f"Error applying settings: {e}", exc_info=True)
+    
     def setup_connections(self):
         """Set up signal connections."""
         # Connect file list selection change if the UI has a file list
@@ -677,3 +703,85 @@ class MainWindow(QMainWindow):
                 self.language_manager.tr("dialog.error"),
                 self.language_manager.tr("errors.settings_open_failed") % str(e)
             )
+
+    def on_show_cache_manager(self):
+        """Show the cache manager dialog."""
+        logger.debug("MainWindow.on_show_cache_manager() called")
+        try:
+            # Check if scanner has hash cache
+            if not hasattr(self, '_scanner') or not self._scanner or not self._scanner.hash_cache:
+                QMessageBox.information(
+                    self,
+                    self.language_manager.tr("cache_manager.title"),
+                    self.language_manager.tr("cache_manager.not_available")
+                )
+                return
+            
+            # Get current settings
+            current_settings = {
+                'enable_hash_cache': self.settings.get('enable_hash_cache', True),
+                'cache_dir': self.settings.get('cache_dir', None),
+                'max_cache_size': self.settings.get('max_cache_size', 10000),
+                'cache_ttl_days': self.settings.get('cache_ttl_days', 30),
+                'memory_cache_size': self.settings.get('memory_cache_size', 1000)
+            }
+            
+            # Create and show the cache manager dialog
+            from script.cache_manager import CacheManagerDialog
+            dialog = CacheManagerDialog(
+                hash_cache=self._scanner.hash_cache,
+                current_settings=current_settings,
+                parent=self
+            )
+            
+            # Connect signals
+            dialog.settings_changed.connect(self.on_cache_settings_changed)
+            dialog.cache_cleared.connect(self.on_cache_cleared)
+            
+            # Show the dialog
+            dialog.exec()
+            
+        except Exception as e:
+            logger.error(f"Error showing cache manager dialog: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error"),
+                self.language_manager.tr("errors.cache_manager_open_failed") % str(e)
+            )
+    
+    def on_cache_settings_changed(self, settings: Dict[str, Any]):
+        """Handle cache settings changes."""
+        logger.debug(f"Cache settings changed: {settings}")
+        try:
+            # Update settings
+            for key, value in settings.items():
+                self.settings.set(key, value)
+            
+            # Show info message
+            QMessageBox.information(
+                self,
+                self.language_manager.tr("cache_manager.settings_changed"),
+                self.language_manager.tr("cache_manager.settings_changed_message")
+            )
+            
+        except Exception as e:
+            logger.error(f"Error updating cache settings: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error"),
+                self.language_manager.tr("errors.cache_settings_update_failed") % str(e)
+            )
+    
+    def on_cache_cleared(self):
+        """Handle cache cleared event."""
+        logger.debug("Cache cleared")
+        try:
+            # Show info message
+            QMessageBox.information(
+                self,
+                self.language_manager.tr("cache_manager.cache_cleared"),
+                self.language_manager.tr("cache_manager.cache_cleared_message")
+            )
+            
+        except Exception as e:
+            logger.error(f"Error handling cache cleared event: {e}", exc_info=True)

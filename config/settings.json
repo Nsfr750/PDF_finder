@@ -16,5 +16,13 @@
     "backend": "wand_ghostscript",
     "ghostscript_path": "C:/Progra~1/gs/gs10.05.0/bin/gswin64.exe"
   },
-  "language": "it"
+  "language": "it",
+  "theme": "system",
+  "check_updates": true,
+  "auto_save": true,
+  "enable_hash_cache": false,
+  "cache_dir": "",
+  "max_cache_size": 10000,
+  "cache_ttl_days": 30,
+  "memory_cache_size": 1000
 }

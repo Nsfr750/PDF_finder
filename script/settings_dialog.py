@@ -217,6 +217,49 @@ class SettingsDialog(QDialog):
             layout.addRow(self.check_updates)
             layout.addRow(self.auto_save)
             
+            # Hash cache settings
+            cache_group = QGroupBox(self.tr("settings.cache_settings"))
+            cache_layout = QFormLayout(cache_group)
+            
+            # Enable hash cache
+            self.enable_hash_cache = QCheckBox(self.tr("settings.enable_hash_cache"))
+            cache_layout.addRow(self.enable_hash_cache)
+            
+            # Cache directory
+            cache_dir_layout = QHBoxLayout()
+            self.cache_dir = QLineEdit()
+            self.cache_dir_browse = QPushButton("...")
+            self.cache_dir_browse.setMaximumWidth(30)
+            cache_dir_layout.addWidget(self.cache_dir)
+            cache_dir_layout.addWidget(self.cache_dir_browse)
+            cache_layout.addRow(self.tr("settings.cache_dir"), cache_dir_layout)
+            
+            # Max cache size
+            self.max_cache_size = QSpinBox()
+            self.max_cache_size.setRange(100, 100000)
+            self.max_cache_size.setValue(10000)
+            self.max_cache_size.setSuffix(" " + self.tr("settings.entries"))
+            cache_layout.addRow(self.tr("settings.max_cache_size"), self.max_cache_size)
+            
+            # Cache TTL days
+            self.cache_ttl_days = QSpinBox()
+            self.cache_ttl_days.setRange(1, 365)
+            self.cache_ttl_days.setValue(30)
+            self.cache_ttl_days.setSuffix(" " + self.tr("settings.days"))
+            cache_layout.addRow(self.tr("settings.cache_ttl_days"), self.cache_ttl_days)
+            
+            # Memory cache size
+            self.memory_cache_size = QSpinBox()
+            self.memory_cache_size.setRange(100, 10000)
+            self.memory_cache_size.setValue(1000)
+            self.memory_cache_size.setSuffix(" " + self.tr("settings.entries"))
+            cache_layout.addRow(self.tr("settings.memory_cache_size"), self.memory_cache_size)
+            
+            layout.addRow(cache_group)
+            
+            # Connect cache directory browse button
+            self.cache_dir_browse.clicked.connect(self._browse_cache_dir)
+            
             logger.debug("General tab setup complete")
             
         except Exception as e:
@@ -288,14 +331,14 @@ class SettingsDialog(QDialog):
         logger.debug("SettingsDialog.load_settings() called")
         try:
             # Load theme
-            current_theme = settings.get('app.theme', 'system')
+            current_theme = settings.get('theme', 'system')
             index = self.theme_combo.findData(current_theme)
             if index >= 0:
                 self.theme_combo.setCurrentIndex(index)
             
             # Load other settings
-            self.check_updates.setChecked(settings.get('app.check_updates', True))
-            self.auto_save.setChecked(settings.get('app.auto_save', True))
+            self.check_updates.setChecked(settings.get('check_updates', True))
+            self.auto_save.setChecked(settings.get('auto_save', True))
             
             # Load PDF backend settings
             current_backend = settings.get('pdf.backend', 'auto')
@@ -309,6 +352,13 @@ class SettingsDialog(QDialog):
                 self.test_backends(inline_only=True)
             except Exception as e:
                 logger.debug(f"Could not test backends on load: {e}")
+            
+            # Load hash cache settings
+            self.enable_hash_cache.setChecked(settings.get('enable_hash_cache', False))
+            self.cache_dir.setText(settings.get('cache_dir', '') or '')
+            self.max_cache_size.setValue(settings.get('max_cache_size', 10000))
+            self.cache_ttl_days.setValue(settings.get('cache_ttl_days', 30))
+            self.memory_cache_size.setValue(settings.get('memory_cache_size', 1000))
             
             logger.debug("Settings loaded")
             
@@ -324,15 +374,22 @@ class SettingsDialog(QDialog):
         try:
             # Save theme
             theme = self.theme_combo.currentData()
-            settings.set('app.theme', theme)
+            settings.set('theme', theme)
             
             # Save application settings
-            settings.set('app.check_updates', self.check_updates.isChecked())
-            settings.set('app.auto_save', self.auto_save.isChecked())
+            settings.set('check_updates', self.check_updates.isChecked())
+            settings.set('auto_save', self.auto_save.isChecked())
             
             # Save PDF settings
             settings.set('pdf.backend', self.backend_combo.currentData())
             settings.set('pdf.ghostscript_path', self.ghostscript_path_edit.text().strip())
+            
+            # Save hash cache settings
+            settings.set('enable_hash_cache', self.enable_hash_cache.isChecked())
+            settings.set('cache_dir', self.cache_dir.text().strip())
+            settings.set('max_cache_size', self.max_cache_size.value())
+            settings.set('cache_ttl_days', self.cache_ttl_days.value())
+            settings.set('memory_cache_size', self.memory_cache_size.value())
             
             logger.debug("Settings saved successfully")
             return True
@@ -392,5 +449,17 @@ class SettingsDialog(QDialog):
         if self.language_manager:
             return self.language_manager.tr(key)
         return key
+
+    def _browse_cache_dir(self):
+        """Browse for cache directory."""
+        logger.debug("Browsing for cache directory")
+        try:
+            f = QFileDialog.getExistingDirectory(self, self.tr("settings.select_cache_dir"))
+            if f:
+                self.cache_dir.setText(f)
+        except Exception as e:
+            logger.error(f"Error browsing for cache directory: {e}")
+            import traceback
+            traceback.print_exc()
 
     # End of SettingsDialog class

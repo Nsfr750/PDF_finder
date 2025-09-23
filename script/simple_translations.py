@@ -54,6 +54,15 @@ TRANSLATIONS = {
         "settings.ghostscript_path": "Ghostscript path:",
         "settings.backend_status": "Backend status:",
         "settings.test_backends": "Test backends",
+        "settings.cache_settings": "Hash Cache Settings",
+        "settings.enable_hash_cache": "Enable hash cache",
+        "settings.cache_dir": "Cache directory",
+        "settings.select_cache_dir": "Select Cache Directory",
+        "settings.max_cache_size": "Maximum cache size",
+        "settings.cache_ttl_days": "Cache retention (days)",
+        "settings.memory_cache_size": "Memory cache size",
+        "settings.entries": "entries",
+        "settings.days": "days",
         
         # Menu items
         "menu.file": "File",
@@ -396,8 +405,6 @@ TRANSLATIONS = {
         "pdf_viewer.errors.invalid_page": "Invalid page number",
         "pdf_viewer.errors.file_not_found": "File not found: {}",
         
-        "pdf_viewer.errors.file_not_found": "File not found: {}",
-        
         # PDF search
         "pdf_search.window_title": "PDF Search",
         "pdf_search.search_in_files": "Search in PDF files",
@@ -413,6 +420,17 @@ TRANSLATIONS = {
         "pdf_search.error_searching": "Error searching in {file}: {error}",
         "pdf_search.invalid_pdf": "Invalid PDF file: {file}",
         "pdf_search.no_text": "No text found in PDF: {file}",
+        
+        # Cache Manager
+        "cache_manager.title": "Cache Manager",
+        "cache_manager.not_available": "Hash cache is not available. Please enable hash cache in settings.",
+        "cache_manager.settings_changed": "Cache Settings Changed",
+        "cache_manager.settings_changed_message": "Cache settings have been updated successfully.",
+        "cache_manager.cache_cleared": "Cache Cleared",
+        "cache_manager.cache_cleared_message": "The hash cache has been cleared successfully.",
+        "cache_manager.menu": "Cache Manager",
+        "cache_manager.menu_description": "Manage PDF hash cache settings and operations",
+        "cache_manager.refresh_language": "Refresh Language",
         
         # PDF utilities
         "pdf_utils.window_title": "PDF Utilities",
@@ -648,6 +666,15 @@ TRANSLATIONS = {
         "settings.ghostscript_path": "Percorso Ghostscript:",
         "settings.backend_status": "Stato backend:",
         "settings.test_backends": "Testa i backend",
+        "settings.cache_settings": "Impostazioni Cache Hash",
+        "settings.enable_hash_cache": "Abilita cache hash",
+        "settings.cache_dir": "Directory cache",
+        "settings.select_cache_dir": "Seleziona directory cache",
+        "settings.max_cache_size": "Dimensione massima cache",
+        "settings.cache_ttl_days": "Validità cache (giorni)",
+        "settings.memory_cache_size": "Dimensione cache memoria",
+        "settings.entries": "voci",
+        "settings.days": "giorni",
         
         # Menu items
         "menu.file": "File",
@@ -989,9 +1016,7 @@ TRANSLATIONS = {
         "pdf_viewer.errors.render_error": "Errore durante la visualizzazione della pagina: {error}",
         "pdf_viewer.errors.invalid_page": "Numero di pagina non valido",
         "pdf_viewer.errors.file_not_found": "File non trovato: {}",
-        
-        "pdf_viewer.errors.file_not_found": "File not found: {}",
-        
+          
         # PDF search
         "pdf_search.window_title": "Ricerca PDF",
         "pdf_search.search_in_files": "Cerca in file PDF",
@@ -1022,6 +1047,17 @@ TRANSLATIONS = {
         "pdf_utils.completed": "Completato",
         "pdf_utils.error_processing": "Errore durante l'elaborazione del PDF: {error}",
         "pdf_utils.no_pdf_files_found": "Nessun file PDF trovato nella directory specificata",
+        
+        # Cache Manager
+        "cache_manager.title": "Gestore Cache",
+        "cache_manager.not_available": "La cache hash non è disponibile. Abilitare la cache hash nelle impostazioni.",
+        "cache_manager.settings_changed": "Impostazioni Cache Modificate",
+        "cache_manager.settings_changed_message": "Le impostazioni della cache sono state aggiornate con successo.",
+        "cache_manager.cache_cleared": "Cache Svuotata",
+        "cache_manager.cache_cleared_message": "La cache hash è stata svuotata con successo.",
+        "cache_manager.menu": "Gestore Cache",
+        "cache_manager.menu_description": "Gestisci le impostazioni e le operazioni della cache hash PDF",
+        "cache_manager.refresh_language": "Aggiorna lingua",
         
         # Log viewer
         "log_viewer.window_title": "Visualizzatore log",

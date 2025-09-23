@@ -74,7 +74,7 @@ class PDFDuplicateFinder(MainWindow):
         logger.debug("MainWindow initialization complete")
         
         # Load window state and geometry from settings
-        self.load_window_state()
+        self.apply_settings()
         
         # Initialize filter settings
         self.current_filters = {
@@ -100,6 +100,40 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize progress dialog
         self.progress_dialog = None
+    
+    def update_recent_files_menu(self, recent_files=None):
+        """Update the recent files menu when the recent files list changes.
+        
+        Args:
+            recent_files: Optional list of recent files (if None, gets from manager)
+        """
+        if recent_files is None:
+            recent_files = self.recent_files_manager.get_recent_files()
+        
+        # Update the menu through the menu bar
+        if hasattr(self, 'menu_bar') and self.menu_bar:
+            self.menu_bar.update_recent_files(recent_files)
+    
+    def open_recent_file(self, file_path):
+        """Open a recent file or folder.
+        
+        Args:
+            file_path: Path to the file or folder to open
+        """
+        if not file_path or not os.path.exists(file_path):
+            logger.warning(f"Cannot open non-existent path: {file_path}")
+            return
+        
+        if os.path.isdir(file_path):
+            # If it's a directory, scan it
+            self.scan_folder(file_path)
+        else:
+            # If it's a file, open it in the PDF viewer
+            from script.PDF_viewer import show_pdf_viewer
+            show_pdf_viewer(file_path, self)
+        
+        # Add to recent files again to update its position
+        self.recent_files_manager.add_file(file_path)
         
     def on_show_about(self):
         """Show the about dialog."""

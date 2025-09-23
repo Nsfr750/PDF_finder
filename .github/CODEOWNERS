@@ -1,16 +1,93 @@
 # This is a CODEOWNERS file that defines individuals or teams responsible for code in this repository.
 # The last matching pattern has the most precedence.
+#
+# Format: <path> <@username> <@team>
+#   - <path> can be a file pattern, directory, or specific file
+#   - <@username> is a GitHub username
+#   - <@team> is a GitHub team (format: @org/team-name)
+#
+# For more information, see: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Default owner for the entire repository
+# Global owner for the entire repository
 *       @Nsfr750
 
-# Specific ownership
-/tests/                 @Nsfr750
+# Core application files
+/main.py                @Nsfr750
+/requirements.txt       @Nsfr750
+/pyproject.toml         @Nsfr750
+/setup.py               @Nsfr750
+
+# Core application modules
 /script/                @Nsfr750
-/config/    @Nsfr750
-/assets/    @Nsfr750
-/README.md  @Nsfr750
-/CHANGELOG.md @Nsfr750
-/CONTRIBUTING.md @Nsfr750
-/PREREQUISITES.md @Nsfr750
-/LICENSE @Nsfr750
+/script/*.py            @Nsfr750
+
+# Translation system (v3.0.0+)
+/script/simple_lang_manager.py    @Nsfr750
+/script/simple_translations.py    @Nsfr750
+
+# Configuration and settings
+/config/                @Nsfr750
+/config/*.json          @Nsfr750
+/config/*.ini           @Nsfr750
+
+# Documentation files
+/README.md              @Nsfr750
+/CHANGELOG.md           @Nsfr750
+/CONTRIBUTING.md        @Nsfr750
+/PREREQUISITES.md       @Nsfr750
+/TO_DO.md               @Nsfr750
+/LICENSE                @Nsfr750
+
+# Build and packaging
+/build_linux.sh         @Nsfr750
+/pyinstaller_build_*.py @Nsfr750
+/nuitka_build_*.py      @Nsfr750
+/nuitka.config.toml     @Nsfr750
+
+# Assets and resources
+/assets/                @Nsfr750
+/assets/*.png           @Nsfr750
+/assets/*.ico           @Nsfr750
+/assets/*.svg           @Nsfr750
+
+# Testing
+/tests/                 @Nsfr750
+/tests/*.py             @Nsfr750
+/tests/test_*.py        @Nsfr750
+
+# GitHub configuration
+/.github/               @Nsfr750
+/.github/CODEOWNERS     @Nsfr750
+/.github/FUNDING.yml    @Nsfr750
+/.github/ISSUE_TEMPLATE/ @Nsfr750
+/.github/PULL_REQUEST_TEMPLATE.md @Nsfr750
+/.github/workflows/     @Nsfr750
+
+# Development tools
+/.vscode/               @Nsfr750
+/.gitignore             @Nsfr750
+
+# Documentation directory
+/docs/                  @Nsfr750
+/docs/*.md              @Nsfr750
+
+# Logs directory (for development)
+/logs/                  @Nsfr750
+
+# Distribution builds
+/dist/                  @Nsfr750
+
+# Virtual environment (gitignored, but for completeness)
+/venv/                  @Nsfr750
+
+# Specific file patterns
+*.md                    @Nsfr750
+*.py                    @Nsfr750
+*.txt                   @Nsfr750
+*.toml                  @Nsfr750
+*.json                  @Nsfr750
+*.yml                   @Nsfr750
+*.yaml                  @Nsfr750
+
+# Emergency fallback (if no other pattern matches)
+**                      @Nsfr750
