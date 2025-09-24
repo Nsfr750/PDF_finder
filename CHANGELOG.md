@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 3.0.0
 
 - **Complete Translation System Rewrite**
+
   - Converted translations from JSON format (en.json/it.json) to Python module (simple_translations.py) for better performance and maintainability
   - Created simple_lang_manager.py with enhanced SimpleLanguageManager class
   - Improved translation loading performance and error handling
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced translation system with better structure and organization
 
 - **Enhanced Error Handling**
+
   - Added comprehensive error handling for QPainter errors in icon rendering
   - Improved error handling around Qt style operations to gracefully handle system-level issues
   - Added fallback mechanisms for translation key lookups with proper error logging
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed in 3.0.0
 
 - **Critical Bug Fixes**
+
   - Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
     - Resolved problem where _update_duplicates_list method was trying to populate non-existent 'duplicates_list' (QListWidget)
     - Fixed by properly using 'duplicates_tree' (QTreeWidget) defined in ui.py
@@ -44,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Used removeWidget() and deleteLater() to properly clean up old spacer widgets
 
 - **Translation System Fixes**
+
   - Fixed all "Translation key not found" errors by updating translation keys to match actual calls in code
     - Removed "ui." prefix from translation keys to match direct calls in menu.py
     - Added missing translation keys for all menu items, dialog messages, and status messages

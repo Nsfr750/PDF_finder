@@ -119,7 +119,8 @@ class PDFDuplicateFinder(MainWindow):
                     threshold=0.95,  # Default threshold
                     dpi=150,        # Default DPI
                     enable_hash_cache=True,
-                    cache_dir=cache_dir
+                    cache_dir=cache_dir,
+                    language_manager=self.language_manager
                 )
                 
                 logger.info("Hash cache initialized successfully")
@@ -245,7 +246,8 @@ class PDFDuplicateFinder(MainWindow):
                 threshold=comparison_threshold,
                 dpi=dpi,
                 enable_hash_cache=enable_hash_cache,
-                cache_dir=cache_dir
+                cache_dir=cache_dir,
+                language_manager=self.language_manager
             )
             
             # Move scanner to thread

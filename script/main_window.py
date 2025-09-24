@@ -183,7 +183,10 @@ class MainWindow(QMainWindow):
     def on_open_folder(self):
         """Handle the 'Open Folder' action from the menu."""
         try:
+            logger.debug("on_open_folder: Starting folder selection process")
+            
             # Open a directory dialog to select a folder
+            logger.debug("on_open_folder: Opening directory dialog")
             folder_path = QFileDialog.getExistingDirectory(
                 self,
                 self.language_manager.tr("dialog.select_folder", "Select Folder"),
@@ -191,35 +194,49 @@ class MainWindow(QMainWindow):
                 QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontUseNativeDialog
             )
             
+            logger.debug(f"on_open_folder: Selected folder path: {folder_path}")
+            
             if folder_path:
+                logger.debug(f"on_open_folder: Processing selected folder: {folder_path}")
+                
                 # Add to recent files
+                logger.debug("on_open_folder: Adding to recent files")
                 self.recent_files_manager.add_file(folder_path)
                 
                 # Update the status bar
+                logger.debug("on_open_folder: Updating status bar")
                 self.status_bar.showMessage(
                     self.language_manager.tr("ui.status_scanning", "Scanning folder: %s") % folder_path
                 )
                 
                 # Start scanning in background thread
+                logger.debug("on_open_folder: Starting scan process")
                 self._start_scan(folder_path)
                 
                 # Reset status bar after a delay
+                logger.debug("on_open_folder: Setting status bar reset timer")
                 QTimer.singleShot(3000, lambda: self.status_bar.showMessage(
                     self.language_manager.tr("ui.status_ready")
                 ))
                 
+                # Show folder selected message
+                logger.debug("on_open_folder: Showing folder selected message")
                 QMessageBox.information(
                     self,
                     self.language_manager.tr("dialog.folder_selected", "Folder Selected"),
                     self.language_manager.tr("dialog.selected_folder", "Selected folder: %s") % folder_path
                 )
                 
+                logger.debug("on_open_folder: Folder selection process completed successfully")
+            else:
+                logger.debug("on_open_folder: No folder selected, process cancelled")
+                
         except Exception as e:
-            logger.error(f"Error opening folder: {e}", exc_info=True)
+            logger.error(f"Error in on_open_folder: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
                 self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr("dialog.error_opening_folder", "Error opening folder: %s") % str(e)
+                self.language_manager.tr("errors.folder_open_failed", "Failed to open folder: %s") % str(e)
             )
     
     def on_select_all(self):
@@ -406,6 +423,10 @@ class MainWindow(QMainWindow):
         if hasattr(self.main_ui, 'file_list'):
             self.main_ui.file_list.itemSelectionChanged.connect(self.on_file_selection_changed)
         
+        # Connect scan status signals
+        self.scan_status.connect(self.on_scan_status)
+        self.scan_progress.connect(self.on_scan_progress)
+        
         # Connect menu actions to toolbar
         if hasattr(self, 'menu_bar') and hasattr(self, 'toolbar'):
             # Get all available menu actions
@@ -420,6 +441,71 @@ class MainWindow(QMainWindow):
             # Connect toolbar toggle action
             if hasattr(self, 'on_toggle_toolbar'):
                 self.menu_bar.actions.get('toggle_toolbar').toggled.connect(self.on_toggle_toolbar)
+    
+    def on_scan_status(self, message: str, current: int, total: int):
+        """Handle scan status updates.
+        
+        Args:
+            message: Status message to display
+            current: Current progress value
+            total: Total progress value
+        """
+        try:
+            # Update status bar with the message
+            self.status_bar.showMessage(message)
+            
+            # Update progress bar if we have valid progress values
+            if total > 0:
+                self.progress_bar.setVisible(True)
+                self.progress_bar.setMaximum(total)
+                self.progress_bar.setValue(current)
+                
+                # Calculate percentage for progress bar text
+                if total > 0:
+                    percentage = int((current / total) * 100)
+                    self.progress_bar.setFormat(f"{percentage}% ({current}/{total})")
+                else:
+                    self.progress_bar.setFormat(f"{current}/{total}")
+            else:
+                # Hide progress bar if no valid progress
+                self.progress_bar.setVisible(False)
+                
+            logger.debug(f"Scan status: {message} ({current}/{total})")
+            
+        except Exception as e:
+            logger.error(f"Error updating scan status: {e}", exc_info=True)
+    
+    def on_scan_progress(self, current: int, total: int, current_file: str):
+        """Handle scan progress updates.
+        
+        Args:
+            current: Current progress value
+            total: Total progress value
+            current_file: Path to the current file being processed
+        """
+        try:
+            # Update progress bar
+            if total > 0:
+                self.progress_bar.setVisible(True)
+                self.progress_bar.setMaximum(total)
+                self.progress_bar.setValue(current)
+                
+                # Calculate percentage for progress bar text
+                percentage = int((current / total) * 100)
+                filename = os.path.basename(current_file) if current_file else ""
+                self.progress_bar.setFormat(f"{percentage}% ({current}/{total}) - {filename}")
+                
+                # Update status bar with current file info
+                self.status_bar.showMessage(
+                    self.language_manager.tr("main.processing_file", "Processing: {file}").format(file=filename)
+                )
+            else:
+                self.progress_bar.setVisible(False)
+                
+            logger.debug(f"Scan progress: {current}/{total} - {current_file}")
+            
+        except Exception as e:
+            logger.error(f"Error updating scan progress: {e}", exc_info=True)
 
     def on_delete_selected(self):
         """Handle deletion of selected files."""
@@ -776,19 +862,24 @@ class MainWindow(QMainWindow):
             folder_path: Path to the folder to scan
         """
         try:
-            logger.debug(f"Starting scan for folder: {folder_path}")
+            logger.debug(f"_start_scan: Starting scan process for folder: {folder_path}")
             
             # Get scanner settings from settings
+            logger.debug("_start_scan: Getting scanner settings")
             threshold = self.settings.get('similarity_threshold', 0.95)
             dpi = self.settings.get('scan_dpi', 150)
+            logger.debug(f"_start_scan: Settings - threshold: {threshold}, dpi: {dpi}")
             
             # Check if scanner is already initialized
+            logger.debug("_start_scan: Checking scanner initialization")
             if not hasattr(self, '_scanner') or self._scanner is None:
-                logger.debug("Scanner not initialized, creating new one")
+                logger.debug("_start_scan: Scanner not initialized, creating new one")
                 enable_hash_cache = self.settings.get('enable_hash_cache', True)
                 cache_dir = self.settings.get('cache_dir', None)
+                logger.debug(f"_start_scan: Cache settings - enabled: {enable_hash_cache}, dir: {cache_dir}")
                 
                 # Create scanner with settings
+                logger.debug("_start_scan: Creating new PDFScanner instance")
                 self._scanner = PDFScanner(
                     threshold=threshold,
                     dpi=dpi,
@@ -796,13 +887,15 @@ class MainWindow(QMainWindow):
                     cache_dir=cache_dir,
                     language_manager=self.language_manager
                 )
+                logger.debug("_start_scan: PDFScanner instance created successfully")
             else:
-                logger.debug("Using existing scanner")
+                logger.debug("_start_scan: Using existing scanner")
                 # Update scanner settings if needed
                 self._scanner.threshold = threshold
                 self._scanner.dpi = dpi
             
             # Set up scan parameters
+            logger.debug("_start_scan: Setting up scan parameters")
             self._scanner.scan_parameters = {
                 'directory': folder_path,
                 'recursive': True,
@@ -811,31 +904,40 @@ class MainWindow(QMainWindow):
                 'min_similarity': 0.8,
                 'enable_text_compare': True
             }
+            logger.debug("_start_scan: Scan parameters set up successfully")
             
             # Connect scanner signals to main window signals
+            logger.debug("_start_scan: Connecting scanner signals")
             self._scanner.status_updated.connect(self.scan_status)
             self._scanner.progress_updated.connect(self.scan_progress)
             self._scanner.duplicates_found.connect(self._on_duplicates_found)
             self._scanner.finished.connect(self._on_scan_finished)
+            logger.debug("_start_scan: Scanner signals connected successfully")
             
             # Create and start scan thread
+            logger.debug("_start_scan: Creating scan thread")
             from PyQt6.QtCore import QThread
             self._scan_thread = QThread()
             self._scanner.moveToThread(self._scan_thread)
+            logger.debug("_start_scan: Scanner moved to thread")
             
             # Connect thread signals
+            logger.debug("_start_scan: Connecting thread signals")
             self._scan_thread.started.connect(self._scanner.start_scan)
             self._scanner.finished.connect(self._scan_thread.quit)
             self._scanner.finished.connect(self._scanner.deleteLater)
             self._scan_thread.finished.connect(self._scan_thread.deleteLater)
+            logger.debug("_start_scan: Thread signals connected successfully")
             
             # Start the thread
+            logger.debug("_start_scan: Starting scan thread")
             self._scan_thread.start()
+            logger.debug("_start_scan: Scan thread started successfully")
             
             logger.info(f"Scan started for folder: {folder_path}")
             
         except Exception as e:
-            logger.error(f"Error starting scan: {e}", exc_info=True)
+            logger.error(f"Error in _start_scan: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
                 self.language_manager.tr("dialog.error", "Error"),
@@ -859,7 +961,20 @@ class MainWindow(QMainWindow):
             duplicates: List of duplicate groups
         """
         logger.debug(f"Scan finished with {len(duplicates)} duplicate groups")
-        self.scan_finished.emit()
+        
+        try:
+            # Hide progress bar and reset status bar
+            self.progress_bar.setVisible(False)
+            self.progress_bar.setValue(0)
+            self.status_bar.showMessage(self.language_manager.tr("ui.status_ready"))
+            
+            # Emit scan finished signal
+            self.scan_finished.emit()
+            
+            logger.info("Scan completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Error finishing scan: {e}", exc_info=True)
         
     def open_recent_file(self, file_path: str):
         """Open a recent file or folder.

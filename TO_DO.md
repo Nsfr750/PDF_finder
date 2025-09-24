@@ -60,18 +60,21 @@
 ### 🚀 Version 3.1.0 (Q4 2025)
 
 #### High Priority Features
+
 - [ ] **Advanced PDF Analysis**
   - [ ] Add OCR support for scanned PDFs using Tesseract
   - [ ] Implement content-based similarity scoring beyond simple text comparison
   - [ ] Add support for password-protected PDFs (with user prompt)
 
 #### Performance Enhancements
+
 - [ ] **Multi-threading Improvements**
   - [ ] Implement parallel processing for large PDF collections
   - [ ] Add configurable thread pool size
   - [ ] Optimize memory usage during batch operations
 
 #### User Interface Improvements
+
 - [ ] **Enhanced File Management**
   - [ ] Add drag-and-drop support for folders and files
   - [ ] Implement file preview thumbnails in the file list
@@ -80,6 +83,7 @@
 ### 🎯 Version 3.2.0 (Q1 2026)
 
 #### Reporting and Analytics
+
 - [ ] **Detailed Reporting**
   - [ ] Generate comprehensive duplicate reports with statistics
   - [ ] Export reports in multiple formats (PDF, Excel, HTML)
@@ -87,6 +91,7 @@
   - [ ] Implement scheduled scanning and reporting
 
 #### Automation
+
 - [ ] **Automated Workflows**
   - [ ] Create rules-based automatic duplicate handling
   - [ ] Add scheduled scanning capabilities
@@ -96,6 +101,7 @@
 ### 🔧 Version 3.3.0 (Q2 2026)
 
 #### Platform Enhancements
+
 - [ ] **Cross-Platform Improvements**
   - [ ] Enhanced macOS support with native UI elements
   - [ ] Improved Linux packaging and distribution
@@ -103,6 +109,7 @@
   - [ ] Implement system tray icon with quick actions
 
 #### Advanced Comparison Algorithms
+
 - [ ] **AI-Powered Comparison**
   - [ ] Implement machine learning-based similarity detection
   - [ ] Add support for semantic similarity analysis
@@ -112,6 +119,7 @@
 ### 🌐 Version 4.0.0 (Q3 2026)
 
 #### Major Architecture Overhaul
+
 - [ ] **Plugin System**
   - [ ] Design and implement plugin architecture
   - [ ] Create plugin SDK for third-party developers

@@ -1,6 +1,8 @@
 """Text processing for PDF comparison."""
 import re
 import logging
+import threading
+import signal
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 import fitz  # PyMuPDF
@@ -21,16 +23,47 @@ class TextProcessor:
         self.options = options or TextExtractionOptions()
     
     def extract_text(self, file_path: str) -> str:
-        """Extract and process text from PDF."""
+        """Extract and process text from PDF with timeout protection."""
         try:
-            doc = fitz.open(file_path)
-            text = ""
-            for page in doc:
-                text += page.get_text("text") + "\n"
-            return self._process_text(text)
+            # Use timeout mechanism to prevent hanging
+            result = self._extract_text_with_timeout(file_path, timeout=30.0)  # 30 second timeout
+            return self._process_text(result)
         except Exception as e:
-            logger.error(f"Error extracting text: {e}")
+            logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
+    
+    def _extract_text_with_timeout(self, file_path: str, timeout: float = 30.0) -> str:
+        """Extract text from PDF with timeout protection."""
+        result_container = {'text': "", 'error': None}
+        
+        def extract_worker():
+            try:
+                doc = fitz.open(file_path)
+                text = ""
+                for page in doc:
+                    text += page.get_text("text") + "\n"
+                doc.close()
+                result_container['text'] = text
+            except Exception as e:
+                result_container['error'] = e
+        
+        # Start extraction thread
+        extract_thread = threading.Thread(target=extract_worker)
+        extract_thread.daemon = True
+        extract_thread.start()
+        
+        # Wait for completion with timeout
+        extract_thread.join(timeout=timeout)
+        
+        if extract_thread.is_alive():
+            # Thread is still running, timeout occurred
+            logger.warning(f"Text extraction timed out for {file_path} after {timeout} seconds")
+            raise TimeoutError(f"Text extraction timed out for {file_path}")
+        
+        if result_container['error']:
+            raise result_container['error']
+        
+        return result_container['text']
     
     def _process_text(self, text: str) -> str:
         """Clean and process extracted text."""

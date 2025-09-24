@@ -72,9 +72,11 @@ The app supports multiple PDF rendering backends. You can choose your preferred 
 1. Download Ghostscript from [ghostscript.com](https://ghostscript.com/releases/)
 2. Install Ghostscript (typically to `C:\Program Files\gs\`)
 3. In **Settings → PDF Rendering**, set the Ghostscript executable path:
+
    ```
    C:\Program Files\gs\<version>\bin\gswin64c.exe
    ```
+   
 4. Click **"Test backends"** to validate the installation
 
 #### Linux Installation

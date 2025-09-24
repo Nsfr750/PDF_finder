@@ -7,7 +7,7 @@
     "ghostscript_path": "C:/Progra~1/gs/gs10.05.0/bin/gswin64.exe"
   },
   "enable_hash_cache": true,
-  "cache_dir": "X:/GitHub/PDF_finder/.temp",
+  "cache_dir": "X:/GitHub/PDF_finder/.data",
   "max_cache_size": 10000,
   "cache_ttl_days": 30,
   "memory_cache_size": 1000

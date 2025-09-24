@@ -53,11 +53,16 @@ class PDFScanner(QObject):
         self.hash_cache = None
         if enable_hash_cache:
             try:
+                logger.debug(f"PDFScanner: Initializing hash cache with cache_dir: {cache_dir}")
                 self.hash_cache = HashCache(cache_dir=cache_dir)
-                logger.info("Hash cache initialized successfully")
+                logger.info(f"PDFScanner: Hash cache initialized successfully, available: {self.hash_cache.is_available()}")
+                if not self.hash_cache.is_available():
+                    logger.warning("PDFScanner: Hash cache is not available after initialization")
             except Exception as e:
-                logger.error(f"Failed to initialize hash cache: {e}")
+                logger.error(f"PDFScanner: Failed to initialize hash cache: {e}", exc_info=True)
                 self.enable_hash_cache = False
+        else:
+            logger.info("PDFScanner: Hash cache is disabled")
         
         # Text processor for content comparison
         self.text_processor = TextProcessor()
@@ -99,9 +104,10 @@ class PDFScanner(QObject):
         from the scan_parameters dictionary and calls scan_directory with those parameters.
         """
         try:
-            logger.debug("Starting scan process...")
+            logger.debug("start_scan: Starting scan process...")
             
             # Get scan parameters with defaults
+            logger.debug("start_scan: Retrieving scan parameters")
             scan_dir = self.scan_parameters.get('directory', '')
             recursive = self.scan_parameters.get('recursive', True)
             min_size = self.scan_parameters.get('min_file_size', 1024)  # 1KB
@@ -109,14 +115,15 @@ class PDFScanner(QObject):
             min_similarity = self.scan_parameters.get('min_similarity', 0.8)
             enable_text_compare = self.scan_parameters.get('enable_text_compare', True)
             
-            logger.debug(f"Scan parameters - Directory: {scan_dir}, Recursive: {recursive}, "
+            logger.debug(f"start_scan: Parameters - Directory: {scan_dir}, Recursive: {recursive}, "
                         f"Min size: {min_size}, Max size: {max_size}, "
                         f"Min similarity: {min_similarity}, Text compare: {enable_text_compare}")
             
             # Validate scan directory
+            logger.debug("start_scan: Validating scan directory")
             if not scan_dir or not os.path.isdir(scan_dir):
                 error_msg = f"Invalid or non-existent scan directory: {scan_dir}"
-                logger.error(error_msg)
+                logger.error(f"start_scan: {error_msg}")
                 self.status_updated.emit(
                     self.tr("scanner.error", f"Error: {error_msg}"), 
                     0, 0
@@ -126,7 +133,7 @@ class PDFScanner(QObject):
                 
             if not os.access(scan_dir, os.R_OK):
                 error_msg = f"No read permissions for directory: {scan_dir}"
-                logger.error(error_msg)
+                logger.error(f"start_scan: {error_msg}")
                 self.status_updated.emit(
                     self.tr("scanner.error", f"Error: {error_msg}"), 
                     0, 0
@@ -134,16 +141,18 @@ class PDFScanner(QObject):
                 self.finished.emit([])
                 return
             
-            logger.info(f"Starting PDF scan in directory: {scan_dir}")
+            logger.info(f"start_scan: Starting PDF scan in directory: {scan_dir}")
             self.status_updated.emit(
                 self.tr("scanner.scan_started", "Starting scan..."),
                 0, 0
             )
             
             # Reset state before starting new scan
+            logger.debug("start_scan: Resetting scan state")
             self._reset_scan_state()
             
             # Start the scan with all parameters
+            logger.debug("start_scan: Calling scan_directory")
             self.scan_directory(
                 directory=scan_dir, 
                 recursive=recursive,
@@ -153,11 +162,11 @@ class PDFScanner(QObject):
                 enable_text_compare=enable_text_compare
             )
             
-            logger.info("PDF scan completed successfully")
+            logger.info("start_scan: PDF scan completed successfully")
             
         except Exception as e:
             error_msg = f"Error during scan: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+            logger.error(f"start_scan: {error_msg}", exc_info=True)
             self.status_updated.emit(
                 self.tr("scanner.error", f"Error: {error_msg}"), 
                 0, 0
@@ -186,35 +195,68 @@ class PDFScanner(QObject):
             enable_text_compare: Whether to enable text-based comparison
         """
         try:
-            logger.info(f"Starting PDF scan in directory: {directory}")
+            logger.info(f"scan_directory: Starting PDF scan in directory: {directory}")
+            
+            # Validate directory exists
+            if not os.path.exists(directory):
+                logger.error(f"scan_directory: Directory does not exist: {directory}")
+                self.status_updated.emit(
+                    self.tr("scanner.error", "Error: Directory does not exist: {dir}").format(dir=directory),
+                    0, 0
+                )
+                self.finished.emit([])
+                return
+            
+            if not os.path.isdir(directory):
+                logger.error(f"scan_directory: Path is not a directory: {directory}")
+                self.status_updated.emit(
+                    self.tr("scanner.error", "Error: Path is not a directory: {dir}").format(dir=directory),
+                    0, 0
+                )
+                self.finished.emit([])
+                return
             
             # Find all PDF files
+            logger.debug("scan_directory: Finding all PDF files")
             pdf_files = []
-            if recursive:
-                for root, _, files in os.walk(directory):
-                    for file in files:
+            try:
+                if recursive:
+                    logger.debug("scan_directory: Scanning recursively")
+                    for root, _, files in os.walk(directory):
+                        for file in files:
+                            if file.lower().endswith('.pdf'):
+                                file_path = os.path.join(root, file)
+                                try:
+                                    file_size = os.path.getsize(file_path)
+                                    if min_file_size <= file_size <= max_file_size:
+                                        pdf_files.append(file_path)
+                                except (OSError, Exception) as e:
+                                    logger.warning(f"scan_directory: Error accessing {file_path}: {e}")
+                else:
+                    logger.debug("scan_directory: Scanning non-recursively")
+                    for file in os.listdir(directory):
                         if file.lower().endswith('.pdf'):
-                            file_path = os.path.join(root, file)
+                            file_path = os.path.join(directory, file)
                             try:
                                 file_size = os.path.getsize(file_path)
                                 if min_file_size <= file_size <= max_file_size:
                                     pdf_files.append(file_path)
                             except (OSError, Exception) as e:
-                                logger.warning(f"Error accessing {file_path}: {e}")
-            else:
-                for file in os.listdir(directory):
-                    if file.lower().endswith('.pdf'):
-                        file_path = os.path.join(directory, file)
-                        try:
-                            file_size = os.path.getsize(file_path)
-                            if min_file_size <= file_size <= max_file_size:
-                                pdf_files.append(file_path)
-                        except (OSError, Exception) as e:
-                            logger.warning(f"Error accessing {file_path}: {e}")
+                                logger.warning(f"scan_directory: Error accessing {file_path}: {e}")
+            except Exception as e:
+                logger.error(f"scan_directory: Error finding PDF files: {e}", exc_info=True)
+                self.status_updated.emit(
+                    self.tr("scanner.error", "Error finding PDF files: {error}").format(error=str(e)),
+                    0, 0
+                )
+                self.finished.emit([])
+                return
             
             total_files = len(pdf_files)
+            logger.info(f"scan_directory: Found {total_files} PDF files to process")
+            
             if total_files == 0:
-                logger.info("No PDF files found in the specified directory")
+                logger.info("scan_directory: No PDF files found in the specified directory")
                 self.status_updated.emit(
                     self.tr("scanner.no_files", "No PDF files found in the specified directory"),
                     0, 0
@@ -222,18 +264,33 @@ class PDFScanner(QObject):
                 self.finished.emit([])
                 return
                 
-            logger.info(f"Found {total_files} PDF files to process")
+            logger.info(f"scan_directory: Found {total_files} PDF files to process")
             
             # Use hash cache if available for faster duplicate detection
-            if self.enable_hash_cache and self.hash_cache:
-                logger.info("Using hash cache for duplicate detection")
-                duplicates = self._find_duplicates_with_cache(pdf_files, min_similarity, enable_text_compare)
-            else:
-                logger.info("Hash cache not available, using traditional scanning")
-                duplicates = self._find_duplicates_traditional(pdf_files, min_similarity, enable_text_compare)
+            logger.debug("scan_directory: Checking hash cache availability")
+            logger.debug(f"scan_directory: enable_hash_cache={self.enable_hash_cache}, hash_cache={self.hash_cache is not None}")
+            if self.hash_cache:
+                logger.debug(f"scan_directory: hash_cache.is_available()={self.hash_cache.is_available()}")
+            
+            try:
+                if self.enable_hash_cache and self.hash_cache and self.hash_cache.is_available():
+                    logger.info("scan_directory: Using hash cache for duplicate detection")
+                    duplicates = self._find_duplicates_with_cache(pdf_files, min_similarity, enable_text_compare)
+                else:
+                    logger.info("scan_directory: Hash cache not available, using traditional scanning")
+                    logger.debug(f"scan_directory: Cache status - enabled: {self.enable_hash_cache}, cache_exists: {self.hash_cache is not None}, available: {self.hash_cache.is_available() if self.hash_cache else False}")
+                    duplicates = self._find_duplicates_traditional(pdf_files, min_similarity, enable_text_compare)
+            except Exception as e:
+                logger.error(f"scan_directory: Error during duplicate detection: {e}", exc_info=True)
+                self.status_updated.emit(
+                    self.tr("scanner.error", "Error during duplicate detection: {error}").format(error=str(e)),
+                    0, 0
+                )
+                self.finished.emit([])
+                return
             
             if not self._stop_requested:
-                logger.info(f"Scan complete. Found {len(duplicates)} groups of duplicate files")
+                logger.info(f"scan_directory: Scan complete. Found {len(duplicates)} groups of duplicate files")
                 self.status_updated.emit(
                     self.tr("scanner.complete", "Scan complete. Found {count} groups of duplicates").format(
                         count=len(duplicates)
@@ -243,11 +300,12 @@ class PDFScanner(QObject):
                 self.duplicates_found.emit(duplicates)
                 self.finished.emit(duplicates)
             else:
+                logger.info("scan_directory: Scan was stopped by user")
                 self.finished.emit([])
                 
         except Exception as e:
             error_msg = f"Error scanning directory: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+            logger.error(f"scan_directory: {error_msg}", exc_info=True)
             self.status_updated.emit(
                 self.tr("scanner.error", "Error: {error}").format(error=error_msg), 
                 0, 0
@@ -273,70 +331,87 @@ class PDFScanner(QObject):
     def _find_duplicates_traditional(self, pdf_files: List[str], min_similarity: float, 
                                     enable_text_compare: bool) -> List[List[str]]:
         """Find duplicates using traditional method without cache."""
+        logger.debug(f"_find_duplicates_traditional: Starting with {len(pdf_files)} files")
         duplicates = []
         
-        for i, file_path in enumerate(pdf_files, 1):
-            if self._stop_requested:
-                logger.info("Scan stopped by user")
+        try:
+            for i, file_path in enumerate(pdf_files, 1):
+                if self._stop_requested:
+                    logger.info("_find_duplicates_traditional: Scan stopped by user")
+                    self.status_updated.emit(
+                        self.tr("scanner.stopped", "Scan stopped"), 
+                        i, len(pdf_files)
+                    )
+                    break
+                    
+                # Update progress
+                self.progress_updated.emit(i, len(pdf_files), file_path)
                 self.status_updated.emit(
-                    self.tr("scanner.stopped", "Scan stopped"), 
+                    self.tr("scanner.processing", "Processing {current} of {total}: {file}").format(
+                        current=i, total=len(pdf_files), file=os.path.basename(file_path)
+                    ),
                     i, len(pdf_files)
                 )
-                break
                 
-            # Update progress
-            self.progress_updated.emit(i, len(pdf_files), file_path)
-            self.status_updated.emit(
-                self.tr("scanner.processing", "Processing {current} of {total}: {file}").format(
-                    current=i, total=len(pdf_files), file=os.path.basename(file_path)
-                ),
-                i, len(pdf_files)
-            )
-            
-            try:
-                # Check if this file is a duplicate of any processed file
-                is_duplicate = False
-                for group in duplicates:
-                    if enable_text_compare:
-                        # Compare text content
-                        try:
-                            text1 = self.text_processor.extract_text(file_path)
-                            text2 = self.text_processor.extract_text(group[0])
-                            similarity = self.text_processor.compare_texts(text1, text2)
-                            
-                            if similarity >= min_similarity:
-                                group.append(file_path)
-                                is_duplicate = True
-                                break
-                        except Exception as e:
-                            logger.warning(f"Error comparing text content: {e}")
-                            # Fall back to file size comparison
-                            if os.path.getsize(file_path) == os.path.getsize(group[0]):
-                                group.append(file_path)
-                                is_duplicate = True
-                                break
-                    else:
-                        # Simple file size comparison
-                        if os.path.getsize(file_path) == os.path.getsize(group[0]):
-                            group.append(file_path)
-                            is_duplicate = True
-                            break
-                
-                if not is_duplicate:
-                    # Start a new duplicate group
-                    duplicates.append([file_path])
+                try:
+                    # Check if this file is a duplicate of any processed file
+                    is_duplicate = False
+                    for group in duplicates:
+                        if enable_text_compare:
+                            # Compare text content
+                            try:
+                                logger.debug(f"_find_duplicates_traditional: Comparing text content for {file_path}")
+                                text1 = self.text_processor.extract_text(file_path)
+                                text2 = self.text_processor.extract_text(group[0])
+                                similarity = self.text_processor.compare_texts(text1, text2)
+                                
+                                if similarity >= min_similarity:
+                                    logger.debug(f"_find_duplicates_traditional: Found duplicate with similarity {similarity}")
+                                    group.append(file_path)
+                                    is_duplicate = True
+                                    break
+                            except Exception as e:
+                                logger.warning(f"_find_duplicates_traditional: Error comparing text content: {e}")
+                                # Fall back to file size comparison
+                                try:
+                                    if os.path.getsize(file_path) == os.path.getsize(group[0]):
+                                        group.append(file_path)
+                                        is_duplicate = True
+                                        break
+                                except Exception as size_error:
+                                    logger.warning(f"_find_duplicates_traditional: Error comparing file sizes: {size_error}")
+                        else:
+                            # Simple file size comparison
+                            try:
+                                if os.path.getsize(file_path) == os.path.getsize(group[0]):
+                                    group.append(file_path)
+                                    is_duplicate = True
+                                    break
+                            except Exception as size_error:
+                                logger.warning(f"_find_duplicates_traditional: Error getting file size: {size_error}")
                     
-            except Exception as e:
-                logger.error(f"Error processing {file_path}: {e}", exc_info=True)
-        
-        # Filter out groups with only one file (no duplicates)
-        duplicates = [group for group in duplicates if len(group) > 1]
+                    if not is_duplicate:
+                        # Start a new duplicate group
+                        logger.debug(f"_find_duplicates_traditional: Starting new group for {file_path}")
+                        duplicates.append([file_path])
+                        
+                except Exception as e:
+                    logger.error(f"_find_duplicates_traditional: Error processing {file_path}: {e}", exc_info=True)
+            
+            # Filter out groups with only one file (no duplicates)
+            duplicates = [group for group in duplicates if len(group) > 1]
+            logger.debug(f"_find_duplicates_traditional: Found {len(duplicates)} duplicate groups")
+            
+        except Exception as e:
+            logger.error(f"_find_duplicates_traditional: Unexpected error: {e}", exc_info=True)
+            # Return empty list on error
+            return []
         
         return duplicates
     
     def get_cache_stats(self) -> Optional[Dict[str, Any]]:
         """Get cache statistics if hash cache is enabled."""
-        if self.enable_hash_cache and self.hash_cache:
+        if self.enable_hash_cache and self.hash_cache and self.hash_cache.is_available():
             try:
                 return self.hash_cache.get_cache_stats()
             except Exception as e:
@@ -345,7 +420,7 @@ class PDFScanner(QObject):
     
     def clear_cache(self) -> bool:
         """Clear the hash cache if enabled."""
-        if self.enable_hash_cache and self.hash_cache:
+        if self.enable_hash_cache and self.hash_cache and self.hash_cache.is_available():
             try:
                 self.hash_cache.clear_cache()
                 logger.info("Hash cache cleared successfully")

@@ -88,10 +88,23 @@ class HashCache:
         # Text processor for content extraction
         self.text_processor = TextProcessor()
         
-        # Initialize database
-        self._init_database()
-        
+        # Initialize database with error handling
+        try:
+            self._init_database()
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            # Try to continue without database
+            self.db_path = None
+            
         logger.info(f"Hash cache initialized with directory: {self.cache_dir}")
+    
+    def is_available(self) -> bool:
+        """Check if the hash cache is available and working.
+        
+        Returns:
+            True if cache is available, False otherwise
+        """
+        return self.db_path is not None
     
     def _init_database(self) -> None:
         """Initialize the SQLite database with required tables."""
@@ -128,12 +141,22 @@ class HashCache:
     @contextmanager
     def _get_connection(self) -> sqlite3.Connection:
         """Get a database connection with proper cleanup."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
+        if self.db_path is None:
+            raise RuntimeError("Database not available")
+            
         try:
+            # Set timeout for database operations
+            conn = sqlite3.connect(str(self.db_path), timeout=5.0)
+            conn.row_factory = sqlite3.Row
             yield conn
+        except sqlite3.Error as e:
+            logger.error(f"Database error: {e}")
+            raise
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
     
     def _calculate_file_hash(self, file_path: str) -> str:
         """Calculate SHA-256 hash of a file."""
@@ -292,10 +315,8 @@ class HashCache:
             text_content = self.text_processor.extract_text(file_path)
             text_hash = self._calculate_text_hash(text_content)
             
-            # Get page count
-            import fitz
-            with fitz.open(file_path) as doc:
-                page_count = len(doc)
+            # Get page count with timeout
+            page_count = self._get_page_count_with_timeout(file_path)
                 
         except Exception as e:
             logger.error(f"Error processing PDF content for {file_path}: {e}")
@@ -530,3 +551,34 @@ class HashCache:
                 continue
         
         return content_groups
+    
+    def _get_page_count_with_timeout(self, file_path: str, timeout: float = 10.0) -> int:
+        """Get page count from PDF with timeout protection."""
+        result_container = {'count': 0, 'error': None}
+        
+        def count_worker():
+            try:
+                import fitz
+                with fitz.open(file_path) as doc:
+                    result_container['count'] = len(doc)
+            except Exception as e:
+                result_container['error'] = e
+        
+        # Start counting thread
+        count_thread = threading.Thread(target=count_worker)
+        count_thread.daemon = True
+        count_thread.start()
+        
+        # Wait for completion with timeout
+        count_thread.join(timeout=timeout)
+        
+        if count_thread.is_alive():
+            # Thread is still running, timeout occurred
+            logger.warning(f"Page count timed out for {file_path} after {timeout} seconds")
+            return 0  # Return 0 as fallback
+        
+        if result_container['error']:
+            logger.warning(f"Error getting page count for {file_path}: {result_container['error']}")
+            return 0  # Return 0 as fallback
+        
+        return result_container['count']

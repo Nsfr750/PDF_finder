@@ -110,6 +110,7 @@ $RECYCLE.BIN/
 *.bat
 *.exe
 /logs
+/tests
 Setup.txt
 build_nuitka.py
 nuitka.config.toml
