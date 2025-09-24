@@ -30,6 +30,7 @@ class MainToolBar(QToolBar):
         self.setMovable(False)
         self.language_manager = language_manager or SimpleLanguageManager()
         self.menu_actions = {}
+        self.spacer_widget = None  # Track the spacer widget to prevent toolbar shifting
         self.setup_ui()
     
     def _get_icon(self, name):
@@ -119,6 +120,10 @@ class MainToolBar(QToolBar):
         if not self.menu_actions:
             return
 
+        # Clear existing actions and widgets
+        self.clear()
+        self.spacer_widget = None
+
         # Left groups (main actions)
         left_groups = [
             ['open_folder', 'pdf_viewer'],
@@ -157,9 +162,9 @@ class MainToolBar(QToolBar):
             first_group_added = True
 
         # Stretch spacer to push help group to the right
-        spacer = QWidget(self)
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.addWidget(spacer)
+        self.spacer_widget = QWidget(self)
+        self.spacer_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.addWidget(self.spacer_widget)
         
         # Add a visual separator before the right-aligned group
         self.addSeparator()

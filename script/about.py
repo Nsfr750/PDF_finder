@@ -21,7 +21,7 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.language_manager = language_manager if language_manager else SimpleLanguageManager()
         self.setWindowTitle(self.language_manager.tr("about.title", "About PDF Duplicate Finder"))
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(600, 600)
         
         layout = QVBoxLayout(self)
         
@@ -84,7 +84,7 @@ class AboutDialog(QDialog):
         sys_info = QTextBrowser()
         sys_info.setOpenLinks(True)
         sys_info.setHtml(self.get_system_info())
-        sys_info.setMaximumHeight(150)
+        sys_info.setMaximumHeight(300) # Height of Info Block
         layout.addWidget(QLabel(self.language_manager.tr("about.system_info", "<b>System Information:</b>")))
         layout.addWidget(sys_info)
         
@@ -107,10 +107,44 @@ class AboutDialog(QDialog):
         github_btn = QPushButton("GitHub")
         github_btn.clicked.connect(lambda: QDesktopServices.openUrl(
             QUrl("https://github.com/Nsfr750/PDF_Finder")))
+        # Style GitHub button with blue background and white text
+        github_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #0366d6;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QPushButton:pressed {
+                background-color: #004494;
+            }
+        """)
         
         # Close button
         close_btn = QPushButton(self.language_manager.tr("about.close", "Close"))
         close_btn.clicked.connect(self.accept)
+        # Style Close button with red background and white text
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #dc3545;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c82333;
+            }
+            QPushButton:pressed {
+                background-color: #bd2130;
+            }
+        """)
         
         buttons.addStretch()
         buttons.addWidget(github_btn)
@@ -150,6 +184,57 @@ class AboutDialog(QDialog):
             if button.text() == "Close":
                 button.setText(self.language_manager.tr("about.close", "Close"))
     
+    def get_imagemagick_version(self):
+        """Get ImageMagick version information."""
+        try:
+            # Try to get version from Wand first
+            from wand.version import MAGICK_VERSION, MAGICK_VERSION_NUMBER
+            return f"{MAGICK_VERSION} ({MAGICK_VERSION_NUMBER})"
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Could not get ImageMagick version from Wand: {e}")
+        
+        # Fallback: try to run magick/convert command
+        try:
+            # Try different possible command names
+            commands = ['magick', 'convert', 'identify']
+            for cmd in commands:
+                try:
+                    result = subprocess.run([cmd, '-version'], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        # Extract version from first line
+                        first_line = result.stdout.split('\n')[0]
+                        if 'Version:' in first_line:
+                            version = first_line.split('Version:')[1].split(',')[0].strip()
+                            return version
+                        return first_line.strip()
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+                    continue
+        except Exception as e:
+            logger.warning(f"Could not get ImageMagick version from command: {e}")
+        
+        return 'Not found'
+    
+    def get_ghostscript_version(self):
+        """Get Ghostscript version information."""
+        try:
+            # Try different possible command names
+            commands = ['gs', 'gswin64c', 'gswin32c', 'ghostscript']
+            for cmd in commands:
+                try:
+                    result = subprocess.run([cmd, '--version'], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        return result.stdout.strip()
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+                    continue
+        except Exception as e:
+            logger.warning(f"Could not get Ghostscript version: {e}")
+        
+        return 'Not found'
+
     def get_system_info(self):
         import psutil
 
@@ -197,6 +282,9 @@ class AboutDialog(QDialog):
             logger.warning(f"Could not get Wand version: {e}")
             wand_version = 'Unknown'
             
+        imagemagick_version = self.get_imagemagick_version()
+        ghostscript_version = self.get_ghostscript_version()
+            
         info = [
             f"<b>OS:</b> {platform.system()} {platform.release()} ({platform.version()})<br>",
             f"<b>System:</b> ({machine})<br>",
@@ -206,6 +294,8 @@ class AboutDialog(QDialog):
             f"<b>Python:</b> {platform.python_version()}<br>",
             f"<b>Qt:</b> {QT_VERSION_STR}<br>",
             f"<b>PyQt:</b> {PYQT_VERSION_STR}<br>",
-            f"<b>Wand:</b> {wand_version}<br>"
+            f"<b>Wand:</b> {wand_version}<br>",
+            f"<b>ImageMagick:</b> {imagemagick_version}<br>",
+            f"<b>Ghostscript:</b> {ghostscript_version}<br>"
         ]
         return ''.join(info)
