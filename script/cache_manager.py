@@ -199,7 +199,7 @@ class CacheManagerDialog(QDialog):
         layout.addWidget(perf_group)
         
         layout.addStretch()
-        widget.setLayout(widget)
+        widget.setLayout(layout)
         return widget
     
     def create_operations_tab(self) -> QWidget:

@@ -90,6 +90,7 @@ TRANSLATIONS = {
         "error.title": "Error",
         "error.filter_dialog": "Failed to open filter dialog: {error}",
         "errors.settings_open_failed": "Could not open settings: %s",
+        "errors.cache_manager_open_failed": "Failed to open cache manager: {error}",
         
         # Language names
         "language.en": "English",
@@ -373,6 +374,15 @@ TRANSLATIONS = {
         "pdf_utils.invalid_hash_size": "Invalid hash size. Must be a positive integer",
         "pdf_utils.invalid_directory": "Directory does not exist: {path}",
         "pdf_utils.no_pdf_files_found": "No PDF files found in the specified directory",
+        
+        # Scanner
+        "scanner.error": "Error: {error}",
+        "scanner.scan_started": "Starting scan...",
+        "scanner.no_files": "No PDF files found in the specified directory",
+        "scanner.complete": "Scan complete. Found {count} groups of duplicates",
+        "scanner.stopped": "Scan stopped",
+        "scanner.processing": "Processing {current} of {total}: {file}",
+        "scanner.stopping": "Stopping scan...",
         
         "log_viewer.save_error": "Failed to save log file: {error}",
         
@@ -718,6 +728,7 @@ TRANSLATIONS = {
         "error.title": "Errore",
         "error.filter_dialog": "Impossibile aprire il dialogo dei filtri: {error}",
         "errors.settings_open_failed": "Impossibile aprire le impostazioni: %s",
+        "errors.cache_manager_open_failed": "Impossibile aprire il gestore cache: {error}",
         
         # Language names
         "language.en": "English",
@@ -1001,6 +1012,15 @@ TRANSLATIONS = {
         "pdf_utils.invalid_hash_size": "Dimensione hash non valida. Deve essere un intero positivo",
         "pdf_utils.invalid_directory": "La directory non esiste: {path}",
         "pdf_utils.no_pdf_files_found": "Nessun file PDF trovato nella directory specificata",
+        
+        # Scanner
+        "scanner.error": "Errore: {error}",
+        "scanner.scan_started": "Avvio scansione...",
+        "scanner.no_files": "Nessun file PDF trovato nella directory specificata",
+        "scanner.complete": "Scansione completata. Trovati {count} gruppi di duplicati",
+        "scanner.stopped": "Scansione interrotta",
+        "scanner.processing": "Elaborazione {current} di {total}: {file}",
+        "scanner.stopping": "Interruzione scansione...",
         
         "log_viewer.save_error": "Impossibile salvare il file di log: {error}",
         

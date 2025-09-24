@@ -40,6 +40,11 @@ def format_traceback(exc_type: Type[BaseException],
         return str(exc_value)
     return ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
+# Global variables for exception handling
+_handling_exception = False
+original_excepthook = None
+original_threading_excepthook = None
+
 def setup_logger(name: str = 'PDFDuplicateFinder', 
                 log_level: Union[str, int] = 'DEBUG',
                 log_dir: Union[str, Path, None] = None,
@@ -131,11 +136,11 @@ def setup_logger(name: str = 'PDFDuplicateFinder',
                 logger.error("Falling back to stderr logging due to file logging failure")
     
     # Store the original exception handler
+    global original_excepthook, original_threading_excepthook
     original_excepthook = sys.excepthook
     original_threading_excepthook = threading.excepthook if hasattr(threading, 'excepthook') else None
     
-    # Flag to prevent recursive error logging
-    _handling_exception = False
+    # Flag to prevent recursive error handling (already defined at module level)
     
     def handle_exception(exc_type: Type[BaseException], exc_value: BaseException, 
                         exc_traceback: Optional[TracebackType]) -> None:

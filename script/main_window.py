@@ -669,8 +669,25 @@ class MainWindow(QMainWindow):
         """Show the cache manager dialog."""
         logger.debug("MainWindow.on_show_cache_manager() called")
         try:
+            # Initialize scanner if it doesn't exist
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                logger.debug("Scanner not initialized, creating new one for cache manager")
+                enable_hash_cache = self.settings.get('enable_hash_cache', True)
+                cache_dir = self.settings.get('cache_dir', None)
+                threshold = self.settings.get('scan_threshold', 0.95)
+                dpi = self.settings.get('scan_dpi', 150)
+                
+                # Create scanner with settings
+                self._scanner = PDFScanner(
+                    threshold=threshold,
+                    dpi=dpi,
+                    enable_hash_cache=enable_hash_cache,
+                    cache_dir=cache_dir,
+                    language_manager=self.language_manager
+                )
+            
             # Check if scanner has hash cache
-            if not hasattr(self, '_scanner') or not self._scanner or not self._scanner.hash_cache:
+            if not self._scanner.hash_cache:
                 QMessageBox.information(
                     self,
                     self.language_manager.tr("cache_manager.title"),
@@ -704,10 +721,15 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error showing cache manager dialog: {e}", exc_info=True)
+            error_msg = self.language_manager.tr("errors.cache_manager_open_failed")
+            if "{error}" in error_msg:
+                error_msg = error_msg.format(error=str(e))
+            else:
+                error_msg = f"{error_msg}: {str(e)}"
             QMessageBox.critical(
                 self,
                 self.language_manager.tr("dialog.error"),
-                self.language_manager.tr("errors.cache_manager_open_failed") % str(e)
+                error_msg
             )
     
     def on_cache_settings_changed(self, settings: Dict[str, Any]):
@@ -771,7 +793,8 @@ class MainWindow(QMainWindow):
                     threshold=threshold,
                     dpi=dpi,
                     enable_hash_cache=enable_hash_cache,
-                    cache_dir=cache_dir
+                    cache_dir=cache_dir,
+                    language_manager=self.language_manager
                 )
             else:
                 logger.debug("Using existing scanner")

@@ -31,7 +31,8 @@ class PDFScanner(QObject):
     finished = pyqtSignal(list)  # list of duplicate groups (emitted when scan is complete)
     
     def __init__(self, threshold: float = 0.95, dpi: int = 150, 
-                 enable_hash_cache: bool = True, cache_dir: Optional[str] = None):
+                 enable_hash_cache: bool = True, cache_dir: Optional[str] = None,
+                 language_manager=None):
         """Initialize the PDF scanner with the given settings.
         
         Args:
@@ -39,6 +40,7 @@ class PDFScanner(QObject):
             dpi: DPI resolution for image-based comparison
             enable_hash_cache: Whether to enable hash caching for performance
             cache_dir: Directory to store cache files (defaults to ~/.pdf_finder_cache)
+            language_manager: Language manager for translations
         """
         super().__init__()
         self.threshold = threshold
@@ -60,8 +62,27 @@ class PDFScanner(QObject):
         # Text processor for content comparison
         self.text_processor = TextProcessor()
         
+        # Language manager for translations
+        self.language_manager = language_manager
+        
         logger.debug(f"PDFScanner initialized with threshold={threshold}, dpi={dpi}, "
                     f"hash_cache={'enabled' if enable_hash_cache else 'disabled'}")
+    
+    def tr(self, key: str, default: str = None) -> str:
+        """Simple translation method for scanner messages.
+        
+        Args:
+            key: Translation key
+            default: Default text if key not found
+            
+        Returns:
+            Translated text or default
+        """
+        if self.language_manager and hasattr(self.language_manager, 'tr'):
+            return self.language_manager.tr(key, default or key)
+        else:
+            # Fallback to default or key if no language manager
+            return default or key
     
     def set_status_callback(self, callback: Callable[[str, int, int], None]) -> None:
         """Set a callback function for status updates.
