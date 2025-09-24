@@ -11,7 +11,7 @@ import os
 import webbrowser
 import logging
 from typing import Optional, Dict, Any, List, Callable
-from script.updates import UpdateDialog
+from script.updates import check_for_updates
 
 # Import translations
 from script.simple_lang_manager import SimpleLanguageManager
@@ -415,16 +415,15 @@ class MenuBar(QObject):
         except ImportError:
             current_version = "0.0.0"
             
-        # Create and connect update dialog
-        self.update_dialog = UpdateDialog(
-            current_version=current_version,
-            language_manager=self.language_manager,
-            config_dir=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config'),
-            parent=self.parent
+        # Connect the action to check for updates
+        self.actions['check_updates'].triggered.connect(
+            lambda: check_for_updates(
+                parent=self.parent,
+                current_version=current_version,
+                force_check=True
+            )
         )
         
-        # Connect the action to show the update dialog
-        self.actions['check_updates'].triggered.connect(self.update_dialog.show)
         menu.addAction(self.actions['check_updates'])
         
         return menu

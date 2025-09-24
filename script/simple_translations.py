@@ -584,6 +584,22 @@ TRANSLATIONS = {
         "settings.ghostscript_path": "Ghostscript Path:",
         "settings.backend_status": "Backend Status:",
         "settings.test_backends": "Test Backends",
+
+        # Update dialog
+        "updates.window_title": "Software Update",
+        "updates.current_version": "Current Version:",
+        "updates.latest_version": "Latest Version:",
+        "updates.checking": "Checking for updates...",
+        "updates.release_notes": "<b>Release Notes:</b>",
+        "updates.no_release_notes": "No release notes available.",
+        "updates.update_available": "A new version {0} is available!",
+        "updates.up_to_date": "You're using the latest version of PDF Duplicate Finder!",
+        "updates.last_checked": "Last checked: {0}",
+        "updates.error": "Error checking for updates: {0}",
+        "updates.ignored": "Version {0} will be ignored.",
+        "updates.buttons.ignore": "Ignore This Version",
+        "updates.buttons.download": "Download Update",
+        "common.later": "Later",
         
         # View log translations
         "Log Viewer": "Log Viewer",
@@ -1196,6 +1212,22 @@ TRANSLATIONS = {
         "settings.ghostscript_path": "Percorso Ghostscript:",
         "settings.backend_status": "Stato backend:",
         "settings.test_backends": "Testa backend",
+
+        # Update dialog
+        "updates.window_title": "Aggiornamento Software",
+        "updates.current_version": "Versione attuale:",
+        "updates.latest_version": "Ultima Versione:",
+        "updates.checking": "Controllo Aggiornamenti...",
+        "updates.release_notes": "Note di rilascio:",
+        "updates.no_release_notes": "Nessuna nota di rilascio disponibile.",
+        "updates.update_available": "Aggiornamento disponibile",
+        "updates.up_to_date": "Software aggiornato",
+        "updates.last_checked": "Ultimo controllo:",
+        "updates.error": "Errore durante il controllo degli aggiornamenti.",
+        "updates.ignored": "Aggiornamento ignorato.",
+        "updates.buttons.ignore": "Ignora",
+        "updates.buttons.download": "Download",
+        "common.later": "Non ora",
         
         # View log translations
         "Log Viewer": "Visualizzatore log",

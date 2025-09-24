@@ -30,7 +30,7 @@ from .ui import MainUI
 from .settings_dialog import SettingsDialog
 from .PDF_viewer import show_pdf_viewer
 from .scanner import PDFScanner
-from .updates import UpdateDataManager
+from .recents import RecentFilesManager
 
 class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
@@ -91,10 +91,12 @@ class MainWindow(QMainWindow):
         
         # Connect to our own language changed signal
         self.language_changed.connect(self.on_language_changed)
-            
-        # Initialize update manager and check for updates on startup
-        self.update_manager = UpdateDataManager("config")
-        self.check_for_updates()
+        
+        # Initialize recent files manager
+        self.recent_files_manager = RecentFilesManager(max_files=10, parent=self)
+        self.recent_files_manager.recents_changed.connect(
+            lambda files: self.menu_bar.update_recent_files(files) if hasattr(self, 'menu_bar') else None
+        )
     
     def change_language(self, lang_code: str) -> bool:
         """Change the application language.
@@ -176,51 +178,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Error updating UI for language change: {e}")
             import traceback
-            traceback.print_exc()
-    
-    def check_for_updates(self):
-        """Check for application updates."""
-        try:
-            # Get current version (you'll need to import your version)
-            from script.version import __version__ as current_version
-            
-            # Check if we already have a recent update check
-            last_check = self.update_manager.get_last_check()
-            if last_check and (datetime.now() - last_check).days < 1:  # Check once per day
-                logger.debug("Skipping update check - already checked today")
-                return
-                
-            # In a real app, you would fetch this from your update server
-            # For now, we'll just demonstrate the data structure
-            update_data = {
-                "version": "1.1.0",  # Example new version
-                "release_notes": "New features and improvements",
-                "download_url": "https://github.com/yourusername/yourrepo/releases/latest",
-                "release_date": "2025-08-22"
-            }
-            
-            # Save the update check
-            self.update_manager.save_update_check(
-                version=current_version,
-                update_available=True,  # In a real app, compare versions
-                update_data=update_data
-            )
-            
-            # Notify user if update is available
-            if self.update_manager.is_update_available():
-                update_info = self.update_manager.get_update_data()
-                QMessageBox.information(
-                    self,
-                    self.tr("Update Available"),
-                    self.tr("Version {0} is now available!\n\n{1}").format(
-                        update_info.get('version', '1.0.0'),
-                        update_info.get('release_notes', '')
-                    )
-                )
-                
-        except Exception as e:
-            logger.error(f"Error checking for updates: {e}")
-            # Don't show error to user for failed update checks
+            traceback.print_exc()   
     
     def on_open_folder(self):
         """Handle the 'Open Folder' action from the menu."""
@@ -234,6 +192,9 @@ class MainWindow(QMainWindow):
             )
             
             if folder_path:
+                # Add to recent files
+                self.recent_files_manager.add_file(folder_path)
+                
                 # Update the status bar
                 self.status_bar.showMessage(
                     self.language_manager.tr("ui.status_scanning", "Scanning folder: %s") % folder_path
@@ -785,3 +746,136 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error handling cache cleared event: {e}", exc_info=True)
+    
+    def _start_scan(self, folder_path: str):
+        """Start the PDF scanning process.
+        
+        Args:
+            folder_path: Path to the folder to scan
+        """
+        try:
+            logger.debug(f"Starting scan for folder: {folder_path}")
+            
+            # Get scanner settings from settings
+            threshold = self.settings.get('similarity_threshold', 0.95)
+            dpi = self.settings.get('scan_dpi', 150)
+            
+            # Check if scanner is already initialized
+            if not hasattr(self, '_scanner') or self._scanner is None:
+                logger.debug("Scanner not initialized, creating new one")
+                enable_hash_cache = self.settings.get('enable_hash_cache', True)
+                cache_dir = self.settings.get('cache_dir', None)
+                
+                # Create scanner with settings
+                self._scanner = PDFScanner(
+                    threshold=threshold,
+                    dpi=dpi,
+                    enable_hash_cache=enable_hash_cache,
+                    cache_dir=cache_dir
+                )
+            else:
+                logger.debug("Using existing scanner")
+                # Update scanner settings if needed
+                self._scanner.threshold = threshold
+                self._scanner.dpi = dpi
+            
+            # Set up scan parameters
+            self._scanner.scan_parameters = {
+                'directory': folder_path,
+                'recursive': True,
+                'min_file_size': 1024,  # 1KB
+                'max_file_size': 1024 * 1024 * 1024,  # 1GB
+                'min_similarity': 0.8,
+                'enable_text_compare': True
+            }
+            
+            # Connect scanner signals to main window signals
+            self._scanner.status_updated.connect(self.scan_status)
+            self._scanner.progress_updated.connect(self.scan_progress)
+            self._scanner.duplicates_found.connect(self._on_duplicates_found)
+            self._scanner.finished.connect(self._on_scan_finished)
+            
+            # Create and start scan thread
+            from PyQt6.QtCore import QThread
+            self._scan_thread = QThread()
+            self._scanner.moveToThread(self._scan_thread)
+            
+            # Connect thread signals
+            self._scan_thread.started.connect(self._scanner.start_scan)
+            self._scanner.finished.connect(self._scan_thread.quit)
+            self._scanner.finished.connect(self._scanner.deleteLater)
+            self._scan_thread.finished.connect(self._scan_thread.deleteLater)
+            
+            # Start the thread
+            self._scan_thread.start()
+            
+            logger.info(f"Scan started for folder: {folder_path}")
+            
+        except Exception as e:
+            logger.error(f"Error starting scan: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.scan_start_failed", "Failed to start scan: %s") % str(e)
+            )
+    
+    def _on_duplicates_found(self, duplicates):
+        """Handle when duplicates are found during scanning.
+        
+        Args:
+            duplicates: List of duplicate groups
+        """
+        logger.debug(f"Duplicates found: {len(duplicates)} groups")
+        # This method should be implemented to handle displaying duplicates
+        # For now, just log the finding
+        
+    def _on_scan_finished(self, duplicates):
+        """Handle when scan is finished.
+        
+        Args:
+            duplicates: List of duplicate groups
+        """
+        logger.debug(f"Scan finished with {len(duplicates)} duplicate groups")
+        self.scan_finished.emit()
+        
+    def open_recent_file(self, file_path: str):
+        """Open a recent file or folder.
+        
+        Args:
+            file_path: Path to the file or folder to open
+        """
+        try:
+            if not file_path or not os.path.exists(file_path):
+                logger.warning(f"Recent file path does not exist: {file_path}")
+                self.recent_files_manager.remove_file(file_path)
+                return
+            
+            if os.path.isdir(file_path):
+                # Handle folder opening
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.status_scanning", "Scanning folder: %s") % file_path
+                )
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.folder_selected", "Selected folder: %s") % file_path,
+                    3000
+                )
+            else:
+                # Handle file opening
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.status_opening", "Opening file: %s") % file_path
+                )
+                self.status_bar.showMessage(
+                    self.language_manager.tr("ui.file_opened", "Opened file: %s") % file_path,
+                    3000
+                )
+            
+            # Add to recent files (this will update the last accessed time)
+            self.recent_files_manager.add_file(file_path)
+            
+        except Exception as e:
+            logger.error(f"Error opening recent file {file_path}: {e}")
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error", "Error"),
+                self.language_manager.tr("errors.recent_file_open_failed", "Could not open recent file: %s") % str(e)
+            )

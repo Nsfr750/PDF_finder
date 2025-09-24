@@ -1,434 +1,310 @@
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QPushButton, 
-                             QHBoxLayout, QTextBrowser)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal as Signal, QObject, QUrl
-from PyQt6.QtGui import QDesktopServices
+"""
+Update checking functionality for the PDF finder application.
+"""
+import logging
+from typing import Optional, Tuple, Callable, Dict, Any
 import requests
 import json
-import platform
-from packaging import version
-import os
-import logging
 from pathlib import Path
+import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+
+# PyQt6 imports
+from PyQt6.QtWidgets import (
+    QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QCheckBox, QDialogButtonBox,
+    QProgressDialog, QApplication
+)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject
 
 # Import language manager
 from script.simple_lang_manager import SimpleLanguageManager
 
+# Get the application directory
+APP_DIR = Path(__file__).parent.parent
+
+# Ensure config directory exists
+CONFIG_DIR = APP_DIR / 'config'
+CONFIG_DIR.mkdir(exist_ok=True)
+UPDATES_FILE = CONFIG_DIR / 'updates.json'
+
+# Configure logger
 logger = logging.getLogger(__name__)
-
-class UpdateDataManager:
-    """Handles saving and loading update data to/from JSON file."""
-    
-    def __init__(self, config_dir: str = "config"):
-        """Initialize with the configuration directory.
-        
-        Args:
-            config_dir: Directory where updates.json will be stored
-        """
-        self.config_dir = Path(config_dir)
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.updates_file = self.config_dir / "updates.json"
-        
-        # Initialize with default values if file doesn't exist
-        if not self.updates_file.exists():
-            self._save_data({
-                'last_check': None,
-                'last_version': None,
-                'update_available': False,
-                'update_data': {}
-            })
-    
-    def _load_data(self) -> Dict[str, Any]:
-        """Load update data from JSON file."""
-        try:
-            if self.updates_file.exists():
-                with open(self.updates_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading update data: {e}")
-        
-        # Return default data if loading fails
-        return {
-            'last_check': None,
-            'last_version': None,
-            'update_available': False,
-            'update_data': {}
-        }
-    
-    def _save_data(self, data: Dict[str, Any]) -> bool:
-        """Save update data to JSON file."""
-        try:
-            with open(self.updates_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            return True
-        except Exception as e:
-            logger.error(f"Error saving update data: {e}")
-            return False
-    
-    def get_last_check(self) -> Optional[datetime]:
-        """Get the timestamp of the last update check."""
-        data = self._load_data()
-        last_check = data.get('last_check')
-        return datetime.fromisoformat(last_check) if last_check else None
-    
-    def get_last_version(self) -> Optional[str]:
-        """Get the last known version from the update data."""
-        data = self._load_data()
-        return data.get('last_version')
-    
-    def is_update_available(self) -> bool:
-        """Check if an update is available based on stored data."""
-        data = self._load_data()
-        return data.get('update_available', False)
-    
-    def get_update_data(self) -> Dict[str, Any]:
-        """Get the stored update data."""
-        data = self._load_data()
-        return data.get('update_data', {})
-    
-    def save_update_check(self, version: str, update_available: bool, update_data: Dict[str, Any] = None) -> bool:
-        """Save the results of an update check.
-        
-        Args:
-            version: The current version of the application
-            update_available: Whether an update is available
-            update_data: Additional data about the update
-            
-        Returns:
-            bool: True if the data was saved successfully
-        """
-        data = {
-            'last_check': datetime.now().isoformat(),
-            'last_version': version,
-            'update_available': update_available,
-            'update_data': update_data or {}
-        }
-        return self._save_data(data)
-
 
 class UpdateChecker(QObject):
     """Handles checking for application updates."""
     
-    update_available = Signal(dict)
-    no_update = Signal()
-    error_occurred = Signal(str)
+    # Signal emitted when update check is complete
+    update_check_complete = pyqtSignal(dict, bool)
     
-    def __init__(self, language_manager: Optional[SimpleLanguageManager] = None, config_dir: str = "config"):
+    def __init__(self, current_version: str, config_path: Optional[Path] = None):
         """Initialize the update checker.
         
         Args:
-            language_manager: Optional language manager for translations
-            config_dir: Directory where update data will be stored
+            current_version: The current version of the application.
+            config_path: Path to the configuration file (optional).
         """
         super().__init__()
-        self.language_manager = language_manager
-        self.tr = language_manager.tr if language_manager else lambda key, default: default
-        self.data_manager = UpdateDataManager(config_dir)
+        self.current_version = current_version
+        self.config_path = config_path or UPDATES_FILE
+        self.config = self._load_config()
+        self.update_url = "https://api.github.com/repos/Nsfr750/PDF_finder/releases/latest"
     
-    def should_check_for_updates(self, current_version: str, check_interval_days: int = 1) -> bool:
-        """Check if we should check for updates based on the last check time.
-        
-        Args:
-            current_version: Current version of the application
-            check_interval_days: Minimum days between update checks
-            
-        Returns:
-            bool: True if we should check for updates
-        """
-        last_check = self.data_manager.get_last_check()
-        if not last_check:
-            return True
-            
-        # Check if enough time has passed since the last check
-        time_since_last_check = datetime.now() - last_check
-        return time_since_last_check >= timedelta(days=check_interval_days)
-    
-    def check_for_updates(self, current_version: str, force: bool = False) -> bool:
-        """Check for updates on GitHub.
-        
-        Args:
-            current_version: Current version of the application
-            force: If True, check for updates even if recently checked
-            
-        Returns:
-            bool: True if the check was performed (not skipped)
-        """
-        if not force and not self.should_check_for_updates(current_version):
-            logger.debug("Skipping update check - recently checked")
-            return False
-            
+    def _load_config(self) -> dict:
+        """Load the update configuration."""
         try:
-            # Replace with your GitHub repository URL
-            repo_url = "https://api.github.com/repos/Nsfr750/PDF_Finder/releases/latest"
-            response = requests.get(repo_url, timeout=10)
+            if self.config_path.exists():
+                with open(self.config_path, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading update config: {e}")
+        return {
+            'last_checked': None,
+            'last_version': None,
+            'dont_ask_until': None
+        }
+    
+    def _save_config(self):
+        """Save the update configuration."""
+        try:
+            with open(self.config_path, 'w') as f:
+                json.dump(self.config, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving update config: {e}")
+    
+    def check_for_updates(self, force: bool = False) -> Tuple[bool, Optional[dict]]:
+        """Check for updates.
+        
+        Args:
+            force: If True, skip the cache and force a check.
+            
+        Returns:
+            A tuple of (update_available, update_info).
+            update_available is True if an update is available.
+            update_info contains information about the update if available.
+        """
+        now = datetime.utcnow()
+        
+        # Check if we should skip the update check
+        if not force and self.config.get('dont_ask_until'):
+            try:
+                dont_ask_until = datetime.fromisoformat(self.config['dont_ask_until'])
+                if now < dont_ask_until:
+                    logger.info("Skipping update check: user asked not to check until %s", 
+                               self.config['dont_ask_until'])
+                    return False, None
+            except (ValueError, KeyError) as e:
+                logger.warning("Error parsing don't ask until date: %s", e)
+        
+        # Check if we've checked recently (within 1 day)
+        if not force and self.config.get('last_checked'):
+            try:
+                last_checked = datetime.fromisoformat(self.config['last_checked'])
+                if (now - last_checked) < timedelta(days=1):
+                    logger.info("Skipping update check: checked recently at %s", 
+                               self.config['last_checked'])
+                    return False, None
+            except (ValueError, KeyError) as e:
+                logger.warning("Error parsing last checked date: %s", e)
+        
+        # Update last checked time
+        self.config['last_checked'] = now.isoformat()
+        self._save_config()
+        
+        try:
+            # Make the API request
+            logger.info("Checking for updates...")
+            response = requests.get(
+                self.update_url,
+                headers={"Accept": "application/vnd.github.v3+json"},
+                timeout=10
+            )
             response.raise_for_status()
             
-            latest_release = response.json()
-            latest_version = latest_release['tag_name'].lstrip('v')
+            release_info = response.json()
+            latest_version = release_info.get('tag_name', '').lstrip('v')
             
-            update_data = {
-                'version': latest_version,
-                'release_notes': latest_release.get('body', self.tr("updates.no_release_notes", "No release notes available.")),
-                'url': latest_release.get('html_url', ''),
-                'published_at': latest_release.get('published_at', '')
-            }
+            if not latest_version:
+                logger.warning("No version information in release data")
+                return False, None
             
-            is_update_available = version.parse(latest_version) > version.parse(current_version)
+            # Update last known version
+            self.config['last_version'] = latest_version
+            self._save_config()
             
-            # Save the update check results
-            self.data_manager.save_update_check(
-                version=current_version,
-                update_available=is_update_available,
-                update_data=update_data if is_update_available else {}
-            )
-            
-            if is_update_available:
-                self.update_available.emit(update_data)
+            # Check if the latest version is newer than current
+            if self._is_newer_version(latest_version, self.current_version):
+                logger.info("Update available: %s (current: %s)", latest_version, self.current_version)
+                return True, {
+                    'version': latest_version,
+                    'url': release_info.get('html_url', ''),
+                    'changelog': release_info.get('body', ''),
+                    'prerelease': release_info.get('prerelease', False),
+                    'published_at': release_info.get('published_at', '')
+                }
             else:
-                self.no_update.emit()
+                logger.info("No updates available (current: %s, latest: %s)", 
+                           self.current_version, latest_version)
+                return False, None
                 
-            return True
-                
+        except requests.RequestException as e:
+            logger.error("Error checking for updates: %s", e)
+            return False, None
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Error checking for updates: {error_msg}")
-            self.error_occurred.emit(error_msg)
-            return False
-
-class UpdateDialog(QDialog):
-    def __init__(self, current_version, language_manager=None, config_dir: str = "config", parent=None):
-        super().__init__(parent)
-        self.current_version = current_version
-        self.latest_version = None
-        self.update_url = ""
-        self.language_manager = language_manager
-        self.tr = language_manager.tr if language_manager else lambda key, default: default
-        self.config_dir = config_dir
-        
-        self.setWindowTitle(self.tr("updates.window_title", "Software Update"))
-        self.setMinimumSize(600, 400)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
-        
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # Version info section
-        version_layout = QVBoxLayout()
-        
-        # Current version
-        current_layout = QHBoxLayout()
-        current_label = QLabel(self.tr("updates.current_version", "Current Version:"))
-        current_label.setStyleSheet("font-weight: bold;")
-        self.current_version_label = QLabel(current_version)
-        current_layout.addWidget(current_label, 0, Qt.AlignmentFlag.AlignLeft)
-        current_layout.addWidget(self.current_version_label, 0, Qt.AlignmentFlag.AlignLeft)
-        current_layout.addStretch()
-        version_layout.addLayout(current_layout)
-        
-        # Latest version
-        self.latest_layout = QHBoxLayout()
-        latest_label = QLabel(self.tr("updates.latest_version", "Latest Version:"))
-        latest_label.setStyleSheet("font-weight: bold;")
-        self.latest_version_label = QLabel(self.tr("updates.checking", "Checking..."))
-        self.latest_layout.addWidget(latest_label, 0, Qt.AlignmentFlag.AlignLeft)
-        self.latest_layout.addWidget(self.latest_version_label, 0, Qt.AlignmentFlag.AlignLeft)
-        self.latest_layout.addStretch()
-        version_layout.addLayout(self.latest_layout)
-        
-        # Status message
-        self.status_label = QLabel(self.tr("updates.checking", "Checking for updates..."))
-        self.status_label.setWordWrap(True)
-        version_layout.addWidget(self.status_label)
-        
-        layout.addLayout(version_layout)
-        
-        # Release notes section
-        notes_group = QVBoxLayout()
-        notes_label = QLabel(self.tr("updates.release_notes", "<b>Release Notes:</b>"))
-        notes_label.setTextFormat(Qt.TextFormat.RichText)
-        notes_group.addWidget(notes_label)
-        
-        # Release notes section (initially hidden)
-        self.release_notes = QTextBrowser()
-        self.release_notes.setOpenExternalLinks(True)
-        self.release_notes.setReadOnly(True)
-        self.release_notes.setVisible(False)
-        self.release_notes.setMaximumHeight(150)  # Limit the height
-        notes_group.addWidget(self.release_notes)
-        self.notes_group = notes_group  # Store reference to show/hide later
-        
-        layout.addLayout(notes_group, 1)  # Add stretch factor to make this section expandable
-        
-        # Buttons
-        self.button_box = QHBoxLayout()
-        self.button_box.setSpacing(10)
-        
-        # Ignore button (only shown when update is available)
-        self.ignore_btn = QPushButton(self.tr("updates.buttons.ignore", "Ignore This Version"))
-        self.ignore_btn.clicked.connect(self.ignore_update)
-        self.ignore_btn.setVisible(False)
-        
-        # Download button (shown when update is available)
-        self.download_btn = QPushButton(self.tr("updates.buttons.download", "Download Update"))
-        self.download_btn.clicked.connect(self.download_update)
-        self.download_btn.setVisible(False)
-        self.download_btn.setDefault(True)
-        
-        # Close button
-        self.close_btn = QPushButton(self.tr("common.close", "Close"))
-        self.close_btn.clicked.connect(self.accept)
-        
-        # Add buttons to layout (right-aligned)
-        self.button_box.addStretch()
-        self.button_box.addWidget(self.ignore_btn)
-        self.button_box.addWidget(self.download_btn)
-        self.button_box.addWidget(self.close_btn)
-        
-        layout.addLayout(self.button_box)
-        
-        # Initialize the data manager with the config directory
-        self.data_manager = UpdateDataManager(self.config_dir)
-        
-        # Check for updates
-        self.check_updates()
+            logger.exception("Unexpected error checking for updates: %s", e)
+            return False, None
     
-    def check_updates(self):
-        """Start the update check in a separate thread."""
-        self.thread = QThread()
-        self.checker = UpdateChecker(self.language_manager, self.config_dir)
-        self.checker.moveToThread(self.thread)
-        
-        # Connect signals
-        self.thread.started.connect(
-            lambda: self.checker.check_for_updates(self.current_version)
-        )
-        self.checker.update_available.connect(self.show_update_available)
-        self.checker.no_update.connect(self.show_no_updates)
-        self.checker.error_occurred.connect(self.show_error)
-        
-        # Clean up thread when done
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(self.checker.deleteLater)
-        
-        # Start the thread
-        self.thread.start()
-        
-        # Show checking status
-        self.status_label.setText(self.tr("updates.checking", "Checking for updates..."))
+    def _is_newer_version(self, version1: str, version2: str) -> bool:
+        """Check if version1 is newer than version2."""
+        try:
+            from packaging import version
+            return version.parse(version1) > version.parse(version2)
+        except ImportError:
+            # Fallback simple comparison if packaging is not available
+            return version1 > version2
     
-    def show_update_available(self, update_data):
-        """Show that an update is available.
+    def show_update_dialog(self, parent=None, update_info=None):
+        """Show the update dialog.
         
         Args:
-            update_data: Dictionary containing update information
+            parent: Parent widget for the dialog.
+            update_info: Update information from check_for_updates().
         """
-        self.latest_version = update_data.get('version')
-        self.update_url = update_data.get('html_url', '')
-        
-        # Update UI
-        self.latest_version_label.setText(f"{self.latest_version} (Update available!)")
-        self.latest_version_label.setStyleSheet("color: #2e7d32; font-weight: bold;")
-        
-        # Show release notes if available
-        if 'body' in update_data and update_data['body']:
-            # Format markdown for better display
-            notes = update_data['body']
-            # Convert markdown links to HTML
-            import re
-            notes = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', notes)
-            self.release_notes.setMarkdown(notes)
-            self.release_notes.setVisible(True)
-            self.notes_group.setVisible(True)  # Show the notes group
-        
-        # Update status with formatted message
-        status_text = self.tr(
-            "updates.update_available", 
-            f"A new version {self.latest_version} is available!"
-        )
-        self.status_label.setText(status_text)
-        self.status_label.setStyleSheet("color: #2e7d32;")
-        
-        # Show appropriate buttons
-        self.download_btn.setVisible(True)
-        self.ignore_btn.setVisible(True)
-        self.close_btn.setText(self.tr("common.later", "Later"))
-        
-        # Bring window to front
-        self.raise_()
-        self.activateWindow()
-    
-    def show_no_updates(self):
-        """Show that no updates are available."""
-        self.latest_version_label.setText(self.current_version)
-        self.latest_version_label.setStyleSheet("color: #2e7d32;")
-        
-        status_text = self.tr(
-            "updates.up_to_date", 
-            "You're using the latest version of PDF Duplicate Finder!"
-        )
-        self.status_label.setText(status_text)
-        self.status_label.setStyleSheet("color: #2e7d32;")
-        
-        # Hide release notes section when no update is available
-        if hasattr(self, 'notes_group'):
-            self.notes_group.setVisible(False)
-        
-        # Show last check time
-        last_check = self.data_manager.get_last_check()
-        if last_check:
-            last_check_str = last_check.strftime("%Y-%m-%d %H:%M")
-            self.status_label.setText(
-                f"{status_text}\n" +
-                self.tr("updates.last_checked", "Last checked: {0}").format(last_check_str)
-            )
-        
-        self.close_btn.setVisible(True)
-        self.close_btn.setDefault(True)
-    
-    def show_error(self, error_msg):
-        """Show an error message."""
-        self.latest_version_label.setText("-")
-        self.status_label.setText(
-            self.tr("updates.error", "Error checking for updates: {0}").format(error_msg)
-        )
-        self.status_label.setStyleSheet("color: #d32f2f;")
-        self.close_btn.setVisible(True)
-        self.close_btn.setDefault(True)
-    
-    def download_update(self):
-        """Open the download URL in the default web browser."""
-        if self.update_url:
-            QDesktopServices.openUrl(QUrl(self.update_url))
-        self.accept()
-    
-    def ignore_update(self):
-        """Ignore this version and close the dialog."""
-        if self.latest_version:
-            # Save the ignored version to avoid showing the update again
-            self.data_manager.save_update_check(
-                version=self.current_version,
-                update_available=False,  # We're ignoring this update
-                update_data={
-                    'ignored_version': self.latest_version,
-                    'ignored_at': datetime.now().isoformat(),
-                    'last_check': datetime.now().isoformat()
-                }
-            )
-            # Show feedback
-            self.status_label.setText(
-                self.tr("updates.ignored", "Version {0} will be ignored.").format(self.latest_version)
-            )
-            self.status_label.setStyleSheet("color: #ff8f00;")
+        if not update_info:
+            return
             
-            # Update UI
-            self.download_btn.setVisible(False)
-            self.ignore_btn.setVisible(False)
-            self.close_btn.setText(self.tr("common.close", "Close"))
-            
-            # Close after a short delay
-            from PyQt6.QtCore import QTimer
-            QTimer.singleShot(1500, self.accept)
+        dialog = QDialog(parent)
+        dialog.setWindowTitle("Update Available")
+        dialog.setMinimumWidth(400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Add update message
+        message = f"<b>Version {update_info['version']} is available!</b>"
+        if update_info.get('prerelease'):
+            message += " (Pre-release)"
+        message += "<br><br>"
+        
+        if update_info.get('changelog'):
+            # Limit changelog length
+            changelog = update_info['changelog']
+            if len(changelog) > 500:
+                changelog = changelog[:497] + "..."
+            message += f"<b>What's new:</b><br>{changelog}"
+        
+        label = QLabel(message)
+        label.setWordWrap(True)
+        label.setOpenExternalLinks(True)
+        layout.addWidget(label)
+        
+        # Add "Don't ask again" checkbox
+        dont_ask_checkbox = QCheckBox("Don't ask me again for this version")
+        layout.addWidget(dont_ask_checkbox)
+        
+        # Add buttons
+        buttons = QDialogButtonBox()
+        download_btn = buttons.addButton("Download", QDialogButtonBox.ButtonRole.AcceptRole)
+        later_btn = buttons.addButton("Remind Me Later", QDialogButtonBox.ButtonRole.RejectRole)
+        
+        download_btn.clicked.connect(lambda: self._on_download_clicked(dialog, update_info['url']))
+        later_btn.clicked.connect(dialog.reject)
+        
+        layout.addWidget(buttons)
+        
+        # Handle dialog result
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            if dont_ask_checkbox.isChecked():
+                # Set don't ask until next version
+                self.config['dont_ask_until'] = None
+                self._save_config()
         else:
-            self.accept()
+            if dont_ask_checkbox.isChecked():
+                # Set don't ask until tomorrow
+                tomorrow = datetime.utcnow() + timedelta(days=1)
+                self.config['dont_ask_until'] = tomorrow.isoformat()
+                self._save_config()
+    
+    def _on_download_clicked(self, dialog, url):
+        """Handle download button click."""
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            dialog.accept()
+        except Exception as e:
+            logger.error("Error opening download URL: %s", e)
+            QMessageBox.critical(
+                dialog,
+                "Error",
+                f"Could not open the download page. Please visit {url} manually."
+            )
+
+
+def check_for_updates(parent=None, current_version: str = "1.0.0", force_check: bool = False):
+    """Check for application updates and show a dialog if an update is available.
+    
+    Args:
+        parent: Parent window for dialogs.
+        current_version: Current application version.
+        force_check: If True, skip the cache and force a check.
+    """
+    def show_update_dialog(update_info):
+        checker.show_update_dialog(parent, update_info)
+    
+    def show_error(message):
+        QMessageBox.warning(
+            parent,
+            "Update Check Failed",
+            message,
+            QMessageBox.StandardButton.Ok
+        )
+    
+    # Create a progress dialog
+    progress = QProgressDialog(
+        "Checking for updates...",
+        "Cancel",
+        0,
+        0,
+        parent
+    )
+    progress.setWindowTitle("Checking for Updates")
+    progress.setWindowModality(Qt.WindowModality.WindowModal)
+    progress.setCancelButton(None)  # No cancel button for now
+    progress.setMinimumDuration(1000)  # Show after 1 second if not done
+    
+    # Create and start the update checker
+    checker = UpdateChecker(current_version)
+    
+    # Use a thread to avoid freezing the UI
+    class UpdateThread(QThread):
+        finished_signal = pyqtSignal(tuple)
+        
+        def run(self):
+            try:
+                result = checker.check_for_updates(force_check)
+                self.finished_signal.emit(result)
+            except Exception as e:
+                logger.exception("Error in update thread: %s", e)
+                self.finished_signal.emit((False, None))
+    
+    def on_finished(result):
+        progress.close()
+        update_available, update_info = result
+        
+        if update_available and update_info:
+            show_update_dialog(update_info)
+        elif force_check:
+            QMessageBox.information(
+                parent,
+                "No Updates",
+                "You are already using the latest version.",
+                QMessageBox.StandardButton.Ok
+            )
+    
+    thread = UpdateThread()
+    thread.finished_signal.connect(on_finished)
+    thread.start()
+    
+    # Keep the progress dialog open until the thread is done
+    while thread.isRunning():
+        QApplication.processEvents()
+    
+    return thread

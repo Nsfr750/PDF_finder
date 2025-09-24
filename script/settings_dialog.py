@@ -41,7 +41,7 @@ class SettingsDialog(QDialog):
             logger.debug("language_manager set")
             
             # Set window properties
-            self.setWindowTitle(self.tr("settings.title"))
+            self.setWindowTitle(self.language_manager.tr("settings.title"))
             self.setMinimumSize(600, 400)
             logger.debug("Window properties set")
             
@@ -405,8 +405,8 @@ class SettingsDialog(QDialog):
             if self.save_settings():
                 QMessageBox.information(
                     self,
-                    self.tr("settings_dialog.saved", "Settings Saved"),
-                    self.tr("settings_dialog.saved_message", "Your settings have been saved.")
+                    self.language_manager.tr("settings_dialog.saved", "Settings Saved"),
+                    self.language_manager.tr("settings_dialog.saved_message", "Your settings have been saved.")
                 )
                 logger.debug("Settings applied")
             
@@ -416,8 +416,8 @@ class SettingsDialog(QDialog):
             traceback.print_exc()
             QMessageBox.critical(
                 self,
-                self.tr("settings_dialog.error", "Error"),
-                self.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
+                self.language_manager.tr("settings_dialog.error", "Error"),
+                self.language_manager.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
             )
     
     def accept(self):
@@ -433,8 +433,8 @@ class SettingsDialog(QDialog):
             traceback.print_exc()
             QMessageBox.critical(
                 self,
-                self.tr("settings_dialog.error", "Error"),
-                self.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
+                self.language_manager.tr("settings_dialog.error", "Error"),
+                self.language_manager.tr("settings_dialog.save_error", "Failed to save settings: {error}").format(error=str(e))
             )
 
     def tr(self, key: str) -> str:

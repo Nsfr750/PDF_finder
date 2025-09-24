@@ -76,6 +76,9 @@ class PDFDuplicateFinder(MainWindow):
         # Load window state and geometry from settings
         self.apply_settings()
         
+        # Initialize hash cache if enabled in settings
+        self._initialize_hash_cache()
+        
         # Initialize filter settings
         self.current_filters = {
             'min_size': 0,  # in bytes
@@ -100,6 +103,33 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize progress dialog
         self.progress_dialog = None
+    
+    def _initialize_hash_cache(self):
+        """Initialize the hash cache if enabled in settings."""
+        try:
+            # Get cache settings from settings
+            enable_hash_cache = self.settings.get('enable_hash_cache', True)
+            cache_dir = self.settings.get('cache_dir', None)
+            
+            if enable_hash_cache:
+                logger.info("Initializing hash cache...")
+                
+                # Create scanner with hash cache enabled
+                self._scanner = PDFScanner(
+                    threshold=0.95,  # Default threshold
+                    dpi=150,        # Default DPI
+                    enable_hash_cache=True,
+                    cache_dir=cache_dir
+                )
+                
+                logger.info("Hash cache initialized successfully")
+            else:
+                logger.info("Hash cache is disabled in settings")
+                self._scanner = None
+                
+        except Exception as e:
+            logger.error(f"Error initializing hash cache: {e}", exc_info=True)
+            self._scanner = None
     
     def update_recent_files_menu(self, recent_files=None):
         """Update the recent files menu when the recent files list changes.
