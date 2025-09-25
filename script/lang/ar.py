@@ -1,0 +1,285 @@
+"""
+Arabic translations for PDF Duplicate Finder.
+"""
+
+# Translation data
+TRANSLATIONS = {
+    "ar": {
+        # Main window
+        "main_window.title": "الباحث عن ملفات PDF المكررة",
+        "main_window.file": "ملف",
+        "main_window.edit": "تحرير",
+        "main_window.view": "عرض",
+        "main_window.help": "مساعدة",
+        "main_window.settings": "الإعدادات",
+        "main_window.exit": "خروج",
+        
+        # Status bar
+        "ui.status_ready": "جاهز",
+        
+        # Common
+        "common.ok": "موافق",
+        "common.cancel": "إلغاء",
+        "common.yes": "نعم",
+        "common.no": "لا",
+        "common.close": "إغلاق",
+        "common.save": "حفظ",
+        "common.apply": "تطبيق",
+        "common.open": "فتح",
+        "common.delete": "حذف",
+        "common.edit": "تحرير",
+        "common.help": "مساعدة",
+        "common.about": "حول",
+        "common.preferences": "التفضيلات",
+        "common.exit": "خروج",
+        "common.none": "لا شيء",
+        
+        # Settings dialog
+        "settings.title": "الإعدادات",
+        "settings.general": "عام",
+        "settings.appearance": "المظهر",
+        "settings.language": "اللغة",
+        "settings.save": "حفظ",
+        "settings.cancel": "إلغاء",
+        "settings.theme_system": "النظام",
+        "settings.theme_light": "فاتح",
+        "settings.theme_dark": "داكن",
+        "settings.check_updates": "التحقق من التحديثات عند البدء",
+        "settings.auto_save": "حفظ الإعدادات تلقائياً",
+        "settings.pdf_rendering": "عرض PDF",
+        
+        # Menu items
+        "file.open": "فتح مجلد...",
+        "file.save_results": "حفظ النتائج...",
+        "file.load_results": "تحميل النتائج...",
+        "file.settings": "الإعدادات...",
+        "file.exit": "خروج",
+        "edit.delete": "حذف",
+        "edit.select_all": "تحديد الكل",
+        "view.view_log": "عرض السجل...",
+        "view.toolbar": "شريط الأدوات",
+        "view.statusbar": "شريط الحالة",
+        "help.about": "حول",
+        "help.sponsor": "رعاية",
+        "help.check_updates": "التحقق من التحديثات",
+        
+        # Toolbar tooltips
+        "toolbar.open_folder": "فتح مجلد للمسح",
+        "toolbar.start_scan": "بدء مسح الملفات المكررة",
+        "toolbar.stop_scan": "إيقاف المسح",
+        "toolbar.save_results": "حفظ نتائج المسح",
+        "toolbar.load_results": "تحميل نتائج المسح",
+        "toolbar.delete_selected": "حذف الملفات المحددة",
+        "toolbar.delete_all": "حذف جميع الملفات المكررة",
+        "toolbar.view_log": "عرض السجل",
+        "toolbar.settings": "الإعدادات",
+        "toolbar.about": "حول",
+        
+        # Progress dialog
+        "progress.title": "مسح PDF",
+        "progress.scanning": "جاري المسح...",
+        "progress.files_processed": "الملفات المعالجة:",
+        "progress.current_file": "الملف الحالي:",
+        "progress.duplicates_found": "المكررات الموجودة:",
+        "progress.cancel": "إلغاء",
+        
+        # Filter dialog
+        "filter.title": "تصفية النتائج",
+        "filter.min_size": "الحجم الأدنى (KB):",
+        "filter.max_size": "الحجم الأقصى (KB):",
+        "filter.min_pages": "الحد الأدنى للصفحات:",
+        "filter.max_pages": "الحد الأقصى للصفحات:",
+        "filter.name_contains": "الاسم يحتوي على:",
+        "filter.apply": "تطبيق",
+        "filter.reset": "إعادة تعيين",
+        "filter.cancel": "إلغاء",
+        
+        # Settings dialog
+        "settings_dialog.title": "الإعدادات",
+        "settings_dialog.general_tab": "عام",
+        "settings_dialog.appearance_tab": "المظهر",
+        "settings_dialog.language_label": "اللغة:",
+        "settings_dialog.theme_label": "المظهر:",
+        "settings_dialog.check_updates": "التحقق من التحديثات عند البدء",
+        "settings_dialog.auto_save": "حفظ الإعدادات تلقائياً",
+        "settings_dialog.pdf_backend": "خلفية PDF:",
+        "settings_dialog.test_backend": "اختبار الخلفية",
+        "settings_dialog.save": "حفظ",
+        "settings_dialog.cancel": "إلغاء",
+        "settings_dialog.restart_required": "إعادة التشغيل مطلوبة",
+        "settings_dialog.restart_message": "التطبيق يحتاج إلى إعادة التشغيل لتطبيق تغييرات اللغة.\nإعادة التشغيل الآن؟",
+        "settings_dialog.language_changed": "تم تغيير اللغة بنجاح",
+        "settings_dialog.language_change_failed": "فشل تغيير اللغة",
+        "settings_dialog.backend_ok": "موافق",
+        "settings_dialog.backend_missing": "غير موجود أو مسار غير صالح",
+        "settings_dialog.no_backends_tested": "لم يتم اختبار أي خلفيات",
+        "settings_dialog.test_results_title": "نتائج اختبار الخلفيات",
+        "settings_dialog.backend_status": "حالة الخلفية:",
+        "settings_dialog.test_backends": "اختبار الخلفيات",
+        
+        # Main application
+        "main.welcome": "مرحباً بك في الباحث عن ملفات PDF المكررة",
+        "main.select_folder": "الرجاء تحديد مجلد لمسح ملفات PDF",
+        "main.scan_started": "بدأ المسح",
+        "main.scan_completed": "اكتمل المسح",
+        "main.duplicates_found": "المكررات الموجودة: {count}",
+        "main.no_duplicates": "لم يتم العثور على مكررات",
+        "main.files_deleted": "تم حذف {count} ملف بنجاح.",
+        "main.confirm_delete": "هل أنت متأكد من حذف {count} ملف محدد؟",
+        "main.confirm_delete_title": "تأكيد الحذف",
+        "main.file_in_use": "الملف قيد الاستخدام ولا يمكن حذفه: {file}",
+        "main.permission_denied": "تم رفض الإذن أثناء المحاولة للحذف: {file}",
+        "main.group_processed": "تمت معالجة المجموعة {current}/{total}: تم العثور على {found} مكرر",
+        "main.retranslate_error": "خطأ في رد الاتصال إعادة الترجمة: {error}",
+        "main.scanning_folder": "جاري مسح المجلد: {folder}",
+        "main.no_pdfs_found": "لم يتم العثور على ملفات PDF في المجلد المحدد.",
+        "main.duplicates_found_groups": "تم العثور على {count} مجموعات مكررات محتملة.",
+        
+        # Scanner
+        "scanner.starting": "جاري بدء المسح...",
+        "scanner.scanning": "جاري المسح...",
+        "scanner.processing_file": "جاري معالجة الملف: {file}",
+        "scanner.comparing": "جاري مقارنة الملفات...",
+        "scanner.found_duplicates": "المكررات الموجودة: {count}",
+        "scanner.complete": "اكتمل المسح. تم العثور على {count} مجموعة مكررات",
+        "scanner.stopped": "تم إيقاف المسح",
+        "scanner.processing": "جاري المعالجة {current} من {total}: {file}",
+        "scanner.stopping": "جاري إيقاف المسح...",
+        
+        # PDF Viewer
+        "pdf_viewer.title": "عارض PDF",
+        "pdf_viewer.open": "فتح PDF",
+        "pdf_viewer.previous": "السابق",
+        "pdf_viewer.next": "التالي",
+        "pdf_viewer.zoom_in": "تكبير",
+        "pdf_viewer.zoom_out": "تصغير",
+        "pdf_viewer.zoom_fit": "ملاءمة",
+        "pdf_viewer.zoom_100": "100%",
+        "pdf_viewer.rotate_left": "تدوير لليسار",
+        "pdf_viewer.rotate_right": "تدوير لليمين",
+        "pdf_viewer.file_filter": "ملفات PDF (*.pdf)",
+        "pdf_viewer.status.page_of": "صفحة {current} من {total} | {width} x {height} | {zoom:.0%}",
+        "pdf_viewer.page_number": "صفحة {current} من {total}",
+        "pdf_viewer.errors.open_error": "خطأ في فتح PDF",
+        "pdf_viewer.errors.could_not_open": "لا يمكن فتح {file}: {error}",
+        
+        # Language manager
+        "language_manager.default_language_info": "اللغة الافتراضية: {language} ({code})",
+        "language_manager.language_switch_success": "تم التغيير إلى {language} بنجاح",
+        "language_manager.language_switch_failed": "فشل التغيير إلى {language}: {error}",
+        
+        # Sponsor dialog
+        "sponsor.title": "رعاية التطوير",
+        "sponsor.message": "الباحث عن ملفات PDF المكررة هو برنامج مجاني ومفتوح المصدر.\n\nإذا كنت تحب هذا التطبيق، يرجى النظر في دعم تطويره.",
+        "sponsor.github_sponsors": "رعاة GitHub",
+        "sponsor.patreon": "Patreon",
+        "sponsor.paypal": "PayPal",
+        "sponsor.monero": "مونيرو (XMR)",
+        "sponsor.close": "إغلاق",
+        
+        # Updates
+        "updates.window_title": "تحديث البرنامج",
+        "updates.current_version": "الإصدار الحالي:",
+        "updates.latest_version": "أحدث إصدار:",
+        "updates.checking": "جاري التحقق من التحديثات...",
+        "updates.release_notes": "<b>ملاحظات الإصدار:</b>",
+        "updates.update_available": "تحديث متوفر!",
+        "updates.no_update_available": "لديك أحدث إصدار.",
+        "updates.download_update": "تنزيل التحديث",
+        "updates.later": "لاحقاً",
+        "updates.error_checking": "خطأ في التحقق من التحديثات: {error}",
+        
+        # Log viewer
+        "log_viewer.title": "عرض السجل",
+        "log_viewer.open": "فتح السجل",
+        "log_viewer.save": "حفظ السجل",
+        "log_viewer.clear": "مسح السجل",
+        "log_viewer.refresh": "تحديث",
+        "log_viewer.filter": "فلتر",
+        "log_viewer.status.line_count": "{count} سطر",
+        "log_viewer.status.last_updated": "آخر تحديث: {time}",
+        "log_viewer.errors.save_error": "خطأ في حفظ ملف السجل: {error}",
+        "log_viewer.save_error": "لا يمكن حفظ ملف السجل: {error}",
+        
+        # Theme settings
+        "theme.system": "النظام",
+        "theme.light": "فاتح",
+        "theme.dark": "داكن",
+        "theme.auto": "تلقائي",
+        
+        # Additional UI elements
+        "Open Folder": "فتح مجلد",
+        "Start Scan": "بدء المسح",
+        "Stop Scan": "إيقاف المسح",
+        "Save Results": "حفظ النتائج",
+        "Load Results": "تحميل النتائج",
+        "Delete Selected": "حذف المحدد",
+        "Delete All Duplicates": "حذف جميع المكررات",
+        "View Log": "عرض السجل",
+        "Settings": "الإعدادات",
+        "About": "حول",
+        "Exit": "خروج",
+        
+        # Dialogs
+        "Select Folder": "تحديد مجلد",
+        "Save Results": "حفظ النتائج",
+        "Load Results": "تحميل النتائج",
+        "Confirm Delete": "تأكيد الحذف",
+        "Are you sure you want to delete the selected files?": "هل أنت متأكد من حذف الملفات المحددة؟",
+        "Error": "خطأ",
+        "Information": "معلومات",
+        "Warning": "تحذير",
+        "Success": "نجاح",
+        
+        # File operations
+        "File": "ملف",
+        "Edit": "تحرير",
+        "View": "عرض",
+        "Help": "مساعدة",
+        "Select All": "تحديد الكل",
+        "Open PDF Viewer": "فتح عارض PDF",
+        "Export Results to CSV": "تصدير النتائج إلى CSV",
+        "Export last scan results to a CSV file": "تصدير نتائج المسح الأخيرة إلى ملف CSV",
+        "Exit": "خروج",
+        "Exit the application": "خروج من التطبيق",
+        
+        # Progress dialog translations
+        "Files processed:": "الملفات المعالجة:",
+        "Current file:": "الملف الحالي:",
+        "Duplicates found:": "المكررات الموجودة:",
+        
+        # Log viewer translations
+        "Failed to list log files: {}": "فشل في سرد ملفات السجل: {}",
+        "Log file not found: {path}": "ملف السجل غير موجود: {path}",
+        "Failed to load log file: {}": "فشل في تحميل ملف السجل: {}",
+        "No log file selected": "لم يتم تحديد ملف سجل",
+        "File: {file} | Entries: {entries} | Size: {size}": "ملف: {file} | الإدخالات: {entries} | الحجم: {size}",
+        "Confirm Delete": "تأكيد الحذف",
+        "Are you sure you want to delete the log file?\nThis will permanently delete: {}\nThis action cannot be undone.": "هل أنت متأكد من حذف ملف السجل؟\nسيتم حذفه بشكل دائم: {}\nهذا الإجراء لا يمكن التراجع عنه.",
+        "Success": "نجاح",
+        "Log file has been deleted.": "تم حذف ملف السجل.",
+        "Failed to delete log file: {}": "فشل في حذف ملف السجل: {}",
+        "Showing {filtered} of {total} entries": "عرض {filtered} من {total} إدخال",
+        "Failed to filter logs: {}": "فشل في تصفية السجلات: {}",
+        "Confirm Clear": "تأكيد المسح",
+        "Are you sure you want to clear all logs? This cannot be undone.": "هل أنت متأكد من مسح جميع السجلات؟ هذا لا يمكن التراجع عنه.",
+        "Failed to clear logs: {error}": "فشل في مسح السجلات: {error}",
+        "Error": "خطأ",
+    }
+}
+
+# Available languages
+AVAILABLE_LANGUAGES = {
+    "en": "English",
+    "it": "Italiano",
+    "ru": "Русский",
+    "ua": "Українська",
+    "de": "Deutsch",
+    "fr": "Français",
+    "pt": "Português",
+    "es": "Español",
+    "ja": "日本語",
+    "zh": "中文",
+    "ar": "العربية",
+    "he": "עברית",
+}

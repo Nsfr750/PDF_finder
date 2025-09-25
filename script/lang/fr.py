@@ -1,0 +1,285 @@
+"""
+French translations for PDF Duplicate Finder.
+"""
+
+# Translation data
+TRANSLATIONS = {
+    "fr": {
+        # Main window
+        "main_window.title": "PDF Duplicate Finder",
+        "main_window.file": "Fichier",
+        "main_window.edit": "Édition",
+        "main_window.view": "Affichage",
+        "main_window.help": "Aide",
+        "main_window.settings": "Paramètres",
+        "main_window.exit": "Quitter",
+        
+        # Status bar
+        "ui.status_ready": "Prêt",
+        
+        # Common
+        "common.ok": "OK",
+        "common.cancel": "Annuler",
+        "common.yes": "Oui",
+        "common.no": "Non",
+        "common.close": "Fermer",
+        "common.save": "Enregistrer",
+        "common.apply": "Appliquer",
+        "common.open": "Ouvrir",
+        "common.delete": "Supprimer",
+        "common.edit": "Modifier",
+        "common.help": "Aide",
+        "common.about": "À propos",
+        "common.preferences": "Préférences",
+        "common.exit": "Quitter",
+        "common.none": "Aucun",
+        
+        # Settings dialog
+        "settings.title": "Paramètres",
+        "settings.general": "Général",
+        "settings.appearance": "Apparence",
+        "settings.language": "Langue",
+        "settings.save": "Enregistrer",
+        "settings.cancel": "Annuler",
+        "settings.theme_system": "Système",
+        "settings.theme_light": "Clair",
+        "settings.theme_dark": "Sombre",
+        "settings.check_updates": "Vérifier les mises à jour au démarrage",
+        "settings.auto_save": "Enregistrement automatique des paramètres",
+        "settings.pdf_rendering": "Rendu PDF",
+        
+        # Menu items
+        "file.open": "Ouvrir un dossier...",
+        "file.save_results": "Enregistrer les résultats...",
+        "file.load_results": "Charger les résultats...",
+        "file.settings": "Paramètres...",
+        "file.exit": "Quitter",
+        "edit.delete": "Supprimer",
+        "edit.select_all": "Tout sélectionner",
+        "view.view_log": "Voir le journal...",
+        "view.toolbar": "Barre d'outils",
+        "view.statusbar": "Barre d'état",
+        "help.about": "À propos",
+        "help.sponsor": "Soutenir",
+        "help.check_updates": "Vérifier les mises à jour",
+        
+        # Toolbar tooltips
+        "toolbar.open_folder": "Ouvrir un dossier à analyser",
+        "toolbar.start_scan": "Démarrer l'analyse des doublons",
+        "toolbar.stop_scan": "Arrêter l'analyse",
+        "toolbar.save_results": "Enregistrer les résultats de l'analyse",
+        "toolbar.load_results": "Charger les résultats de l'analyse",
+        "toolbar.delete_selected": "Supprimer les fichiers sélectionnés",
+        "toolbar.delete_all": "Supprimer tous les doublons",
+        "toolbar.view_log": "Voir le journal",
+        "toolbar.settings": "Paramètres",
+        "toolbar.about": "À propos",
+        
+        # Progress dialog
+        "progress.title": "Analyse PDF",
+        "progress.scanning": "Analyse...",
+        "progress.files_processed": "Fichiers traités :",
+        "progress.current_file": "Fichier actuel :",
+        "progress.duplicates_found": "Doublons trouvés :",
+        "progress.cancel": "Annuler",
+        
+        # Filter dialog
+        "filter.title": "Filtrer les résultats",
+        "filter.min_size": "Taille minimale (Ko) :",
+        "filter.max_size": "Taille maximale (Ko) :",
+        "filter.min_pages": "Nombre minimum de pages :",
+        "filter.max_pages": "Nombre maximum de pages :",
+        "filter.name_contains": "Le nom contient :",
+        "filter.apply": "Appliquer",
+        "filter.reset": "Réinitialiser",
+        "filter.cancel": "Annuler",
+        
+        # Settings dialog
+        "settings_dialog.title": "Paramètres",
+        "settings_dialog.general_tab": "Général",
+        "settings_dialog.appearance_tab": "Apparence",
+        "settings_dialog.language_label": "Langue :",
+        "settings_dialog.theme_label": "Thème :",
+        "settings_dialog.check_updates": "Vérifier les mises à jour au démarrage",
+        "settings_dialog.auto_save": "Enregistrement automatique des paramètres",
+        "settings_dialog.pdf_backend": "Moteur PDF :",
+        "settings_dialog.test_backend": "Tester le moteur",
+        "settings_dialog.save": "Enregistrer",
+        "settings_dialog.cancel": "Annuler",
+        "settings_dialog.restart_required": "Redémarrage requis",
+        "settings_dialog.restart_message": "L'application doit être redémarrée pour appliquer les changements de langue.\nRedémarrer maintenant ?",
+        "settings_dialog.language_changed": "Langue changée avec succès",
+        "settings_dialog.language_change_failed": "Échec du changement de langue",
+        "settings_dialog.backend_ok": "OK",
+        "settings_dialog.backend_missing": "Manquant ou chemin invalide",
+        "settings_dialog.no_backends_tested": "Aucun moteur testé",
+        "settings_dialog.test_results_title": "Résultats des tests des moteurs",
+        "settings_dialog.backend_status": "État du moteur :",
+        "settings_dialog.test_backends": "Tester les moteurs",
+        
+        # Main application
+        "main.welcome": "Bienvenue dans PDF Duplicate Finder",
+        "main.select_folder": "Sélectionnez un dossier pour analyser les fichiers PDF",
+        "main.scan_started": "Analyse démarrée",
+        "main.scan_completed": "Analyse terminée",
+        "main.duplicates_found": "Doublons trouvés : {count}",
+        "main.no_duplicates": "Aucun doublon trouvé",
+        "main.files_deleted": "{count} fichiers supprimés avec succès.",
+        "main.confirm_delete": "Êtes-vous sûr de vouloir supprimer {count} fichiers sélectionnés ?",
+        "main.confirm_delete_title": "Confirmer la suppression",
+        "main.file_in_use": "Le fichier est en cours d'utilisation et ne peut pas être supprimé : {file}",
+        "main.permission_denied": "Permission refusée lors de la tentative de suppression : {file}",
+        "main.group_processed": "Groupe {current}/{total} traité : {found} doublons trouvés",
+        "main.retranslate_error": "Erreur dans le callback retranslate : {error}",
+        "main.scanning_folder": "Analyse du dossier : {folder}",
+        "main.no_pdfs_found": "Aucun fichier PDF trouvé dans le dossier sélectionné.",
+        "main.duplicates_found_groups": "{count} groupes de doublons potentiels trouvés.",
+        
+        # Scanner
+        "scanner.starting": "Démarrage de l'analyse...",
+        "scanner.scanning": "Analyse...",
+        "scanner.processing_file": "Traitement du fichier : {file}",
+        "scanner.comparing": "Comparaison des fichiers...",
+        "scanner.found_duplicates": "Doublons trouvés : {count}",
+        "scanner.complete": "Analyse terminée. {count} groupes de doublons trouvés",
+        "scanner.stopped": "Analyse arrêtée",
+        "scanner.processing": "Traitement {current} sur {total} : {file}",
+        "scanner.stopping": "Arrêt de l'analyse...",
+        
+        # PDF Viewer
+        "pdf_viewer.title": "Visionneuse PDF",
+        "pdf_viewer.open": "Ouvrir PDF",
+        "pdf_viewer.previous": "Précédent",
+        "pdf_viewer.next": "Suivant",
+        "pdf_viewer.zoom_in": "Zoomer",
+        "pdf_viewer.zoom_out": "Dézoomer",
+        "pdf_viewer.zoom_fit": "Ajuster",
+        "pdf_viewer.zoom_100": "100%",
+        "pdf_viewer.rotate_left": "Rotation gauche",
+        "pdf_viewer.rotate_right": "Rotation droite",
+        "pdf_viewer.file_filter": "Fichiers PDF (*.pdf)",
+        "pdf_viewer.status.page_of": "Page {current} sur {total} | {width} x {height} | {zoom:.0%}",
+        "pdf_viewer.page_number": "Page {current} sur {total}",
+        "pdf_viewer.errors.open_error": "Erreur d'ouverture PDF",
+        "pdf_viewer.errors.could_not_open": "Impossible d'ouvrir {file} : {error}",
+        
+        # Language manager
+        "language_manager.default_language_info": "Langue par défaut : {language} ({code})",
+        "language_manager.language_switch_success": "Passage à {language} réussi",
+        "language_manager.language_switch_failed": "Échec du passage à {language} : {error}",
+        
+        # Sponsor dialog
+        "sponsor.title": "Soutenir le développement",
+        "sponsor.message": "PDF Duplicate Finder est un logiciel gratuit et open source.\n\nSi vous aimez cette application, veuillez envisager de soutenir son développement.",
+        "sponsor.github_sponsors": "GitHub Sponsors",
+        "sponsor.patreon": "Patreon",
+        "sponsor.paypal": "PayPal",
+        "sponsor.monero": "Monero (XMR)",
+        "sponsor.close": "Fermer",
+        
+        # Updates
+        "updates.window_title": "Mise à jour du logiciel",
+        "updates.current_version": "Version actuelle :",
+        "updates.latest_version": "Dernière version :",
+        "updates.checking": "Vérification des mises à jour...",
+        "updates.release_notes": "<b>Notes de version :</b>",
+        "updates.update_available": "Mise à jour disponible !",
+        "updates.no_update_available": "Vous avez la dernière version.",
+        "updates.download_update": "Télécharger la mise à jour",
+        "updates.later": "Plus tard",
+        "updates.error_checking": "Erreur lors de la vérification des mises à jour : {error}",
+        
+        # Log viewer
+        "log_viewer.title": "Voir le journal",
+        "log_viewer.open": "Ouvrir le journal",
+        "log_viewer.save": "Enregistrer le journal",
+        "log_viewer.clear": "Effacer le journal",
+        "log_viewer.refresh": "Actualiser",
+        "log_viewer.filter": "Filtre",
+        "log_viewer.status.line_count": "{count} lignes",
+        "log_viewer.status.last_updated": "Dernière mise à jour : {time}",
+        "log_viewer.errors.save_error": "Erreur lors de l'enregistrement du fichier journal : {error}",
+        "log_viewer.save_error": "Impossible d'enregistrer le fichier journal : {error}",
+        
+        # Theme settings
+        "theme.system": "Système",
+        "theme.light": "Clair",
+        "theme.dark": "Sombre",
+        "theme.auto": "Automatique",
+        
+        # Additional UI elements
+        "Open Folder": "Ouvrir un dossier",
+        "Start Scan": "Démarrer l'analyse",
+        "Stop Scan": "Arrêter l'analyse",
+        "Save Results": "Enregistrer les résultats",
+        "Load Results": "Charger les résultats",
+        "Delete Selected": "Supprimer la sélection",
+        "Delete All Duplicates": "Supprimer tous les doublons",
+        "View Log": "Voir le journal",
+        "Settings": "Paramètres",
+        "About": "À propos",
+        "Exit": "Quitter",
+        
+        # Dialogs
+        "Select Folder": "Sélectionner un dossier",
+        "Save Results": "Enregistrer les résultats",
+        "Load Results": "Charger les résultats",
+        "Confirm Delete": "Confirmer la suppression",
+        "Are you sure you want to delete the selected files?": "Êtes-vous sûr de vouloir supprimer les fichiers sélectionnés ?",
+        "Error": "Erreur",
+        "Information": "Information",
+        "Warning": "Avertissement",
+        "Success": "Succès",
+        
+        # File operations
+        "File": "Fichier",
+        "Edit": "Édition",
+        "View": "Affichage",
+        "Help": "Aide",
+        "Select All": "Tout sélectionner",
+        "Open PDF Viewer": "Ouvrir la visionneuse PDF",
+        "Export Results to CSV": "Exporter les résultats en CSV",
+        "Export last scan results to a CSV file": "Exporter les derniers résultats d'analyse dans un fichier CSV",
+        "Exit": "Quitter",
+        "Exit the application": "Quitter l'application",
+        
+        # Progress dialog translations
+        "Files processed:": "Fichiers traités :",
+        "Current file:": "Fichier actuel :",
+        "Duplicates found:": "Doublons trouvés :",
+        
+        # Log viewer translations
+        "Failed to list log files: {}": "Impossible de lister les fichiers journal : {}",
+        "Log file not found: {path}": "Fichier journal non trouvé : {path}",
+        "Failed to load log file: {}": "Impossible de charger le fichier journal : {}",
+        "No log file selected": "Aucun fichier journal sélectionné",
+        "File: {file} | Entries: {entries} | Size: {size}": "Fichier : {file} | Entrées : {entries} | Taille : {size}",
+        "Confirm Delete": "Confirmer la suppression",
+        "Are you sure you want to delete the log file?\nThis will permanently delete: {}\nThis action cannot be undone.": "Êtes-vous sûr de vouloir supprimer le fichier journal ?\nCela supprimera définitivement : {}\nCette action ne peut pas être annulée.",
+        "Success": "Succès",
+        "Log file has been deleted.": "Le fichier journal a été supprimé.",
+        "Failed to delete log file: {}": "Impossible de supprimer le fichier journal : {}",
+        "Showing {filtered} of {total} entries": "Affichage de {filtered} sur {total} entrées",
+        "Failed to filter logs: {}": "Impossible de filtrer les journaux : {}",
+        "Confirm Clear": "Confirmer l'effacement",
+        "Are you sure you want to clear all logs? This cannot be undone.": "Êtes-vous sûr de vouloir effacer tous les journaux ? Cela ne peut pas être annulé.",
+        "Failed to clear logs: {error}": "Impossible d'effacer les journaux : {error}",
+        "Error": "Erreur",
+    }
+}
+
+# Available languages
+AVAILABLE_LANGUAGES = {
+    "en": "English",
+    "it": "Italiano",
+    "ru": "Русский",
+    "ua": "Українська",
+    "de": "Deutsch",
+    "fr": "Français",
+    "pt": "Português",
+    "es": "Español",
+    "ja": "日本語",
+    "zh": "中文",
+    "ar": "العربية",
+    "he": "עברית",
+}

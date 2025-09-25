@@ -520,16 +520,24 @@ class MenuBar(QObject):
             ('Italiano', 'it', '🇮🇹'),
             ('Russian', 'ru', '🇷🇺'),
             ('Ukrainian', 'ua', '🇺🇦'),
+            ('German', 'de', '🇩🇪'),
+            ('French', 'fr', '🇫🇷'),
+            ('Portuguese', 'pt', '🇵🇹'),
+            ('Spanish', 'es', '🇪🇸'),
+            ('Japanese', 'ja', '🇯🇵'),
+            ('Chinese', 'zh', '🇨🇳'),
+            ('Arabic', 'ar', '🇦🇪'),
+            ('Hebrew', 'he', '🇮🇱'),
             # Add more languages as needed: ('Language Name', 'code', 'flag_emoji')
         ]
         
         for name, code, flag in languages:
             # Create action with flag and language name
-            action = QAction(f"{flag} {self.tr(name)}", self.parent, checkable=True)
+            action = QAction(f"{flag} {name}", self.parent, checkable=True)
             action.setData(code)
             
             # Set tooltip
-            action.setToolTip(self.tr(f"Switch to {name}"))
+            action.setToolTip(f"Switch to {name}")
             
             # Connect to the language manager's set_language method
             action.triggered.connect(
@@ -621,15 +629,21 @@ class MenuBar(QObject):
             logger.debug(traceback.format_exc())
     
     def on_show_documentation(self):
-        """Open the documentation in the markdown viewer."""
+        """Open the GitHub wiki page in the default browser."""
         try:
-            from .docs import DocsDialog
-            viewer = DocsDialog(
-                parent=self.parent,
-                current_lang=self.language_manager.current_lang
-            )
-            viewer.language_manager = self.language_manager
-            viewer.exec()
+            import webbrowser
+            from PyQt6.QtGui import QDesktopServices
+            from PyQt6.QtCore import QUrl
+            
+            wiki_url = "https://github.com/Nsfr750/PDF_finder/wiki"
+            
+            # Try to open with QDesktopServices (Qt way)
+            try:
+                QDesktopServices.openUrl(QUrl(wiki_url))
+            except Exception:
+                # Fallback to webbrowser module
+                webbrowser.open(wiki_url)
+                
         except Exception as e:
             QMessageBox.critical(
                 self.parent,

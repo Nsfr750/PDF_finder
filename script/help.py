@@ -104,29 +104,38 @@ class HelpDialog(QDialog):
                 }
             """
             
-            # English button
-            self.en_button = QPushButton(self.tr("help.language.en", "English"))
-            self.en_button.setCheckable(True)
-            self.en_button.setStyleSheet(button_style)
-            self.en_button.clicked.connect(lambda: self.on_language_changed('en'))
+            # Language data with flag emojis - same as in menu.py
+            languages = [
+                ('English', 'en', '🇬🇧'),
+                ('Italiano', 'it', '🇮🇹'),
+                ('Russian', 'ru', '🇷🇺'),
+                ('Ukrainian', 'ua', '🇺🇦'),
+                ('German', 'de', '🇩🇪'),
+                ('French', 'fr', '🇫🇷'),
+                ('Portuguese', 'pt', '🇵🇹'),
+                ('Spanish', 'es', '🇪🇸'),
+                ('Japanese', 'ja', '🇯🇵'),
+                ('Chinese', 'zh', '🇨🇳'),
+                ('Arabic', 'ar', '🇦🇪'),
+                ('Hebrew', 'he', '🇮🇱'),
+            ]
             
-            # Italian button
-            self.it_button = QPushButton(self.tr("help.language.it", "Italiano"))
-            self.it_button.setCheckable(True)
-            self.it_button.setStyleSheet(button_style)
-            self.it_button.clicked.connect(lambda: self.on_language_changed('it'))
+            # Create language buttons
+            self.lang_buttons = {}
+            for name, code, flag in languages:
+                button = QPushButton(f"{flag} {name}")
+                button.setCheckable(True)
+                button.setStyleSheet(button_style)
+                button.clicked.connect(lambda checked, c=code: self.on_language_changed(c))
+                self.lang_buttons[code] = button
+                button_layout.addWidget(button)
             
             # Set current language
-            if self.current_lang == 'it':
-                self.it_button.setChecked(True)
-                self.en_button.setChecked(False)
-            else:
-                self.en_button.setChecked(True)
-                self.it_button.setChecked(False)
-            
-            # Add buttons to layout
-            button_layout.addWidget(self.en_button)
-            button_layout.addWidget(self.it_button)
+            for code, button in self.lang_buttons.items():
+                if code == self.current_lang:
+                    button.setChecked(True)
+                else:
+                    button.setChecked(False)
             
             # Add to main layout
             lang_layout.addStretch()
@@ -161,11 +170,9 @@ class HelpDialog(QDialog):
         and updates all UI elements accordingly.
         """
         try:
-            if self.current_lang == 'it':
-                help_text = self._get_italian_help()
-            else:
-                help_text = self._get_english_help()
-                
+            # Get help text based on current language
+            help_text = self._get_help_text(self.current_lang)
+            
             self.text_browser.setHtml(help_text)
             logger.debug(self.tr(
                 "help.language_changed",
@@ -178,8 +185,40 @@ class HelpDialog(QDialog):
                 "Error retranslating UI: {error}"
             ).format(error=str(e)))
             # Fallback to English if translation fails
-            help_text = self._get_english_help()
-            self.text_browser.setHtml(help_text)
+            try:
+                fallback_text = self._get_help_text('en')
+                self.text_browser.setHtml(fallback_text)
+            except Exception as fallback_error:
+                logger.error(f"Fallback to English also failed: {fallback_error}")
+                self.text_browser.setHtml("<h1>Error</h1><p>Could not load help content.</p>")
+    
+    def _get_help_text(self, lang_code):
+        """
+        Get help text for the specified language.
+        
+        Args:
+            lang_code (str): Language code (e.g., 'en', 'it', 'ru', etc.)
+            
+        Returns:
+            str: HTML help text for the specified language
+        """
+        help_methods = {
+            'en': self._get_english_help,
+            'it': self._get_italian_help,
+            'ru': self._get_russian_help,
+            'ua': self._get_ukrainian_help,
+            'de': self._get_german_help,
+            'fr': self._get_french_help,
+            'pt': self._get_portuguese_help,
+            'es': self._get_spanish_help,
+            'ja': self._get_japanese_help,
+            'zh': self._get_chinese_help,
+            'ar': self._get_arabic_help,
+            'he': self._get_hebrew_help,
+        }
+        
+        method = help_methods.get(lang_code, self._get_english_help)
+        return method()
     
     def _get_italian_help(self):
         """Return Italian help text."""
@@ -282,7 +321,7 @@ class HelpDialog(QDialog):
         Handle language change event.
         
         Args:
-            lang_code (str): New language code ('en' or 'it')
+            lang_code (str): New language code
         """
         try:
             if lang_code != self.current_lang:
@@ -291,12 +330,11 @@ class HelpDialog(QDialog):
                 self.language_changed.emit(lang_code)
                 
                 # Update button states
-                if lang_code == 'it':
-                    self.it_button.setChecked(True)
-                    self.en_button.setChecked(False)
-                else:
-                    self.en_button.setChecked(True)
-                    self.it_button.setChecked(False)
+                for code, button in self.lang_buttons.items():
+                    if code == lang_code:
+                        button.setChecked(True)
+                    else:
+                        button.setChecked(False)
                     
                 logger.debug(self.tr(
                     "help.language_switched",

@@ -1,0 +1,285 @@
+"""
+Chinese translations for PDF Duplicate Finder.
+"""
+
+# Translation data
+TRANSLATIONS = {
+    "zh": {
+        # Main window
+        "main_window.title": "PDF重复文件查找器",
+        "main_window.file": "文件",
+        "main_window.edit": "编辑",
+        "main_window.view": "视图",
+        "main_window.help": "帮助",
+        "main_window.settings": "设置",
+        "main_window.exit": "退出",
+        
+        # Status bar
+        "ui.status_ready": "就绪",
+        
+        # Common
+        "common.ok": "确定",
+        "common.cancel": "取消",
+        "common.yes": "是",
+        "common.no": "否",
+        "common.close": "关闭",
+        "common.save": "保存",
+        "common.apply": "应用",
+        "common.open": "打开",
+        "common.delete": "删除",
+        "common.edit": "编辑",
+        "common.help": "帮助",
+        "common.about": "关于",
+        "common.preferences": "首选项",
+        "common.exit": "退出",
+        "common.none": "无",
+        
+        # Settings dialog
+        "settings.title": "设置",
+        "settings.general": "常规",
+        "settings.appearance": "外观",
+        "settings.language": "语言",
+        "settings.save": "保存",
+        "settings.cancel": "取消",
+        "settings.theme_system": "系统",
+        "settings.theme_light": "浅色",
+        "settings.theme_dark": "深色",
+        "settings.check_updates": "启动时检查更新",
+        "settings.auto_save": "自动保存设置",
+        "settings.pdf_rendering": "PDF渲染",
+        
+        # Menu items
+        "file.open": "打开文件夹...",
+        "file.save_results": "保存结果...",
+        "file.load_results": "加载结果...",
+        "file.settings": "设置...",
+        "file.exit": "退出",
+        "edit.delete": "删除",
+        "edit.select_all": "全选",
+        "view.view_log": "查看日志...",
+        "view.toolbar": "工具栏",
+        "view.statusbar": "状态栏",
+        "help.about": "关于",
+        "help.sponsor": "赞助",
+        "help.check_updates": "检查更新",
+        
+        # Toolbar tooltips
+        "toolbar.open_folder": "打开要扫描的文件夹",
+        "toolbar.start_scan": "开始扫描重复文件",
+        "toolbar.stop_scan": "停止扫描",
+        "toolbar.save_results": "保存扫描结果",
+        "toolbar.load_results": "加载扫描结果",
+        "toolbar.delete_selected": "删除选中的文件",
+        "toolbar.delete_all": "删除所有重复文件",
+        "toolbar.view_log": "查看日志",
+        "toolbar.settings": "设置",
+        "toolbar.about": "关于",
+        
+        # Progress dialog
+        "progress.title": "PDF扫描",
+        "progress.scanning": "扫描中...",
+        "progress.files_processed": "已处理文件:",
+        "progress.current_file": "当前文件:",
+        "progress.duplicates_found": "找到重复:",
+        "progress.cancel": "取消",
+        
+        # Filter dialog
+        "filter.title": "筛选结果",
+        "filter.min_size": "最小大小 (KB):",
+        "filter.max_size": "最大大小 (KB):",
+        "filter.min_pages": "最小页数:",
+        "filter.max_pages": "最大页数:",
+        "filter.name_contains": "名称包含:",
+        "filter.apply": "应用",
+        "filter.reset": "重置",
+        "filter.cancel": "取消",
+        
+        # Settings dialog
+        "settings_dialog.title": "设置",
+        "settings_dialog.general_tab": "常规",
+        "settings_dialog.appearance_tab": "外观",
+        "settings_dialog.language_label": "语言:",
+        "settings_dialog.theme_label": "主题:",
+        "settings_dialog.check_updates": "启动时检查更新",
+        "settings_dialog.auto_save": "自动保存设置",
+        "settings_dialog.pdf_backend": "PDF后端:",
+        "settings_dialog.test_backend": "测试后端",
+        "settings_dialog.save": "保存",
+        "settings_dialog.cancel": "取消",
+        "settings_dialog.restart_required": "需要重新启动",
+        "settings_dialog.restart_message": "应用程序需要重新启动以应用语言更改。\n立即重新启动？",
+        "settings_dialog.language_changed": "语言更改成功",
+        "settings_dialog.language_change_failed": "语言更改失败",
+        "settings_dialog.backend_ok": "正常",
+        "settings_dialog.backend_missing": "不存在或路径无效",
+        "settings_dialog.no_backends_tested": "未测试后端",
+        "settings_dialog.test_results_title": "后端测试结果",
+        "settings_dialog.backend_status": "后端状态:",
+        "settings_dialog.test_backends": "测试后端",
+        
+        # Main application
+        "main.welcome": "欢迎使用PDF重复文件查找器",
+        "main.select_folder": "请选择要扫描PDF文件的文件夹",
+        "main.scan_started": "扫描已开始",
+        "main.scan_completed": "扫描已完成",
+        "main.duplicates_found": "找到重复: {count}",
+        "main.no_duplicates": "未找到重复文件",
+        "main.files_deleted": "成功删除了{count}个文件。",
+        "main.confirm_delete": "确定要删除选中的{count}个文件吗？",
+        "main.confirm_delete_title": "确认删除",
+        "main.file_in_use": "文件正在使用中，无法删除: {file}",
+        "main.permission_denied": "删除时权限被拒绝: {file}",
+        "main.group_processed": "已处理组 {current}/{total}: 找到{found}个重复",
+        "main.retranslate_error": "重新翻译回调错误: {error}",
+        "main.scanning_folder": "扫描文件夹: {folder}",
+        "main.no_pdfs_found": "在选定文件夹中未找到PDF文件。",
+        "main.duplicates_found_groups": "找到{count}个潜在的重复组。",
+        
+        # Scanner
+        "scanner.starting": "正在启动扫描...",
+        "scanner.scanning": "扫描中...",
+        "scanner.processing_file": "正在处理文件: {file}",
+        "scanner.comparing": "正在比较文件...",
+        "scanner.found_duplicates": "找到重复: {count}",
+        "scanner.complete": "扫描完成。找到{count}个重复组",
+        "scanner.stopped": "扫描已停止",
+        "scanner.processing": "正在处理 {current}/{total}: {file}",
+        "scanner.stopping": "正在停止扫描...",
+        
+        # PDF Viewer
+        "pdf_viewer.title": "PDF查看器",
+        "pdf_viewer.open": "打开PDF",
+        "pdf_viewer.previous": "上一页",
+        "pdf_viewer.next": "下一页",
+        "pdf_viewer.zoom_in": "放大",
+        "pdf_viewer.zoom_out": "缩小",
+        "pdf_viewer.zoom_fit": "适应",
+        "pdf_viewer.zoom_100": "100%",
+        "pdf_viewer.rotate_left": "向左旋转",
+        "pdf_viewer.rotate_right": "向右旋转",
+        "pdf_viewer.file_filter": "PDF文件 (*.pdf)",
+        "pdf_viewer.status.page_of": "第{current}页，共{total}页 | {width} x {height} | {zoom:.0%}",
+        "pdf_viewer.page_number": "第{current}页，共{total}页",
+        "pdf_viewer.errors.open_error": "打开PDF错误",
+        "pdf_viewer.errors.could_not_open": "无法打开{file}: {error}",
+        
+        # Language manager
+        "language_manager.default_language_info": "默认语言: {language} ({code})",
+        "language_manager.language_switch_success": "成功切换到{language}",
+        "language_manager.language_switch_failed": "切换到{language}失败: {error}",
+        
+        # Sponsor dialog
+        "sponsor.title": "赞助开发",
+        "sponsor.message": "PDF重复文件查找器是免费的开源软件。\n\n如果您喜欢这个应用程序，请考虑支持其开发。",
+        "sponsor.github_sponsors": "GitHub赞助商",
+        "sponsor.patreon": "Patreon",
+        "sponsor.paypal": "PayPal",
+        "sponsor.monero": "门罗币 (XMR)",
+        "sponsor.close": "关闭",
+        
+        # Updates
+        "updates.window_title": "软件更新",
+        "updates.current_version": "当前版本:",
+        "updates.latest_version": "最新版本:",
+        "updates.checking": "正在检查更新...",
+        "updates.release_notes": "<b>发行说明:</b>",
+        "updates.update_available": "有可用更新！",
+        "updates.no_update_available": "您使用的是最新版本。",
+        "updates.download_update": "下载更新",
+        "updates.later": "稍后",
+        "updates.error_checking": "检查更新错误: {error}",
+        
+        # Log viewer
+        "log_viewer.title": "查看日志",
+        "log_viewer.open": "打开日志",
+        "log_viewer.save": "保存日志",
+        "log_viewer.clear": "清除日志",
+        "log_viewer.refresh": "刷新",
+        "log_viewer.filter": "筛选",
+        "log_viewer.status.line_count": "{count}行",
+        "log_viewer.status.last_updated": "最后更新: {time}",
+        "log_viewer.errors.save_error": "保存日志文件错误: {error}",
+        "log_viewer.save_error": "无法保存日志文件: {error}",
+        
+        # Theme settings
+        "theme.system": "系统",
+        "theme.light": "浅色",
+        "theme.dark": "深色",
+        "theme.auto": "自动",
+        
+        # Additional UI elements
+        "Open Folder": "打开文件夹",
+        "Start Scan": "开始扫描",
+        "Stop Scan": "停止扫描",
+        "Save Results": "保存结果",
+        "Load Results": "加载结果",
+        "Delete Selected": "删除选中",
+        "Delete All Duplicates": "删除所有重复",
+        "View Log": "查看日志",
+        "Settings": "设置",
+        "About": "关于",
+        "Exit": "退出",
+        
+        # Dialogs
+        "Select Folder": "选择文件夹",
+        "Save Results": "保存结果",
+        "Load Results": "加载结果",
+        "Confirm Delete": "确认删除",
+        "Are you sure you want to delete the selected files?": "确定要删除选中的文件吗？",
+        "Error": "错误",
+        "Information": "信息",
+        "Warning": "警告",
+        "Success": "成功",
+        
+        # File operations
+        "File": "文件",
+        "Edit": "编辑",
+        "View": "视图",
+        "Help": "帮助",
+        "Select All": "全选",
+        "Open PDF Viewer": "打开PDF查看器",
+        "Export Results to CSV": "导出结果到CSV",
+        "Export last scan results to a CSV file": "将上次扫描结果导出到CSV文件",
+        "Exit": "退出",
+        "Exit the application": "退出应用程序",
+        
+        # Progress dialog translations
+        "Files processed:": "已处理文件:",
+        "Current file:": "当前文件:",
+        "Duplicates found:": "找到重复:",
+        
+        # Log viewer translations
+        "Failed to list log files: {}": "列出日志文件失败: {}",
+        "Log file not found: {path}": "未找到日志文件: {path}",
+        "Failed to load log file: {}": "加载日志文件失败: {}",
+        "No log file selected": "未选择日志文件",
+        "File: {file} | Entries: {entries} | Size: {size}": "文件: {file} | 条目: {entries} | 大小: {size}",
+        "Confirm Delete": "确认删除",
+        "Are you sure you want to delete the log file?\nThis will permanently delete: {}\nThis action cannot be undone.": "确定要删除日志文件吗？\n这将永久删除: {}\n此操作无法撤销。",
+        "Success": "成功",
+        "Log file has been deleted.": "日志文件已被删除。",
+        "Failed to delete log file: {}": "删除日志文件失败: {}",
+        "Showing {filtered} of {total} entries": "显示{total}条中的{filtered}条",
+        "Failed to filter logs: {}": "筛选日志失败: {}",
+        "Confirm Clear": "确认清除",
+        "Are you sure you want to clear all logs? This cannot be undone.": "确定要清除所有日志吗？这无法撤销。",
+        "Failed to clear logs: {error}": "清除日志失败: {error}",
+        "Error": "错误",
+    }
+}
+
+# Available languages
+AVAILABLE_LANGUAGES = {
+    "en": "English",
+    "it": "Italiano",
+    "ru": "Русский",
+    "ua": "Українська",
+    "de": "Deutsch",
+    "fr": "Français",
+    "pt": "Português",
+    "es": "Español",
+    "ja": "日本語",
+    "zh": "中文",
+    "ar": "العربية",
+    "he": "עברית",
+}

@@ -1,0 +1,285 @@
+"""
+Hebrew translations for PDF Duplicate Finder.
+"""
+
+# Translation data
+TRANSLATIONS = {
+    "he": {
+        # Main window
+        "main_window.title": "מאתר קבצי PDF כפולים",
+        "main_window.file": "קובץ",
+        "main_window.edit": "עריכה",
+        "main_window.view": "תצוגה",
+        "main_window.help": "עזרה",
+        "main_window.settings": "הגדרות",
+        "main_window.exit": "יציאה",
+        
+        # Status bar
+        "ui.status_ready": "מוכן",
+        
+        # Common
+        "common.ok": "אישור",
+        "common.cancel": "ביטול",
+        "common.yes": "כן",
+        "common.no": "לא",
+        "common.close": "סגירה",
+        "common.save": "שמירה",
+        "common.apply": "החלה",
+        "common.open": "פתיחה",
+        "common.delete": "מחיקה",
+        "common.edit": "עריכה",
+        "common.help": "עזרה",
+        "common.about": "אודות",
+        "common.preferences": "העדפות",
+        "common.exit": "יציאה",
+        "common.none": "ללא",
+        
+        # Settings dialog
+        "settings.title": "הגדרות",
+        "settings.general": "כללי",
+        "settings.appearance": "מראה",
+        "settings.language": "שפה",
+        "settings.save": "שמירה",
+        "settings.cancel": "ביטול",
+        "settings.theme_system": "מערכת",
+        "settings.theme_light": "בהיר",
+        "settings.theme_dark": "כהה",
+        "settings.check_updates": "בדיקת עדכונים בהפעלה",
+        "settings.auto_save": "שמירת הגדרות אוטומטית",
+        "settings.pdf_rendering": "עיבוד PDF",
+        
+        # Menu items
+        "file.open": "פתח תיקייה...",
+        "file.save_results": "שמור תוצאות...",
+        "file.load_results": "טען תוצאות...",
+        "file.settings": "הגדרות...",
+        "file.exit": "יציאה",
+        "edit.delete": "מחיקה",
+        "edit.select_all": "בחר הכל",
+        "view.view_log": "הצג יומן רישום...",
+        "view.toolbar": "סרגל כלים",
+        "view.statusbar": "סרגל מצב",
+        "help.about": "אודות",
+        "help.sponsor": "תמיכה",
+        "help.check_updates": "בדוק עדכונים",
+        
+        # Toolbar tooltips
+        "toolbar.open_folder": "פתח תיקייה לסריקה",
+        "toolbar.start_scan": "התחל סריקת קבצים כפולים",
+        "toolbar.stop_scan": "עצור סריקה",
+        "toolbar.save_results": "שמור תוצאות סריקה",
+        "toolbar.load_results": "טען תוצאות סריקה",
+        "toolbar.delete_selected": "מחק קבצים נבחרים",
+        "toolbar.delete_all": "מחק את כל הקבצים הכפולים",
+        "toolbar.view_log": "הצג יומן רישום",
+        "toolbar.settings": "הגדרות",
+        "toolbar.about": "אודות",
+        
+        # Progress dialog
+        "progress.title": "סריקת PDF",
+        "progress.scanning": "סורק...",
+        "progress.files_processed": "קבצים שעובדו:",
+        "progress.current_file": "קובץ נוכחי:",
+        "progress.duplicates_found": "כפילויות שנמצאו:",
+        "progress.cancel": "ביטול",
+        
+        # Filter dialog
+        "filter.title": "סנן תוצאות",
+        "filter.min_size": "גודל מינימלי (KB):",
+        "filter.max_size": "גודל מקסימלי (KB):",
+        "filter.min_pages": "מספר עמודים מינימלי:",
+        "filter.max_pages": "מספר עמודים מקסימלי:",
+        "filter.name_contains": "שם מכיל:",
+        "filter.apply": "החל",
+        "filter.reset": "איפוס",
+        "filter.cancel": "ביטול",
+        
+        # Settings dialog
+        "settings_dialog.title": "הגדרות",
+        "settings_dialog.general_tab": "כללי",
+        "settings_dialog.appearance_tab": "מראה",
+        "settings_dialog.language_label": "שפה:",
+        "settings_dialog.theme_label": "ערכת נושא:",
+        "settings_dialog.check_updates": "בדיקת עדכונים בהפעלה",
+        "settings_dialog.auto_save": "שמירת הגדרות אוטומטית",
+        "settings_dialog.pdf_backend": "מנוע PDF:",
+        "settings_dialog.test_backend": "בדוק מנוע",
+        "settings_dialog.save": "שמירה",
+        "settings_dialog.cancel": "ביטול",
+        "settings_dialog.restart_required": "נדרש אתחול מחדש",
+        "settings_dialog.restart_message": "היישום צריך להיות מופעל מחדש כדי להחיל את שינויי השפה.\nלהפעיל מחדש עכשיו?",
+        "settings_dialog.language_changed": "השפה שונתה בהצלחה",
+        "settings_dialog.language_change_failed": "שינוי השפה נכשל",
+        "settings_dialog.backend_ok": "תקין",
+        "settings_dialog.backend_missing": "חסר או נתיב לא חוקי",
+        "settings_dialog.no_backends_tested": "לא נבדקו מנועים",
+        "settings_dialog.test_results_title": "תוצאות בדיקת מנועים",
+        "settings_dialog.backend_status": "סטטוס מנוע:",
+        "settings_dialog.test_backends": "בדוק מנועים",
+        
+        # Main application
+        "main.welcome": "ברוכים הבאים למאתר קבצי PDF כפולים",
+        "main.select_folder": "אנא בחר תיקייה לסריקת קבצי PDF",
+        "main.scan_started": "הסריקה החלה",
+        "main.scan_completed": "הסריקה הושלמה",
+        "main.duplicates_found": "נמצאו כפילויות: {count}",
+        "main.no_duplicates": "לא נמצאו כפילויות",
+        "main.files_deleted": "{count} קבצים נמחקו בהצלחה.",
+        "main.confirm_delete": "האם אתה בטוח שברצונך למחוק {count} קבצים נבחרים?",
+        "main.confirm_delete_title": "אישור מחיקה",
+        "main.file_in_use": "הקובץ בשימוש ולא ניתן למחוק אותו: {file}",
+        "main.permission_denied": "ההרשאה נדחתה בניסיון למחוק: {file}",
+        "main.group_processed": "קבוצה {current}/{total} עובדה: נמצאו {found} כפילויות",
+        "main.retranslate_error": "שגיאה ב-callback retranslate: {error}",
+        "main.scanning_folder": "סורק תיקייה: {folder}",
+        "main.no_pdfs_found": "לא נמצאו קבצי PDF בתיקייה הנבחרת.",
+        "main.duplicates_found_groups": "נמצאו {count} קבוצות כפילויות פוטנציאליות.",
+        
+        # Scanner
+        "scanner.starting": "מתחיל סריקה...",
+        "scanner.scanning": "סורק...",
+        "scanner.processing_file": "מעבד קובץ: {file}",
+        "scanner.comparing": "משווה קבצים...",
+        "scanner.found_duplicates": "נמצאו כפילויות: {count}",
+        "scanner.complete": "סריקה הושלמה. נמצאו {count} קבוצות כפילויות",
+        "scanner.stopped": "הסריקה נעצרה",
+        "scanner.processing": "מעבד {current} מתוך {total}: {file}",
+        "scanner.stopping": "עוצר סריקה...",
+        
+        # PDF Viewer
+        "pdf_viewer.title": "מציג PDF",
+        "pdf_viewer.open": "פתח PDF",
+        "pdf_viewer.previous": "קודם",
+        "pdf_viewer.next": "הבא",
+        "pdf_viewer.zoom_in": "הגדל",
+        "pdf_viewer.zoom_out": "הקטן",
+        "pdf_viewer.zoom_fit": "התאם",
+        "pdf_viewer.zoom_100": "100%",
+        "pdf_viewer.rotate_left": "סובב שמאלה",
+        "pdf_viewer.rotate_right": "סובב ימינה",
+        "pdf_viewer.file_filter": "קבצי PDF (*.pdf)",
+        "pdf_viewer.status.page_of": "עמוד {current} מתוך {total} | {width} x {height} | {zoom:.0%}",
+        "pdf_viewer.page_number": "עמוד {current} מתוך {total}",
+        "pdf_viewer.errors.open_error": "שגיאה בפתיחת PDF",
+        "pdf_viewer.errors.could_not_open": "לא ניתן לפתוח {file}: {error}",
+        
+        # Language manager
+        "language_manager.default_language_info": "שפת ברירת מחדל: {language} ({code})",
+        "language_manager.language_switch_success": "הוחלף בהצלחה ל-{language}",
+        "language_manager.language_switch_failed": "החלפה ל-{language} נכשלה: {error}",
+        
+        # Sponsor dialog
+        "sponsor.title": "תמיכה בפיתוח",
+        "sponsor.message": "מאתר קבצי PDF כפולים הוא תוכנה חינמית בקוד פתוח.\n\nאם אתה אוהב את היישום הזה, אנא שקול לתמוך בפיתוח שלו.",
+        "sponsor.github_sponsors": "GitHub Sponsors",
+        "sponsor.patreon": "Patreon",
+        "sponsor.paypal": "PayPal",
+        "sponsor.monero": "מונרו (XMR)",
+        "sponsor.close": "סגירה",
+        
+        # Updates
+        "updates.window_title": "עדכון תוכנה",
+        "updates.current_version": "גרסה נוכחית:",
+        "updates.latest_version": "גרסה אחרונה:",
+        "updates.checking": "בודק עדכונים...",
+        "updates.release_notes": "<b>הערות שחרור:</b>",
+        "updates.update_available": "עדכון זמין!",
+        "updates.no_update_available": "יש לך את הגרסה האחרונה.",
+        "updates.download_update": "הורד עדכון",
+        "updates.later": "מאוחר יותר",
+        "updates.error_checking": "שגיאה בבדיקת עדכונים: {error}",
+        
+        # Log viewer
+        "log_viewer.title": "הצג יומן רישום",
+        "log_viewer.open": "פתח יומן",
+        "log_viewer.save": "שמור יומן",
+        "log_viewer.clear": "נקה יומן",
+        "log_viewer.refresh": "רענן",
+        "log_viewer.filter": "מסנן",
+        "log_viewer.status.line_count": "{count} שורות",
+        "log_viewer.status.last_updated": "עדכון אחרון: {time}",
+        "log_viewer.errors.save_error": "שגיאה בשמירת קובץ יומן: {error}",
+        "log_viewer.save_error": "לא ניתן לשמור קובץ יומן: {error}",
+        
+        # Theme settings
+        "theme.system": "מערכת",
+        "theme.light": "בהיר",
+        "theme.dark": "כהה",
+        "theme.auto": "אוטומטי",
+        
+        # Additional UI elements
+        "Open Folder": "פתח תיקייה",
+        "Start Scan": "התחל סריקה",
+        "Stop Scan": "עצור סריקה",
+        "Save Results": "שמור תוצאות",
+        "Load Results": "טען תוצאות",
+        "Delete Selected": "מחק נבחרים",
+        "Delete All Duplicates": "מחק את כל הכפילויות",
+        "View Log": "הצג יומן",
+        "Settings": "הגדרות",
+        "About": "אודות",
+        "Exit": "יציאה",
+        
+        # Dialogs
+        "Select Folder": "בחר תיקייה",
+        "Save Results": "שמור תוצאות",
+        "Load Results": "טען תוצאות",
+        "Confirm Delete": "אישור מחיקה",
+        "Are you sure you want to delete the selected files?": "האם אתה בטוח שברצונך למחוק את הקבצים הנבחרים?",
+        "Error": "שגיאה",
+        "Information": "מידע",
+        "Warning": "אזהרה",
+        "Success": "הצלחה",
+        
+        # File operations
+        "File": "קובץ",
+        "Edit": "עריכה",
+        "View": "תצוגה",
+        "Help": "עזרה",
+        "Select All": "בחר הכל",
+        "Open PDF Viewer": "פתח מציג PDF",
+        "Export Results to CSV": "ייצא תוצאות ל-CSV",
+        "Export last scan results to a CSV file": "ייצא תוצאות סריקה אחרונות לקובץ CSV",
+        "Exit": "יציאה",
+        "Exit the application": "צא מהיישום",
+        
+        # Progress dialog translations
+        "Files processed:": "קבצים שעובדו:",
+        "Current file:": "קובץ נוכחי:",
+        "Duplicates found:": "כפילויות שנמצאו:",
+        
+        # Log viewer translations
+        "Failed to list log files: {}": "נכשל בהצגת רשימת קבצי יומן: {}",
+        "Log file not found: {path}": "קובץ יומן לא נמצא: {path}",
+        "Failed to load log file: {}": "נכשל בטעינת קובץ יומן: {}",
+        "No log file selected": "לא נבחר קובץ יומן",
+        "File: {file} | Entries: {entries} | Size: {size}": "קובץ: {file} | רשומות: {entries} | גודל: {size}",
+        "Confirm Delete": "אישור מחיקה",
+        "Are you sure you want to delete the log file?\nThis will permanently delete: {}\nThis action cannot be undone.": "האם אתה בטוח שברצונך למחוק את קובץ היומן?\nזה ימחק לצמיתות: {}\nפעולה זו לא ניתנת לביטול.",
+        "Success": "הצלחה",
+        "Log file has been deleted.": "קובץ היומן נמחק.",
+        "Failed to delete log file: {}": "נכשל במחיקת קובץ יומן: {}",
+        "Showing {filtered} of {total} entries": "מציג {filtered} מתוך {total} רשומות",
+        "Failed to filter logs: {}": "נכשל בסינון יומנים: {}",
+        "Confirm Clear": "אישור ניקוי",
+        "Are you sure you want to clear all logs? This cannot be undone.": "האם אתה בטוח שברצונך לנקות את כל היומנים? זה לא ניתן לביטול.",
+        "Failed to clear logs: {error}": "נכשל בניקוי יומנים: {error}",
+        "Error": "שגיאה",
+    }
+}
+
+# Available languages
+AVAILABLE_LANGUAGES = {
+    "en": "English",
+    "it": "Italiano",
+    "ru": "Русский",
+    "ua": "Українська",
+    "de": "Deutsch",
+    "fr": "Français",
+    "pt": "Português",
+    "es": "Español",
+    "ja": "日本語",
+    "zh": "中文",
+    "ar": "العربية",
+    "he": "עברית",
+}
