@@ -201,7 +201,13 @@ class MenuBar(QObject):
             # Add a wrapper function to debug when the action is triggered
             def debug_delete_selected():
                 print(f"DEBUG: Delete action triggered!")
-                self.parent.on_delete_selected()
+                try:
+                    self.parent.on_delete_selected()
+                    print(f"DEBUG: on_delete_selected completed successfully")
+                except Exception as e:
+                    print(f"DEBUG: Error in on_delete_selected: {e}")
+                    import traceback
+                    traceback.print_exc()
             self.actions['delete_selected'].triggered.connect(debug_delete_selected)
         else:
             print(f"DEBUG: on_delete_selected method NOT found on parent: {self.parent}")
@@ -266,10 +272,10 @@ class MenuBar(QObject):
         # Cache Manager action with icon
         self.actions['cache_manager'] = QAction(
             QIcon.fromTheme("system-run", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserStop)),
-            self.tr("cache_manager.menu"),
+            self.tr("Cache Manager"),
             self.parent
         )
-        self.actions['cache_manager'].setStatusTip(self.tr("cache_manager.menu_description"))
+        self.actions['cache_manager'].setStatusTip(self.tr("Manage PDF hash cache settings and operations"))
         if hasattr(self.parent, 'on_show_cache_manager'):
             self.actions['cache_manager'].triggered.connect(self.parent.on_show_cache_manager)
         menu.addAction(self.actions['cache_manager'])
@@ -484,7 +490,7 @@ class MenuBar(QObject):
         # Add a refresh action
         refresh_action = QAction(
             QIcon.fromTheme("view-refresh", QApplication.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)),
-            self.tr("refresh_language"),
+            self.tr("Refresh Language"),
             self.parent
         )
         refresh_action.triggered.connect(self.retranslate_ui)
@@ -530,6 +536,8 @@ class MenuBar(QObject):
             self.actions['open_folder'].setStatusTip(self.tr("Open a folder to scan for duplicate PDFs"))
             self.actions['pdf_viewer'].setText(self.tr("PDF Viewer"))
             self.actions['pdf_viewer'].setStatusTip(self.tr("Open PDF Viewer"))
+            self.actions['export_csv'].setText(self.tr("Export Results to CSV"))
+            self.actions['export_csv'].setStatusTip(self.tr("Export last scan results to a CSV file"))
             self.actions['exit'].setText(self.tr("Exit"))
             self.actions['exit'].setStatusTip(self.tr("Exit the application"))
             
@@ -538,7 +546,26 @@ class MenuBar(QObject):
             self.actions['select_all'].setStatusTip(self.tr("Select all items"))
             self.actions['deselect_all'].setText(self.tr("Deselect All"))
             self.actions['deselect_all'].setStatusTip(self.tr("Deselect all items"))
+            self.actions['delete_selected'].setText(self.tr("Delete Selected"))
+            self.actions['delete_selected'].setStatusTip(self.tr("Move selected files to Recycle Bin"))
             
+            # Update tools menu actions
+            self.actions['filter_options'].setText(self.tr("Filter Options"))
+            self.actions['filter_options'].setStatusTip(self.tr("Set PDF search filters"))
+            self.actions['cache_manager'].setText(self.tr("Cache Manager"))
+            self.actions['cache_manager'].setStatusTip(self.tr("Manage PDF hash cache settings and operations"))
+            self.actions['settings'].setText(self.tr("Settings"))
+            self.actions['settings'].setStatusTip(self.tr("Configure application settings"))
+            self.actions['check_updates'].setText(self.tr("Check for Updates"))
+            self.actions['check_updates'].setStatusTip(self.tr("Check for application updates"))
+            
+            # Update help menu actions
+            self.actions['help'].setText(self.tr("Help"))
+            self.actions['help'].setStatusTip(self.tr("Open help documentation"))
+            self.actions['documentation'].setText(self.tr("Documentation"))
+            self.actions['documentation'].setStatusTip(self.tr("Open the documentation"))
+            self.actions['view_logs'].setText(self.tr("View Logs"))
+            self.actions['view_logs'].setStatusTip(self.tr("View application logs"))
             self.actions['about'].setText(self.tr("About"))
             self.actions['about'].setStatusTip(self.tr("Show information about the application"))
             self.actions['sponsor'].setText(self.tr("Sponsor"))

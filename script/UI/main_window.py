@@ -981,10 +981,20 @@ class MainWindow(QMainWindow):
         logger.debug(f"Scan finished with {len(duplicates)} duplicate groups")
         
         try:
+            # Store the duplicates for later use
+            self.duplicate_groups = duplicates
+            
             # Hide progress bar and reset status bar
             self.progress_bar.setVisible(False)
             self.progress_bar.setValue(0)
             self.status_bar.showMessage(self.language_manager.tr("ui.status_ready"))
+            
+            # Update the duplicates list and file list
+            self._update_duplicates_list()
+            
+            # Update the UI with the duplicates
+            if hasattr(self.main_ui, 'update_duplicates_tree'):
+                self.main_ui.update_duplicates_tree(duplicates)
             
             # Emit scan finished signal
             self.scan_finished.emit()

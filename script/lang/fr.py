@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "Êtes-vous sûr de vouloir effacer tous les journaux ? Cela ne peut pas être annulé.",
         "Failed to clear logs: {error}": "Impossible d'effacer les journaux : {error}",
         "Error": "Erreur",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "Gestionnaire de Cache",
+        "Manage PDF hash cache settings and operations": "Gérer les paramètres et opérations du cache de hachage PDF",
+        "Refresh Language": "Actualiser la Langue"
     }
 }
 

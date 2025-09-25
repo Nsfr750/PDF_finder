@@ -266,6 +266,11 @@ TRANSLATIONS = {
     "Are you sure you want to clear all logs? This cannot be undone.": "Ви впевнені, що хочете очистити всі журнали? Цю дію не можна скасувати.",
     "Failed to clear logs: {error}": "Не вдалося очистити журнали: {error}",
     "Error": "Помилка",
+    
+    # Toolbar translation keys (added to fix toolbar translation issues)
+    "Cache Manager": "Менеджер кешу",
+    "Manage PDF hash cache settings and operations": "Керування налаштуваннями та операціями кешу хешів PDF",
+    "Refresh Language": "Оновити мову"
 }
 }
 

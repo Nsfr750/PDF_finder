@@ -547,7 +547,7 @@ class PDFDuplicateFinder(MainWindow):
             
             # Initialize scanner with proper threading
             if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner()
+                self._init_scanner_without_thread()
             elif not hasattr(self, 'scan_thread') or self.scan_thread is None:
                 # Scanner exists but no thread, create thread and move scanner
                 self.scan_thread = QThread()

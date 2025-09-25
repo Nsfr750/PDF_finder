@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "Tem certeza de que deseja limpar todos os logs? Isso não pode ser desfeito.",
         "Failed to clear logs: {error}": "Falha ao limpar logs: {error}",
         "Error": "Erro",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "Gerenciador de Cache",
+        "Manage PDF hash cache settings and operations": "Gerenciar configurações e operações do cache de hash PDF",
+        "Refresh Language": "Atualizar Idioma"
     }
 }
 

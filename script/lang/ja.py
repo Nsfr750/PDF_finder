@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "すべてのログをクリアしてもよろしいですか？これは元に戻せません。",
         "Failed to clear logs: {error}": "ログのクリアに失敗しました: {error}",
         "Error": "エラー",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "キャッシュマネージャー",
+        "Manage PDF hash cache settings and operations": "PDFハッシュキャッシュの設定と操作を管理",
+        "Refresh Language": "言語を更新"
     }
 }
 

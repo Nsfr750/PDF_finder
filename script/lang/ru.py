@@ -266,6 +266,11 @@ TRANSLATIONS = {
     "Are you sure you want to clear all logs? This cannot be undone.": "Вы уверены, что хотите очистить все журналы? Это действие нельзя отменить.",
     "Failed to clear logs: {error}": "Не удалось очистить журналы: {error}",
     "Error": "Ошибка",
+    
+    # Toolbar translation keys (added to fix toolbar translation issues)
+    "Cache Manager": "Менеджер кэша",
+    "Manage PDF hash cache settings and operations": "Управление настройками и операциями кэша хешей PDF",
+    "Refresh Language": "Обновить язык"
 }
 }
 

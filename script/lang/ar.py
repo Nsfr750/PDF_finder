@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "هل أنت متأكد من مسح جميع السجلات؟ هذا لا يمكن التراجع عنه.",
         "Failed to clear logs: {error}": "فشل في مسح السجلات: {error}",
         "Error": "خطأ",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "مدير التخزين المؤقت",
+        "Manage PDF hash cache settings and operations": "إدارة إعدادات وعمليات التخزين المؤقت لتجزئة PDF",
+        "Refresh Language": "تحديث اللغة"
     }
 }
 

@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "האם אתה בטוח שברצונך לנקות את כל היומנים? זה לא ניתן לביטול.",
         "Failed to clear logs: {error}": "נכשל בניקוי יומנים: {error}",
         "Error": "שגיאה",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "מנהל מטמון",
+        "Manage PDF hash cache settings and operations": "נהל הגדרות ופעולות של מטמון גיבוב PDF",
+        "Refresh Language": "רענן שפה"
     }
 }
 

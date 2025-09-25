@@ -653,7 +653,12 @@ TRANSLATIONS = {
         # Progress dialog translations
         "Files processed:": "Files processed:",
         "Current file:": "Current file:",
-        "Duplicates found:": "Duplicates found:"
+        "Duplicates found:": "Duplicates found:",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "Cache Manager",
+        "Manage PDF hash cache settings and operations": "Manage PDF hash cache settings and operations",
+        "Refresh Language": "Refresh Language"
     },
 }    
 

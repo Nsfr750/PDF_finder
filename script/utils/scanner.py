@@ -229,7 +229,7 @@ class PDFScanner(QObject):
                                 try:
                                     file_size = os.path.getsize(file_path)
                                     if min_file_size <= file_size <= max_file_size:
-                                        pdf_files.append(file_path)
+                                        pdf_files.append(os.path.normpath(file_path))
                                 except (OSError, Exception) as e:
                                     logger.warning(f"scan_directory: Error accessing {file_path}: {e}")
                 else:
@@ -240,7 +240,7 @@ class PDFScanner(QObject):
                             try:
                                 file_size = os.path.getsize(file_path)
                                 if min_file_size <= file_size <= max_file_size:
-                                    pdf_files.append(file_path)
+                                    pdf_files.append(os.path.normpath(file_path))
                             except (OSError, Exception) as e:
                                 logger.warning(f"scan_directory: Error accessing {file_path}: {e}")
             except Exception as e:

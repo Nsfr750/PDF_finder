@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "Möchten Sie wirklich alle Protokolle löschen? Dies kann nicht rückgängig gemacht werden.",
         "Failed to clear logs: {error}": "Protokolle konnten nicht gelöscht werden: {error}",
         "Error": "Fehler",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "Cache-Manager",
+        "Manage PDF hash cache settings and operations": "PDF-Hash-Cache-Einstellungen und -Operationen verwalten",
+        "Refresh Language": "Sprache aktualisieren"
     }
 }
 

@@ -266,6 +266,11 @@ TRANSLATIONS = {
         "Are you sure you want to clear all logs? This cannot be undone.": "确定要清除所有日志吗？这无法撤销。",
         "Failed to clear logs: {error}": "清除日志失败: {error}",
         "Error": "错误",
+        
+        # Toolbar translation keys (added to fix toolbar translation issues)
+        "Cache Manager": "缓存管理器",
+        "Manage PDF hash cache settings and operations": "管理PDF哈希缓存设置和操作",
+        "Refresh Language": "刷新语言"
     }
 }
 

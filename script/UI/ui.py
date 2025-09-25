@@ -308,7 +308,7 @@ class MainUI(QWidget):
     
     def on_file_double_clicked(self, item):
         """Handle double-click on a file in the file list."""
-        file_path = item.text()
+        file_path = item.data(Qt.ItemDataRole.UserRole)
         if file_path and os.path.exists(file_path):
             self.add_to_recent_files(file_path)
             try:
@@ -327,7 +327,7 @@ class MainUI(QWidget):
     def on_duplicate_double_clicked(self, item, column):
         """Handle double-click on a duplicate file in the tree."""
         if item.parent():  # This is a file item (not a group header)
-            file_path = item.text(0)  # Get the file path from the first column
+            file_path = item.data(0, Qt.ItemDataRole.UserRole)  # Get the file path from UserRole
             if file_path and os.path.exists(file_path):
                 try:
                     # Use the show_pdf_viewer function instead of creating the instance directly
@@ -370,7 +370,10 @@ class MainUI(QWidget):
             if not duplicates:
                 no_duplicates = QTreeWidgetItem([self.tr("No duplicate files found."), "", "", ""])
                 self.duplicates_tree.addTopLevelItem(no_duplicates)
-                self.file_list.addItem(self.tr("No duplicate files found."))
+                # Add a message item to the file list
+                no_files_item = QListWidgetItem(self.tr("No duplicate files found."))
+                no_files_item.setData(Qt.ItemDataRole.ToolTipRole, self.tr("No duplicate files found."))
+                self.file_list.addItem(no_files_item)
                 return
             
             # Set to store all unique file paths to avoid duplicates in the file list
@@ -392,14 +395,14 @@ class MainUI(QWidget):
                     try:
                         if isinstance(file_info, str):
                             # If file_info is a string, treat it as the path
-                            file_path = file_info
+                            file_path = os.path.normpath(file_info)
                             file_item = QTreeWidgetItem([file_path, "", "", ""])
                             # Store file path in UserRole for delete function
                             file_item.setData(0, Qt.ItemDataRole.UserRole, file_path)
                             valid_files += 1
                         elif isinstance(file_info, dict):
                             # If file_info is a dictionary, extract the values
-                            file_path = str(file_info.get('path', ''))
+                            file_path = os.path.normpath(str(file_info.get('path', '')))
                             file_item = QTreeWidgetItem([
                                 file_path,
                                 self._format_file_size(file_info.get('size', 0)),
@@ -419,7 +422,11 @@ class MainUI(QWidget):
                         # Add to file list (avoid duplicates)
                         if file_path and file_path not in all_files:
                             all_files.add(file_path)
-                            self.file_list.addItem(file_path)
+                            # Create QListWidgetItem with file path stored in UserRole
+                            file_item = QListWidgetItem(os.path.basename(file_path))
+                            file_item.setData(Qt.ItemDataRole.UserRole, file_path)
+                            file_item.setData(Qt.ItemDataRole.ToolTipRole, file_path)
+                            self.file_list.addItem(file_item)
                         
                     except Exception as e:
                         logger.error(f"Error processing file info: {e}", exc_info=True)
@@ -437,6 +444,38 @@ class MainUI(QWidget):
             # Show error in UI
             error_item = QTreeWidgetItem([f"Error: {str(e)}", "", "", ""])
             self.duplicates_tree.addTopLevelItem(error_item)
+    
+    def remove_files_from_list(self, file_paths):
+        """Remove files from the file list after deletion.
+        
+        Args:
+            file_paths: List of file paths to remove
+        """
+        try:
+            if not hasattr(self, 'file_list'):
+                return
+                
+            # Create a set of file paths for faster lookup
+            paths_to_remove = set(file_paths)
+            
+            # Iterate through all items and remove those that match
+            items_to_remove = []
+            for i in range(self.file_list.count()):
+                item = self.file_list.item(i)
+                item_path = item.data(Qt.ItemDataRole.UserRole)
+                if item_path in paths_to_remove:
+                    items_to_remove.append(item)
+            
+            # Remove the items
+            for item in items_to_remove:
+                row = self.file_list.row(item)
+                if row >= 0:
+                    self.file_list.takeItem(row)
+                    
+            logger.info(f"Removed {len(items_to_remove)} files from file list")
+            
+        except Exception as e:
+            logger.error(f"Error removing files from list: {e}", exc_info=True)
     
     def _format_file_size(self, size_bytes):
         """Format file size in human readable format.
