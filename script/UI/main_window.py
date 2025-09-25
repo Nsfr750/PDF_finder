@@ -359,6 +359,9 @@ class MainWindow(QMainWindow):
         # Create the main UI with the central widget as parent and shared language manager
         self.main_ui = MainUI(central_widget, self.language_manager)
         
+        # Connect UI signals to main window methods
+        self.main_ui.delete_selected.connect(self.on_delete_selected)
+        
         # Add the main UI to the main layout
         main_layout.addWidget(self.main_ui)
         

@@ -6,7 +6,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, 
     QListWidget, QLabel, QFrame, QStatusBar, QTreeWidget,
     QTreeWidgetItem, QHeaderView, QSizePolicy, QMenuBar, QToolBar,
-    QApplication, QTabWidget, QStackedWidget, QMenu, QPushButton, QListWidgetItem
+    QApplication, QTabWidget, QStackedWidget, QMenu, QPushButton, QListWidgetItem,
+    QStyle
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QAction, QIcon
@@ -16,6 +17,9 @@ from script.lang.lang_manager import SimpleLanguageManager
 
 class MainUI(QWidget):
     """Main UI components for the application."""
+    
+    # Signal emitted when delete selected is requested
+    delete_selected = pyqtSignal()
     
     def __init__(self, parent=None, language_manager=None):
         """Initialize the UI components.
@@ -203,7 +207,7 @@ class MainUI(QWidget):
         # Add delete action if items are selected
         if self.file_list.selectedItems():
             delete_action = QAction(self.tr("Delete Selected"), self)
-            delete_action.triggered.connect(self._on_delete_selected)
+            delete_action.triggered.connect(self.delete_selected.emit)
             delete_action.setIcon(QApplication.style().standardIcon(
                 QStyle.StandardPixmap.SP_TrashIcon
             ))
