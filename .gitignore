@@ -121,3 +121,6 @@ build_linux.sh
 config/settings.json
 /.data
 installer.nsi
+nuitka_config.toml
+pyproject.toml
+pyproject.toml

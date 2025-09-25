@@ -1,32 +1,32 @@
-# Requirements.txt for PDF_finder 
+# Requirements.txt for PDF Finder v3.0.0
 
 # Core dependencies
 PyPDF2>=3.0.0
 imagehash>=4.3.1
 requests>=2.31.0
-PyMuPDF>=1.21.0
-numpy>=1.21.0
-qrcode>=7.3.1
+PyMuPDF>=1.23.0
+numpy>=1.24.0
+qrcode>=7.4.2
 wand>=0.6.10
 markdown>=3.8.2
 pyyaml>=6.0.2
-pymdown-extensions>=9.0
-opencv-python-headless>=4.8.0
+pymdown-extensions>=10.0
+opencv-python-headless>=4.9.0
 
 # GUI
-PyQt6>=6.4.0
-PyQt6-Qt6>=6.4.0
-PyQt6-sip>=13.4.0
-PyQt6-WebEngine>=6.4.0
+PyQt6>=6.6.0
+PyQt6-Qt6>=6.6.0
+PyQt6-sip>=13.6.0
+PyQt6-WebEngine>=6.6.0
 ttkthemes>=3.2.2
 
 # Utilities
 send2trash>=1.8.2
-python-dotenv>=0.19.0
-tqdm>=4.67.1
-pywin32>=303; sys_platform == 'win32'
-pyobjc>=8.0; sys_platform == 'darwin'
-pycairo>=1.20.0; sys_platform == 'linux'
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+pywin32>=306; sys_platform == 'win32'
+pyobjc>=10.0; sys_platform == 'darwin'
+pycairo>=1.25.0; sys_platform == 'linux'
 psutil>=5.9.8
 
 # Testing & Development
@@ -39,5 +39,6 @@ mypy>=1.9.0
 pre-commit>=3.7.0
 
 # Type stubs
-types-PyYAML>=6.0.0
+types-PyYAML>=6.0.12
 types-requests>=2.31.0
+types-tqdm>=4.66.0

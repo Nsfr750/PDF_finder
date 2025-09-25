@@ -53,17 +53,22 @@ def read_requirements():
     except FileNotFoundError:
         print("Warning: requirements.txt not found, using default dependencies")
         requirements = [
-            "PyMuPDF>=1.21.0",
+            "PyMuPDF>=1.23.0",
             "PyPDF2>=3.0.0",
-            "PyQt6>=6.4.0",
+            "PyQt6>=6.6.0",
             "Wand>=0.6.10",
             "imagehash>=4.3.1",
             "numpy>=1.24.0",
             "pdf2image>=1.16.3",
             "python-dotenv>=1.0.0",
             "requests>=2.31.0",
-            "scikit-image>=0.21.0",
-            "tqdm>=4.66.0"
+            "scikit-image>=0.22.0",
+            "tqdm>=4.66.0",
+            "qrcode>=7.4.2",
+            "markdown>=3.8.2",
+            "pyyaml>=6.0.2",
+            "send2trash>=1.8.2",
+            "psutil>=5.9.8"
         ]
     return requirements
 
@@ -73,7 +78,7 @@ if __name__ == "__main__":
     setup(
         name="pdf-finder",
         version=version,
-        python_requires=">=3.9",
+        python_requires=">=3.8",
         install_requires=read_requirements(),
         package_dir={"": "."},
         packages=["script"],
