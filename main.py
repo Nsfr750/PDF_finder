@@ -91,8 +91,8 @@ class PDFDuplicateFinder(MainWindow):
         # Show the window
         self.show()
         
-        # Automatically open the folder selection dialog
-        QTimer.singleShot(100, self.on_open_folder)
+        # Note: Removed automatic folder selection dialog to prevent freezing
+        # QTimer.singleShot(100, self.on_open_folder)
         
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
@@ -313,6 +313,39 @@ class PDFDuplicateFinder(MainWindow):
         except Exception as e:
             logger.error(f"Failed to initialize scanner: {e}", exc_info=True)
             return False
+    
+    def _init_scanner_without_thread(self):
+        """Initialize the PDF scanner without creating a thread."""
+        logger.debug("Initializing PDF scanner without thread")
+        
+        try:
+            # Get settings for scanner with reasonable defaults
+            comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
+            dpi = int(self.settings.get('dpi', 150))
+            enable_hash_cache = bool(self.settings.get('enable_hash_cache', True))
+            cache_dir = self.settings.get('cache_dir', None)
+            
+            logger.debug(f"Creating scanner with threshold={comparison_threshold}, dpi={dpi}, "
+                        f"hash_cache={'enabled' if enable_hash_cache else 'disabled'}")
+            
+            # Create scanner with settings including hash cache
+            self._scanner = PDFScanner(
+                threshold=comparison_threshold,
+                dpi=dpi,
+                enable_hash_cache=enable_hash_cache,
+                cache_dir=cache_dir,
+                language_manager=self.language_manager
+            )
+            
+            logger.debug("PDF scanner initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Error initializing scanner: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Failed to initialize scanner: {}").format(str(e))
+            )
     
     def _start_scan(self, folder_path: str):
         """Start scanning the given folder with current filter settings.
@@ -638,9 +671,9 @@ class PDFDuplicateFinder(MainWindow):
                 # Force update to ensure the dialog is visible
                 QCoreApplication.processEvents()
             
-            # Initialize scanner if needed
+            # Initialize scanner if needed (but don't create thread here)
             if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner()
+                self._init_scanner_without_thread()
             
             # Reset UI
             self._reset_scan_ui()
@@ -648,11 +681,46 @@ class PDFDuplicateFinder(MainWindow):
             # Update status bar
             self.status_bar.showMessage(self.tr("Scanning: {}").format(folder_path))
             
-            # Start scan in a separate thread
+            # Set up proper threading for the scanner
             self.scan_thread = QThread()
-            self.scan_worker = lambda: self._scan_worker(folder_path)
-            self.scan_thread.started.connect(self.scan_worker)
+            self.scan_thread.setObjectName("PDFScanThread")
+            
+            # Move scanner to thread
+            self._scanner.moveToThread(self.scan_thread)
+            
+            # Connect signals with proper connection type
+            self._scanner.progress_updated.connect(
+                self._on_scan_progress,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.status_updated.connect(
+                self._on_scan_status,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.duplicates_found.connect(
+                self._on_duplicates_found,
+                Qt.ConnectionType.QueuedConnection
+            )
+            self._scanner.finished.connect(
+                self._on_scan_finished,
+                Qt.ConnectionType.QueuedConnection
+            )
+            
+            # Connect thread signals
+            self.scan_thread.started.connect(self._scanner.start_scan)
             self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            
+            # Set scan parameters
+            self._scanner.scan_parameters = {
+                'directory': folder_path,
+                'recursive': True,
+                'min_file_size': 1024,  # 1KB
+                'max_file_size': 1024 * 1024 * 1024,  # 1GB
+                'min_similarity': self.settings.get('comparison_threshold', 0.95),
+                'enable_text_compare': self.settings.get('enable_text_compare', True)
+            }
+            
+            # Start the thread
             self.scan_thread.start()
             
         except Exception as e:
@@ -664,36 +732,6 @@ class PDFDuplicateFinder(MainWindow):
                 self.tr("Failed to start scan: {}".format(str(e)))
             )
     
-    def _scan_worker(self, folder_path: str):
-        """Worker method that runs in a separate thread to perform the actual scanning.
-        
-        Args:
-            folder_path: Path to the folder to scan
-        """
-        try:
-            logger.info(f"Starting scan in worker thread for: {folder_path}")
-            
-            # Ensure the scanner is initialized
-            if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner()
-            
-            # Start the scan using scan_directory
-            self._scanner.scan_directory(
-                directory=folder_path,
-                recursive=True,
-                min_file_size=self.current_filters['min_size'],
-                max_file_size=self.current_filters['max_size'],
-                min_similarity=self.current_filters['min_similarity'],
-                enable_text_compare=self.current_filters['enable_text_compare']
-            )
-            
-            logger.info("Scan completed successfully in worker thread")
-            
-        except Exception as e:
-            logger.error(f"Error in scan worker: {e}", exc_info=True)
-            # Emit error signal if available
-            if hasattr(self, 'error_occurred'):
-                self.error_occurred.emit(str(e))
     
     def scan_folder(self, folder_path: str):
         """Scan a folder for duplicate PDF files.

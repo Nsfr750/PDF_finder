@@ -191,7 +191,7 @@ class MainWindow(QMainWindow):
                 self,
                 self.language_manager.tr("dialog.select_folder", "Select Folder"),
                 "",
-                QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontUseNativeDialog
+                QFileDialog.Option.ShowDirsOnly
             )
             
             logger.debug(f"on_open_folder: Selected folder path: {folder_path}")

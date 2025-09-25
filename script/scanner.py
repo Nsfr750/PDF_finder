@@ -317,14 +317,51 @@ class PDFScanner(QObject):
         """Find duplicates using hash cache for improved performance."""
         duplicates = []
         
+        # Emit initial progress
+        self.progress_updated.emit(0, len(pdf_files), "")
+        self.status_updated.emit(
+            self.tr("scanner.processing_cache", "Processing files with cache..."),
+            0, len(pdf_files)
+        )
+        
         if enable_text_compare:
             # Use content-based duplicate detection with cache
-            content_groups = self.hash_cache.find_duplicates_by_content(pdf_files, min_similarity)
-            duplicates = list(content_groups.values())
+            # Process files in smaller batches to provide progress updates
+            batch_size = max(1, len(pdf_files) // 20)  # Update progress every ~5%
+            for i in range(0, len(pdf_files), batch_size):
+                if self._stop_requested:
+                    break
+                    
+                batch_end = min(i + batch_size, len(pdf_files))
+                batch_files = pdf_files[i:batch_end]
+                
+                # Update progress
+                self.progress_updated.emit(batch_end, len(pdf_files), batch_files[-1] if batch_files else "")
+                self.status_updated.emit(
+                    self.tr("scanner.processing_cache", "Processing files with cache: {current} of {total}").format(
+                        current=batch_end, total=len(pdf_files)
+                    ),
+                    batch_end, len(pdf_files)
+                )
+                
+                # Process this batch
+                content_groups = self.hash_cache.find_duplicates_by_content(batch_files, min_similarity)
+                duplicates.extend(list(content_groups.values()))
+                
+                # Process events to keep UI responsive
+                if hasattr(self, 'thread') and self.thread():
+                    self.thread().msleep(1)  # Small delay to allow UI updates
         else:
             # Use hash-based duplicate detection
             hash_groups = self.hash_cache.find_duplicates_by_hash(pdf_files)
             duplicates = list(hash_groups.values())
+            
+            # Emit final progress for hash-based method
+            self.progress_updated.emit(len(pdf_files), len(pdf_files), "")
+            self.status_updated.emit(
+                self.tr("scanner.complete_cache", "Cache processing complete"),
+                len(pdf_files), len(pdf_files)
+            )
         
         return duplicates
     

@@ -85,6 +85,16 @@ TRANSLATIONS = {
         "dialog.error": "Error",
         "dialog.warning": "Warning",
         "dialog.info": "Information",
+        "dialog.select_folder": "Select Folder",
+        "dialog.folder_selected": "Folder Selected",
+        "dialog.selected_folder": "Selected folder: %s",
+        
+        # UI elements
+        "ui.status_scanning": "Scanning folder: %s",
+        "ui.status_ready": "Ready",
+        
+        # Errors
+        "errors.folder_open_failed": "Failed to open folder: %s",
         
         # Errors
         "error.title": "Error",
@@ -641,7 +651,12 @@ TRANSLATIONS = {
         "Confirm Clear": "Confirm Clear",
         "Are you sure you want to clear all logs? This cannot be undone.": "Are you sure you want to clear all logs? This cannot be undone.",
         "Failed to clear logs: {error}": "Failed to clear logs: {error}",
-        "Error": "Error"
+        "Error": "Error",
+        
+        # Progress dialog translations
+        "Files processed:": "Files processed:",
+        "Current file:": "Current file:",
+        "Duplicates found:": "Duplicates found:"
     },
     "it": {
         # Main window
@@ -1190,6 +1205,18 @@ TRANSLATIONS = {
         "Dark": "Scuro",
         "Exit": "Esci",
         
+        # Dialogs
+        "dialog.select_folder": "Seleziona Cartella",
+        "dialog.folder_selected": "Cartella Selezionata",
+        "dialog.selected_folder": "Cartella selezionata: %s",
+        
+        # UI elements
+        "ui.status_scanning": "Scansione cartella: %s",
+        "ui.status_ready": "Pronto",
+        
+        # Errors
+        "errors.folder_open_failed": "Impossibile aprire la cartella: %s",
+        
         # UI translations
         "Files": "File",
         "Recent Files": "File recenti",
@@ -1279,7 +1306,12 @@ TRANSLATIONS = {
         "Confirm Clear": "Conferma cancellazione",
         "Are you sure you want to clear all logs? This cannot be undone.": "Sei sicuro di voler cancellare tutti i log? Questa azione non può essere annullata.",
         "Failed to clear logs: {error}": "Impossibile cancellare i log: {error}",
-        "Error": "Errore"
+        "Error": "Errore",
+        
+        # Progress dialog translations
+        "Files processed:": "File elaborati:",
+        "Current file:": "File corrente:",
+        "Duplicates found:": "Duplicati trovati:"
     }
 }
 

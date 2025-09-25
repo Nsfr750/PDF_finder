@@ -23,6 +23,12 @@ class ScanProgressDialog(QDialog):
             message: Initial status message
         """
         super().__init__(parent)
+        self._language_manager = None
+        
+        # Try to get language manager from parent if available
+        if parent and hasattr(parent, 'language_manager'):
+            self._language_manager = parent.language_manager
+        
         self.setWindowTitle(title)
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setMinimumWidth(400)
@@ -116,3 +122,17 @@ class ScanProgressDialog(QDialog):
         if not self._cancelled:
             self.on_cancel()
         event.accept()
+    
+    def tr(self, key: str, default: str = None) -> str:
+        """Translate a string using the language manager.
+        
+        Args:
+            key: Translation key
+            default: Default text if translation not found
+            
+        Returns:
+            Translated string or default/key if not available
+        """
+        if self._language_manager and hasattr(self._language_manager, 'tr'):
+            return self._language_manager.tr(key, default)
+        return default or key
