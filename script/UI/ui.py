@@ -268,8 +268,14 @@ class MainUI(QWidget):
     
     def _on_delete_selected(self):
         """Handle delete selected action from context menu."""
+        print(f"DEBUG: Context menu delete action triggered")
+        print(f"DEBUG: Parent: {self.parent()}")
         if hasattr(self.parent(), 'on_delete_selected'):
+            print(f"DEBUG: on_delete_selected method found on parent")
             self.parent().on_delete_selected()
+        else:
+            print(f"DEBUG: on_delete_selected method NOT found on parent")
+            print(f"DEBUG: Parent attributes: {[attr for attr in dir(self.parent()) if 'delete' in attr.lower()]}")
     
     def select_all_files(self):
         """Select all files in the file list."""
@@ -388,6 +394,8 @@ class MainUI(QWidget):
                             # If file_info is a string, treat it as the path
                             file_path = file_info
                             file_item = QTreeWidgetItem([file_path, "", "", ""])
+                            # Store file path in UserRole for delete function
+                            file_item.setData(0, Qt.ItemDataRole.UserRole, file_path)
                             valid_files += 1
                         elif isinstance(file_info, dict):
                             # If file_info is a dictionary, extract the values
@@ -398,6 +406,8 @@ class MainUI(QWidget):
                                 self._format_timestamp(file_info.get('modified', 0)),
                                 f"{file_info.get('similarity', 0) * 100:.1f}%" if 'similarity' in file_info else ""
                             ])
+                            # Store file path in UserRole for delete function
+                            file_item.setData(0, Qt.ItemDataRole.UserRole, file_path)
                             valid_files += 1
                         else:
                             logger.warning(f"Unknown file_info type: {type(file_info)}")
@@ -467,12 +477,8 @@ class MainUI(QWidget):
         except Exception:
             return str(timestamp)
     
-    def on_language_changed(self, language):
-        """Handle language change event.
-        
-        Args:
-            language: New language code
-        """
+    def on_language_changed(self):
+        """Handle language change event."""
         # Rebuild UI with new language
         self.rebuild_ui()
     
@@ -480,15 +486,17 @@ class MainUI(QWidget):
         """Rebuild UI elements with current language."""
         # Update labels using stored translation keys
         if 'file_list_label' in self.translation_keys:
-            self.findChild(QLabel, "file_list_label").setText(self.tr(self.translation_keys['file_list_label']))
+            file_list_label = self.findChild(QLabel, "file_list_label")
+            if file_list_label:
+                file_list_label.setText(self.tr(self.translation_keys['file_list_label']))
         
         # Update tab labels
-        if hasattr(self, 'tab_widget'):
+        if hasattr(self, 'tab_widget') and self.tab_widget:
             self.tab_widget.setTabText(0, self.tr(self.translation_keys.get('tab_widget_files', 'Files')))
             self.tab_widget.setTabText(1, self.tr(self.translation_keys.get('tab_widget_duplicates', 'Duplicates')))
         
         # Update tree headers
-        if hasattr(self, 'duplicates_tree'):
+        if hasattr(self, 'duplicates_tree') and self.duplicates_tree:
             self.duplicates_tree.setHeaderLabels([
                 self.tr("File"), 
                 self.tr("Size"), 
@@ -497,11 +505,11 @@ class MainUI(QWidget):
             ])
         
         # Update button texts
-        if hasattr(self, 'btn_expand'):
+        if hasattr(self, 'btn_expand') and self.btn_expand:
             self.btn_expand.setText(self.tr(self.translation_keys.get('btn_expand', 'Expand All')))
         
-        if hasattr(self, 'btn_collapse'):
+        if hasattr(self, 'btn_collapse') and self.btn_collapse:
             self.btn_collapse.setText(self.tr(self.translation_keys.get('btn_collapse', 'Collapse All')))
         
-        if hasattr(self, 'clear_button'):
+        if hasattr(self, 'clear_button') and self.clear_button:
             self.clear_button.setText(self.tr(self.translation_keys.get('clear_button', 'Clear Recent Files')))

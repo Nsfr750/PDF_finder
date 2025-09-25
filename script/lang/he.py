@@ -145,6 +145,7 @@ TRANSLATIONS = {
         "scanner.stopped": "הסריקה נעצרה",
         "scanner.processing": "מעבד {current} מתוך {total}: {file}",
         "scanner.stopping": "עוצר סריקה...",
+        "scan.complete": "סריקה הושלמה",
         
         # PDF Viewer
         "pdf_viewer.title": "מציג PDF",

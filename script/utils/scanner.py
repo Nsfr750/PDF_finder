@@ -30,7 +30,7 @@ class PDFScanner(QObject):
     duplicates_found = pyqtSignal(list)  # list of duplicate groups
     finished = pyqtSignal(list)  # list of duplicate groups (emitted when scan is complete)
     
-    def __init__(self, threshold: float = 0.95, dpi: int = 150, 
+    def __init__(self, threshold: float = 0.8, dpi: int = 150, 
                  enable_hash_cache: bool = True, cache_dir: Optional[str] = None,
                  language_manager=None):
         """Initialize the PDF scanner with the given settings.

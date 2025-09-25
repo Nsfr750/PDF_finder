@@ -197,7 +197,15 @@ class MenuBar(QObject):
         self.actions['delete_selected'].setShortcut("Del")
         self.actions['delete_selected'].setStatusTip(self.tr("Move selected files to Recycle Bin"))
         if hasattr(self.parent, 'on_delete_selected'):
-            self.actions['delete_selected'].triggered.connect(self.parent.on_delete_selected)
+            print(f"DEBUG: on_delete_selected method found on parent: {self.parent}")
+            # Add a wrapper function to debug when the action is triggered
+            def debug_delete_selected():
+                print(f"DEBUG: Delete action triggered!")
+                self.parent.on_delete_selected()
+            self.actions['delete_selected'].triggered.connect(debug_delete_selected)
+        else:
+            print(f"DEBUG: on_delete_selected method NOT found on parent: {self.parent}")
+            print(f"DEBUG: Parent attributes: {[attr for attr in dir(self.parent) if 'delete' in attr.lower()]}")
         menu.addAction(self.actions['delete_selected'])
         
         return menu

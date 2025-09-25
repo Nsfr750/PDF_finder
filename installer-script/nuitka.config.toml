@@ -1,0 +1,66 @@
+# Nuitka configuration for PDF Duplicate Finder
+# See: https://nuitka.net/doc/user-manual.html#configuration-files
+
+[tool.nuitka]
+# Build mode
+onefile = true
+remove_output = true
+assume_yes_for_downloads = true
+
+# Target
+company_name = "PDFDuplicateFinder"
+product_name = "PDF Duplicate Finder"
+file_version = "3.0.0"
+product_version = "3.0.0"
+file_description = "A tool to find and manage duplicate PDF files."
+
+# Windows specifics
+windows_console_mode = "disable"
+windows_icon_from_ico = "../assets/icon.ico"
+
+# Plugins
+enable_plugins = [
+  "qt-plugins",
+]
+include_qt_plugins = [
+  "printsupport",
+  "svg",
+  "widgets",
+]
+
+# Follow and include imports
+follow_imports = true
+include_package = [
+  "PyQt6",
+  "fitz",
+  "PyMuPDF",
+  "wand",
+  "numpy",
+  "cv2",
+  "tqdm",
+  "send2trash",
+  "psutil",
+]
+
+# Data files and folders to include
+# format: ["source=dest_inside_dist", ...]
+include_data_files = [
+  "../assets/icon.ico=assets/icon.ico",
+  "../assets/version_info.txt=assets/version_info.txt",
+  "../config/settings.json=config/settings.json",
+  "../config/updates.json=config/updates.json",
+]
+include_data_dirs = [
+  "../lang=lang",
+  "../docs=docs",
+]
+
+# Exclude heavy/unneeded packages
+nofollow_import_to = [
+  "skimage",
+  "scipy",
+  "PIL",
+]
+
+# Output
+output_dir = "dist-nuitka"

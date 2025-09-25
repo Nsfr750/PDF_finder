@@ -109,19 +109,4 @@ $RECYCLE.BIN/
 # Project specific
 *.bat
 *.exe
-/logs
-/tests
 Setup.txt
-build_nuitka.py
-nuitka.config.toml
-pyinstaller_build_win.py
-pyinstaller_build_linux.py
-nuitka_build_win.py
-build_linux.sh
-config/settings.json
-/.data
-installer.nsi
-nuitka_config.toml
-pyproject.toml
-pyproject.toml
-publish_to_pypi.py

@@ -145,6 +145,7 @@ TRANSLATIONS = {
         "scanner.stopped": "スキャンが停止しました",
         "scanner.processing": "処理中 {current}/{total}: {file}",
         "scanner.stopping": "スキャンを停止中...",
+        "scan.complete": "スキャン完了",
         
         # PDF Viewer
         "pdf_viewer.title": "PDFビューア",

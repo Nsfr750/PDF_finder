@@ -498,6 +498,7 @@ class MainWindow(QMainWindow):
 
     def on_delete_selected(self):
         """Handle deletion of selected files."""
+        logger.info("on_delete_selected method called")
         try:
             selected_items = self.main_ui.file_list.selectedItems()
             if not selected_items:
@@ -726,8 +727,8 @@ class MainWindow(QMainWindow):
             # The on_language_changed will be called automatically by the signal
             logger.debug(f"Language change signal processed")
             
-            # Note: language_changed signal was removed from SettingsDialog as per requirements
-            # dialog.language_changed.connect(handle_settings_language_change)
+            # Connect to language change signal from settings dialog
+            dialog.language_changed.connect(self._handle_settings_language_change)
             
             # Show the dialog
             result = dialog.exec()
@@ -738,6 +739,34 @@ class MainWindow(QMainWindow):
                 self,
                 self.language_manager.tr("dialog.error"),
                 self.language_manager.tr("errors.settings_open_failed") % str(e)
+            )
+    
+    def _handle_settings_language_change(self, language_code: str):
+        """Handle language change from settings dialog.
+        
+        Args:
+            language_code: The new language code
+        """
+        logger.debug(f"Handling language change from settings dialog: {language_code}")
+        try:
+            # Update the language manager
+            if self.language_manager:
+                self.language_manager.set_language(language_code)
+                
+            # Save the language setting
+            self.settings.set_language(language_code)
+                
+            # Emit our own language changed signal
+            self.language_changed.emit(language_code)
+                
+            logger.debug(f"Language changed to: {language_code}")
+            
+        except Exception as e:
+            logger.error(f"Error handling language change: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.language_manager.tr("dialog.error"),
+                self.language_manager.tr("errors.language_change_failed") % str(e)
             )
 
     def on_show_cache_manager(self):

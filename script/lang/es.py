@@ -145,6 +145,7 @@ TRANSLATIONS = {
         "scanner.stopped": "Escaneo detenido",
         "scanner.processing": "Procesando {current} de {total}: {file}",
         "scanner.stopping": "Deteniendo escaneo...",
+        "scan.complete": "Escaneo completado",
         
         # PDF Viewer
         "pdf_viewer.title": "Visor PDF",

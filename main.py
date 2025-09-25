@@ -37,6 +37,12 @@ from PyQt6.QtCore import (
 
 from datetime import datetime
 import csv
+import shutil
+try:
+    import send2trash
+    SEND2TRASH_AVAILABLE = True
+except ImportError:
+    SEND2TRASH_AVAILABLE = False
 
 # Import our custom modules
 from script.UI.main_window import MainWindow
@@ -111,7 +117,7 @@ class PDFDuplicateFinder(MainWindow):
                 
                 # Create scanner with hash cache enabled
                 self._scanner = PDFScanner(
-                    threshold=0.95,  # Default threshold
+                    threshold=0.8,  # Default threshold
                     dpi=150,        # Default DPI
                     enable_hash_cache=True,
                     cache_dir=cache_dir,
@@ -194,7 +200,7 @@ class PDFDuplicateFinder(MainWindow):
             self.scan_thread.setObjectName("PDFScannerThread")
             
             # Get settings for scanner with reasonable defaults
-            comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
+            comparison_threshold = float(self.settings.get('comparison_threshold', 0.8))
             dpi = int(self.settings.get('dpi', 150))
             enable_hash_cache = bool(self.settings.get('enable_hash_cache', True))
             cache_dir = self.settings.get('cache_dir', None)
@@ -240,36 +246,10 @@ class PDFDuplicateFinder(MainWindow):
             if hasattr(self._scanner, 'set_status_callback'):
                 self._scanner.set_status_callback(self._on_scan_status)
             
-            logger.info("Scanner initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize scanner: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "errors.scanner_init_failed",
-                        "Failed to initialize scanner: {error}"
-                    ).format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
-            raise
+            # Connect cleanup signals
             self._scanner.finished.connect(self._scanner.deleteLater)
-            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
             
-            # Make sure the scanner is properly set up in the thread
-            self._scanner.moveToThread(self.scan_thread)
-            
-            # Set up progress bar if needed
-            if not hasattr(self, 'progress_bar') and hasattr(self, 'status_bar'):
-                self.progress_bar = QProgressBar()
-                self.progress_bar.setMinimum(0)
-                self.progress_bar.setMaximum(100)
-                self.progress_bar.setTextVisible(True)
-                self.progress_bar.setVisible(False)
-                self.status_bar.addPermanentWidget(self.progress_bar)
-                
             logger.info("Scanner initialized successfully")
-            return True
             
         except Exception as e:
             logger.error(f"Failed to initialize scanner: {e}", exc_info=True)
@@ -281,7 +261,7 @@ class PDFDuplicateFinder(MainWindow):
         
         try:
             # Get settings for scanner with reasonable defaults
-            comparison_threshold = float(self.settings.get('comparison_threshold', 0.95))
+            comparison_threshold = float(self.settings.get('comparison_threshold', 0.8))
             dpi = int(self.settings.get('dpi', 150))
             enable_hash_cache = bool(self.settings.get('enable_hash_cache', True))
             cache_dir = self.settings.get('cache_dir', None)
@@ -308,144 +288,6 @@ class PDFDuplicateFinder(MainWindow):
                 self.tr("Failed to initialize scanner: {}").format(str(e))
             )
     
-    def _start_scan(self, folder_path: str):
-        """Start scanning the given folder with current filter settings.
-        
-        Args:
-            folder_path: Path to the folder to scan
-        """
-        try:
-            if not folder_path or not os.path.isdir(folder_path):
-                QMessageBox.warning(
-                    self,
-                    self.language_manager.tr("dialog.warning", "Warning"),
-                    self.language_manager.tr("errors.invalid_folder", "Please select a valid folder to scan.")
-                )
-                return
-            
-            try:
-                # Ensure scanner is properly initialized
-                if not hasattr(self, '_scanner') or not hasattr(self, 'scan_thread'):
-                    logger.error("Scanner or thread not initialized")
-                    QMessageBox.critical(
-                        self, 
-                        self.language_manager.tr("dialog.error", "Error"),
-                        self.language_manager.tr(
-                            "errors.scanner_not_initialized", 
-                            "Scanner is not properly initialized. Please restart the application."
-                        )
-                    )
-                    return
-                
-                # Start the scan
-                self.scan_thread.start()
-                
-            except Exception as e:
-                logger.error(f"Error during scan preparation: {e}", exc_info=True)
-                self._cleanup_scan()
-                QMessageBox.critical(
-                    self,
-                    self.language_manager.tr("dialog.error", "Error"),
-                    self.language_manager.tr("errors.scan_preparation_failed", "Failed to prepare scan: {}").format(str(e))
-                )
-                
-                # Stop any existing scan
-                if self.scan_thread.isRunning():
-                    logger.info("Stopping existing scan...")
-                    self._scanner.stop_scan()
-                    self.scan_thread.quit()
-                    self.scan_thread.wait(2000)  # Wait up to 2 seconds for clean shutdown
-                    
-                    if self.scan_thread.isRunning():
-                        logger.warning("Forcibly terminating scan thread")
-                        self.scan_thread.terminate()
-                        self.scan_thread.wait()
-                
-                # Re-initialize the scanner and thread
-                self._init_scanner()
-                
-                # Configure scan parameters
-                self._scanner.scan_parameters = {
-                    'directory': folder_path,
-                    'recursive': True,
-                    'min_file_size': self.current_filters.get('min_size', 1024),
-                    'max_file_size': self.current_filters.get('max_size', 1024*1024*1024),
-                    'min_similarity': self.current_filters.get('min_similarity', 0.8),
-                    'enable_text_compare': self.current_filters.get('enable_text_compare', True)
-                }
-                
-                # Clear previous results
-                self.last_scan_duplicates = []
-                
-                # Initialize the duplicates tree if it doesn't exist
-                if not hasattr(self, 'duplicates_tree') or self.duplicates_tree is None:
-                    self._init_duplicates_tree()
-                
-                # Make sure the tree widget is properly initialized
-                if not hasattr(self, 'duplicates_tree') or not self.duplicates_tree:
-                    logger.error("Failed to initialize duplicates tree widget")
-                    return
-                
-                # Clear existing items
-                self.duplicates_tree.clear()
-            
-            # Check if we have any duplicate groups to display
-            if not hasattr(self, 'last_scan_duplicates') or not self.last_scan_duplicates:
-                # No duplicates found, show a message
-                no_duplicates_item = QTreeWidgetItem([
-                    self.language_manager.tr("ui.no_duplicates", "No duplicate files found."),
-                    "", "", ""
-                ])
-                self.duplicates_tree.addTopLevelItem(no_duplicates_item)
-                
-                # Resize columns to fit content
-                for i in range(self.duplicates_tree.columnCount()):
-                    self.duplicates_tree.resizeColumnToContents(i)
-                return
-                
-            # Add each duplicate group to the tree
-            valid_groups = 0
-            for group_idx, group in enumerate(self.last_scan_duplicates):
-                try:
-                    if group and 'files' in group and len(group['files']) >= 2:
-                        self._add_duplicate_group_to_ui(valid_groups, group)
-                        valid_groups += 1
-                except Exception as e:
-                    logger.error(f"Error adding duplicate group {group_idx}: {e}", exc_info=True)
-                    continue
-            
-            # If no valid groups were found, show a message
-            if valid_groups == 0:
-                no_duplicates_item = QTreeWidgetItem([
-                    self.language_manager.tr("ui.no_duplicates", "No duplicate files found."),
-                    "", "", ""
-                ])
-                self.duplicates_tree.addTopLevelItem(no_duplicates_item)
-            
-            # Resize columns to fit content
-            for i in range(self.duplicates_tree.columnCount()):
-                self.duplicates_tree.resizeColumnToContents(i)
-                
-            logger.info(f"Updated UI with {valid_groups} duplicate groups")
-            
-            # Update status bar if available
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr(
-                        "status.scan_complete", 
-                        "Scan complete. Found {count} duplicate groups."
-                    ).format(count=valid_groups),
-                    5000  # Show for 5 seconds
-                )
-            
-        except Exception as e:
-            logger.error(f"Error updating scan results UI: {e}", exc_info=True)
-            if hasattr(self, 'status_bar'):
-                self.status_bar.showMessage(
-                    self.language_manager.tr("errors.ui_update_failed", "Failed to update UI: {error}").format(error=str(e)),
-                    5000  # Show for 5 seconds
-                )
-    
     def _reset_scan_ui(self):
         """Reset the UI for a new scan."""
         # Clear previous results
@@ -458,9 +300,9 @@ class PDFDuplicateFinder(MainWindow):
     def cancel_scan(self):
         """Cancel the current scan operation."""
         if hasattr(self, '_scanner') and self._scanner:
-            self._scanner.cancel_scan()
+            self._scanner.stop_scan()
         
-        if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
+        if hasattr(self, 'scan_thread') and self.scan_thread and self.scan_thread.isRunning():
             self.scan_thread.quit()
             self.scan_thread.wait()
         
@@ -480,25 +322,60 @@ class PDFDuplicateFinder(MainWindow):
         
         self.status_bar.showMessage(self.tr("Scan cancelled"), 3000)
     
+    def _auto_close_progress_dialog(self):
+        """Automatically close the progress dialog after scan completion."""
+        logger.debug("Auto-closing progress dialog")
+        if self.progress_dialog:
+            # Stop any pending updates
+            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
+                self.progress_dialog._update_timer.stop()
+            
+            # Close the dialog
+            if self.progress_dialog.isVisible():
+                logger.debug("Closing progress dialog automatically")
+                self.progress_dialog.close()
+            
+            # Clear the reference
+            self.progress_dialog = None
+            
+            # Process events to ensure everything is cleaned up
+            from PyQt6.QtCore import QCoreApplication
+            QCoreApplication.processEvents()
+            logger.debug("Progress dialog auto-close completed")
+    
+    def _cleanup_progress_dialog(self):
+        """Clean up the progress dialog reference when it's closed."""
+        logger.debug("Cleaning up progress dialog reference")
+        if self.progress_dialog:
+            # Stop any pending updates
+            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
+                self.progress_dialog._update_timer.stop()
+            
+            # Process events to ensure the dialog is properly updated
+            from PyQt6.QtCore import QCoreApplication
+            QCoreApplication.processEvents()
+            
+            # Close the dialog if it's still visible
+            if self.progress_dialog.isVisible():
+                logger.debug("Closing visible progress dialog")
+                self.progress_dialog.close()
+            
+            # Clear the reference
+            self.progress_dialog = None
+            
+            # Process events again to ensure everything is cleaned up
+            QCoreApplication.processEvents()
+            logger.debug("Progress dialog cleanup completed")
+    
     def _cleanup_scan(self):
         """Clean up resources after scan is complete or cancelled."""
         if hasattr(self, 'scan_thread') and self.scan_thread.isRunning():
             self.scan_thread.quit()
             self.scan_thread.wait()
         
-        if self.progress_dialog:
-            # Stop any pending updates and close the dialog
-            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
-                self.progress_dialog._update_timer.stop()
-            
-            # Process events to ensure the dialog is properly updated before closing
-            QCoreApplication.processEvents()
-            
-            self.progress_dialog.accept()
-            self.progress_dialog = None
-            
-            # Process events again to ensure the dialog is fully closed
-            QCoreApplication.processEvents()
+        # Note: Don't automatically close the progress dialog here
+        # The dialog should be closed either by user clicking Close button
+        # or when scan is cancelled (handled in cancel_scan method)
     
     def _on_scan_finished(self, duplicate_groups=None):
         """Handle scan completion."""
@@ -520,21 +397,15 @@ class PDFDuplicateFinder(MainWindow):
                 5000
             )
         
-        # Close progress dialog
+        # Update progress dialog to show completion status
         if self.progress_dialog:
-            logger.debug("Closing progress dialog")
-            # Stop any pending updates and close the dialog
-            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
-                self.progress_dialog._update_timer.stop()
+            logger.debug("Setting progress dialog to complete state")
+            self.progress_dialog.set_scan_complete()
             
-            # Process events to ensure the dialog is properly updated before closing
-            QCoreApplication.processEvents()
-            
-            self.progress_dialog.accept()
-            self.progress_dialog = None
-            
-            # Process events again to ensure the dialog is fully closed
-            QCoreApplication.processEvents()
+            # Auto-close the dialog after 2 seconds since close button doesn't work
+            logger.debug("Scheduling auto-close of progress dialog in 2 seconds")
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(2000, self._auto_close_progress_dialog)
         
         # Update the UI directly since we're already on the main thread
         self._update_scan_results_ui()
@@ -605,6 +476,9 @@ class PDFDuplicateFinder(MainWindow):
         """Handle scan status updates."""
         if hasattr(self, 'status_bar') and hasattr(self.status_bar, 'showMessage'):
             self.status_bar.showMessage(message)
+        
+        # Update progress dialog if it exists
+        if self.progress_dialog and not self.progress_dialog._cancelled:
             self.progress_dialog.update_progress(current, total)
         
         # Update status bar less frequently to improve performance
@@ -653,6 +527,7 @@ class PDFDuplicateFinder(MainWindow):
                     self.tr("Preparing to scan: {}").format(folder_path)
                 )
                 self.progress_dialog.cancelled.connect(self.cancel_scan)
+                self.progress_dialog.close_requested.connect(self._cleanup_progress_dialog)
                 
                 # Configure dialog properties
                 self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
@@ -670,9 +545,36 @@ class PDFDuplicateFinder(MainWindow):
                 # Force update to ensure the dialog is visible
                 QCoreApplication.processEvents()
             
-            # Initialize scanner if needed (but don't create thread here)
+            # Initialize scanner with proper threading
             if not hasattr(self, '_scanner') or self._scanner is None:
-                self._init_scanner_without_thread()
+                self._init_scanner()
+            elif not hasattr(self, 'scan_thread') or self.scan_thread is None:
+                # Scanner exists but no thread, create thread and move scanner
+                self.scan_thread = QThread()
+                self.scan_thread.setObjectName("PDFScanThread")
+                self._scanner.moveToThread(self.scan_thread)
+                
+                # Connect signals with proper connection type
+                self._scanner.progress_updated.connect(
+                    self._on_scan_progress,
+                    Qt.ConnectionType.QueuedConnection
+                )
+                self._scanner.status_updated.connect(
+                    self._on_scan_status,
+                    Qt.ConnectionType.QueuedConnection
+                )
+                self._scanner.duplicates_found.connect(
+                    self._on_duplicates_found,
+                    Qt.ConnectionType.QueuedConnection
+                )
+                self._scanner.finished.connect(
+                    self._on_scan_finished,
+                    Qt.ConnectionType.QueuedConnection
+                )
+                
+                # Connect thread signals
+                self.scan_thread.started.connect(self._scanner.start_scan)
+                self.scan_thread.finished.connect(self.scan_thread.deleteLater)
             
             # Reset UI
             self._reset_scan_ui()
@@ -680,34 +582,11 @@ class PDFDuplicateFinder(MainWindow):
             # Update status bar
             self.status_bar.showMessage(self.tr("Scanning: {}").format(folder_path))
             
-            # Set up proper threading for the scanner
-            self.scan_thread = QThread()
-            self.scan_thread.setObjectName("PDFScanThread")
-            
-            # Move scanner to thread
-            self._scanner.moveToThread(self.scan_thread)
-            
-            # Connect signals with proper connection type
-            self._scanner.progress_updated.connect(
-                self._on_scan_progress,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.status_updated.connect(
-                self._on_scan_status,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.duplicates_found.connect(
-                self._on_duplicates_found,
-                Qt.ConnectionType.QueuedConnection
-            )
-            self._scanner.finished.connect(
-                self._on_scan_finished,
-                Qt.ConnectionType.QueuedConnection
-            )
-            
-            # Connect thread signals
-            self.scan_thread.started.connect(self._scanner.start_scan)
-            self.scan_thread.finished.connect(self.scan_thread.deleteLater)
+            # Connect thread signals (only if not already connected)
+            if not self.scan_thread.receivers(self.scan_thread.started):
+                self.scan_thread.started.connect(self._scanner.start_scan)
+            if not self.scan_thread.receivers(self.scan_thread.finished):
+                self.scan_thread.finished.connect(self.scan_thread.deleteLater)
             
             # Set scan parameters
             self._scanner.scan_parameters = {
@@ -715,7 +594,7 @@ class PDFDuplicateFinder(MainWindow):
                 'recursive': True,
                 'min_file_size': 1024,  # 1KB
                 'max_file_size': 1024 * 1024 * 1024,  # 1GB
-                'min_similarity': self.settings.get('comparison_threshold', 0.95),
+                'min_similarity': self.settings.get('comparison_threshold', 0.8),
                 'enable_text_compare': self.settings.get('enable_text_compare', True)
             }
             
@@ -747,6 +626,7 @@ class PDFDuplicateFinder(MainWindow):
                     self.tr("Preparing to scan: {}").format(folder_path)
                 )
                 self.progress_dialog.cancelled.connect(self.cancel_scan)
+                self.progress_dialog.close_requested.connect(self._cleanup_progress_dialog)
             
             # Show the dialog
             self.progress_dialog.show()
@@ -984,6 +864,161 @@ class PDFDuplicateFinder(MainWindow):
                 self,
                 self.tr("Export Error"),
                 self.tr(f"An unexpected error occurred: {str(e)}")
+            )
+    
+    def on_delete_selected(self):
+        """Delete selected files from the duplicates tree.
+        
+        Moves selected files to the Recycle Bin if send2trash is available,
+        otherwise permanently deletes them.
+        """
+        try:
+            logger.info("DEBUG: on_delete_selected method started")
+            # Check if duplicates_tree exists in main_ui
+            logger.info(f"DEBUG: hasattr(self, 'main_ui'): {hasattr(self, 'main_ui')}")
+            if hasattr(self, 'main_ui'):
+                logger.info(f"DEBUG: hasattr(self.main_ui, 'duplicates_tree'): {hasattr(self.main_ui, 'duplicates_tree')}")
+                if hasattr(self.main_ui, 'duplicates_tree'):
+                    logger.info(f"DEBUG: self.main_ui.duplicates_tree: {self.main_ui.duplicates_tree}")
+            
+            if (not hasattr(self, 'main_ui') or 
+                not hasattr(self.main_ui, 'duplicates_tree') or 
+                not self.main_ui.duplicates_tree):
+                logger.warning("Duplicates tree not available for deletion")
+                QMessageBox.information(
+                    self,
+                    self.tr("No Scan Results"),
+                    self.tr("Please run a scan first to find duplicate PDF files before attempting to delete them.")
+                )
+                return
+            
+            # Get selected items
+            selected_items = self.main_ui.duplicates_tree.selectedItems()
+            logger.info(f"DEBUG: Found {len(selected_items)} selected items")
+            
+            if not selected_items:
+                QMessageBox.information(
+                    self,
+                    self.tr("No Selection"),
+                    self.tr("Please select files to delete.")
+                )
+                return
+            
+            # Debug: Log details of selected items
+            for i, item in enumerate(selected_items):
+                file_path = item.data(0, Qt.ItemDataRole.UserRole)
+                logger.info(f"DEBUG: Selected item {i}: text='{item.text(0)}', path='{file_path}'")
+            
+            # Collect files to delete
+            files_to_delete = []
+            for item in selected_items:
+                # Get file path from item data (stored in Qt.UserRole)
+                file_path = item.data(0, Qt.ItemDataRole.UserRole)
+                if file_path and os.path.exists(file_path):
+                    files_to_delete.append(file_path)
+            
+            if not files_to_delete:
+                QMessageBox.information(
+                    self,
+                    self.tr("No Valid Files"),
+                    self.tr("No valid files found for deletion.")
+                )
+                return
+            
+            # Confirm deletion
+            if len(files_to_delete) == 1:
+                confirm_msg = self.tr("Are you sure you want to delete this file?\n\n{}").format(files_to_delete[0])
+            else:
+                confirm_msg = self.tr("Are you sure you want to delete {} files?").format(len(files_to_delete))
+                confirm_msg += "\n\n" + "\n".join(files_to_delete[:5])  # Show first 5 files
+                if len(files_to_delete) > 5:
+                    confirm_msg += f"\n... and {len(files_to_delete) - 5} more"
+            
+            reply = QMessageBox.question(
+                self,
+                self.tr("Confirm Deletion"),
+                confirm_msg,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            
+            # Delete files
+            deleted_files = []
+            failed_files = []
+            
+            for file_path in files_to_delete:
+                try:
+                    if SEND2TRASH_AVAILABLE:
+                        send2trash.send2trash(file_path)
+                        logger.info(f"Moved file to Recycle Bin: {file_path}")
+                    else:
+                        os.remove(file_path)
+                        logger.info(f"Permanently deleted file: {file_path}")
+                    deleted_files.append(file_path)
+                except Exception as e:
+                    logger.error(f"Failed to delete file {file_path}: {e}")
+                    failed_files.append((file_path, str(e)))
+            
+            # Show results
+            if deleted_files:
+                # Remove deleted items from the tree
+                for item in selected_items:
+                    file_path = item.data(0, Qt.ItemDataRole.UserRole)
+                    if file_path in deleted_files:
+                        parent = item.parent()
+                        if parent:
+                            parent.removeChild(item)
+                            # If parent has no more children, remove it too
+                            if parent.childCount() == 0:
+                                grandparent = parent.parent()
+                                if grandparent:
+                                    grandparent.removeChild(parent)
+                                else:
+                                    # Parent is a top-level item
+                                    root = self.main_ui.duplicates_tree.invisibleRootItem()
+                                    root.removeChild(parent)
+                        else:
+                            # Item is top-level
+                            root = self.main_ui.duplicates_tree.invisibleRootItem()
+                            root.removeChild(item)
+            
+            # Show success message
+            if deleted_files:
+                if SEND2TRASH_AVAILABLE:
+                    msg = self.tr("Successfully moved {} file(s) to Recycle Bin.").format(len(deleted_files))
+                else:
+                    msg = self.tr("Successfully deleted {} file(s).").format(len(deleted_files))
+                
+                if failed_files:
+                    msg += "\n\n" + self.tr("Some files could not be deleted:")
+                    for file_path, error in failed_files[:3]:  # Show first 3 errors
+                        msg += f"\n- {os.path.basename(file_path)}: {error}"
+                    if len(failed_files) > 3:
+                        msg += f"\n... and {len(failed_files) - 3} more"
+                
+                QMessageBox.information(self, self.tr("Deletion Complete"), msg)
+            elif failed_files:
+                # All files failed to delete
+                error_msg = self.tr("Failed to delete any files. Errors:")
+                for file_path, error in failed_files:
+                    error_msg += f"\n- {os.path.basename(file_path)}: {error}"
+                QMessageBox.critical(self, self.tr("Deletion Failed"), error_msg)
+            
+            # Update status bar
+            if deleted_files:
+                self.status_bar.showMessage(
+                    self.tr("Deleted {} file(s)").format(len(deleted_files)), 
+                    3000
+                )
+        except Exception as e:
+            logger.error(f"DEBUG: Error in on_delete_selected: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                self.tr("Delete Error"),
+                self.tr(f"An error occurred while trying to delete files: {str(e)}")
             )
 
 def main():

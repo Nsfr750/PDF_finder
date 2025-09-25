@@ -145,6 +145,7 @@ TRANSLATIONS = {
         "scanner.stopped": "تم إيقاف المسح",
         "scanner.processing": "جاري المعالجة {current} من {total}: {file}",
         "scanner.stopping": "جاري إيقاف المسح...",
+        "scan.complete": "اكتمل المسح",
         
         # PDF Viewer
         "pdf_viewer.title": "عارض PDF",

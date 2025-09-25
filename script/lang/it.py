@@ -86,6 +86,7 @@ TRANSLATIONS = {
         "error.filter_dialog": "Impossibile aprire il dialogo dei filtri: {error}",
         "errors.settings_open_failed": "Impossibile aprire le impostazioni: %s",
         "errors.cache_manager_open_failed": "Impossibile aprire il gestore cache: {error}",
+        "errors.language_change_failed": "Impossibile cambiare lingua: %s",
         
         # Language names
         "language.en": "English",
@@ -378,6 +379,7 @@ TRANSLATIONS = {
         "scanner.stopped": "Scansione interrotta",
         "scanner.processing": "Elaborazione {current} di {total}: {file}",
         "scanner.stopping": "Interruzione scansione...",
+        "scan.complete": "Scansione completata",
         
         "log_viewer.save_error": "Impossibile salvare il file di log: {error}",
         

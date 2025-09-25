@@ -96,6 +96,7 @@ TRANSLATIONS = {
         "error.filter_dialog": "Failed to open filter dialog: {error}",
         "errors.settings_open_failed": "Could not open settings: %s",
         "errors.cache_manager_open_failed": "Failed to open cache manager: {error}",
+        "errors.language_change_failed": "Failed to change language: %s",
         
         # Language names
         "language.en": "English",
@@ -388,6 +389,7 @@ TRANSLATIONS = {
         "scanner.stopped": "Scan stopped",
         "scanner.processing": "Processing {current} of {total}: {file}",
         "scanner.stopping": "Stopping scan...",
+        "scan.complete": "Scan complete",
         
         "log_viewer.save_error": "Failed to save log file: {error}",
         

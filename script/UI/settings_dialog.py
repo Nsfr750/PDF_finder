@@ -23,6 +23,7 @@ class SettingsDialog(QDialog):
     
     settings_changed = pyqtSignal()
     requires_restart = pyqtSignal()
+    language_changed = pyqtSignal(str)
     
     def __init__(self, parent=None, language_manager=None):
         """Initialize the settings dialog.
@@ -210,6 +211,18 @@ class SettingsDialog(QDialog):
                 self.theme_combo
             )
             
+            # Language selection
+            self.language_combo = QComboBox()
+            if self.language_manager:
+                available_languages = self.language_manager.get_available_languages()
+                for lang_code, lang_name in available_languages.items():
+                    self.language_combo.addItem(lang_name, lang_code)
+            
+            layout.addRow(
+                QLabel(self.tr("settings.language")), 
+                self.language_combo
+            )
+            
             # Application settings
             self.check_updates = QCheckBox(self.tr("settings.check_updates"))
             self.auto_save = QCheckBox(self.tr("settings.auto_save"))
@@ -259,6 +272,10 @@ class SettingsDialog(QDialog):
             
             # Connect cache directory browse button
             self.cache_dir_browse.clicked.connect(self._browse_cache_dir)
+            
+            # Connect language selection change
+            if self.language_manager:
+                self.language_combo.currentTextChanged.connect(self._on_language_changed)
             
             logger.debug("General tab setup complete")
             
@@ -336,6 +353,13 @@ class SettingsDialog(QDialog):
             if index >= 0:
                 self.theme_combo.setCurrentIndex(index)
             
+            # Load language setting
+            current_language = settings.get('application.language', 'en')
+            if self.language_manager:
+                index = self.language_combo.findData(current_language)
+                if index >= 0:
+                    self.language_combo.setCurrentIndex(index)
+            
             # Load other settings
             self.check_updates.setChecked(settings.get('check_updates', True))
             self.auto_save.setChecked(settings.get('auto_save', True))
@@ -375,6 +399,11 @@ class SettingsDialog(QDialog):
             # Save theme
             theme = self.theme_combo.currentData()
             settings.set('theme', theme)
+            
+            # Save language setting
+            if self.language_manager:
+                selected_language = self.language_combo.currentData()
+                settings.set('application.language', selected_language)
             
             # Save application settings
             settings.set('check_updates', self.check_updates.isChecked())
@@ -461,5 +490,17 @@ class SettingsDialog(QDialog):
             logger.error(f"Error browsing for cache directory: {e}")
             import traceback
             traceback.print_exc()
+    
+    def _on_language_changed(self, language_name: str):
+        """Handle language selection change.
+        
+        Args:
+            language_name: The name of the selected language
+        """
+        if self.language_manager:
+            selected_language = self.language_combo.currentData()
+            if selected_language:
+                logger.debug(f"Language changed to: {selected_language}")
+                self.language_changed.emit(selected_language)
 
     # End of SettingsDialog class
