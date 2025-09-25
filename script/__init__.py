@@ -8,14 +8,14 @@ This package contains the main application modules for the PDF Duplicate Finder.
 # All the application modules are imported here for easier access
 
 # Import main components
-from .main_window import MainWindow
-from .menu import MenuBar
-from .toolbar import MainToolBar
-from .settings_dialog import SettingsDialog
-from .help import HelpDialog
+from .UI.main_window import MainWindow
+from .UI.menu import MenuBar
+from .UI.toolbar import MainToolBar
+from .UI.settings_dialog import SettingsDialog
+from .UI.help import HelpDialog
 
 # Version information
-__version__ = '2.12.0'
+__version__ = '3.0.0'
 __author__ = 'Nsfr750'
 __email__ = 'nsfr750@yandex.com'
 

@@ -39,15 +39,15 @@ from datetime import datetime
 import csv
 
 # Import our custom modules
-from script.main_window import MainWindow
-from script.settings import AppSettings
-from script.logger import get_logger
-from script.settings_dialog import SettingsDialog
-from script.scanner import PDFScanner
+from script.UI.main_window import MainWindow
+from script.utils.settings import AppSettings
+from script.utils.logger import get_logger
+from script.UI.settings_dialog import SettingsDialog
+from script.utils.scanner import PDFScanner
 from PyQt6.QtCore import QThread, QObject, QTimer, QMetaObject
 from PyQt6.QtWidgets import QProgressBar, QMessageBox, QDialog
-from script.recents import RecentFilesManager
-from script.progress_dialog import ScanProgressDialog
+from script.utils.recents import RecentFilesManager
+from script.UI.progress_dialog import ScanProgressDialog
 
 # Set up logger
 logger = get_logger('main')
@@ -64,7 +64,7 @@ class PDFDuplicateFinder(MainWindow):
         
         # Initialize language manager with saved language
         language = self.settings.get_language()
-        from script.simple_lang_manager import SimpleLanguageManager
+        from script.lang.lang_manager import SimpleLanguageManager
         self.language_manager = SimpleLanguageManager(
             default_lang=language
         )
@@ -160,7 +160,7 @@ class PDFDuplicateFinder(MainWindow):
             self.scan_folder(file_path)
         else:
             # If it's a file, open it in the PDF viewer
-            from script.PDF_viewer import show_pdf_viewer
+            from script.UI.PDF_viewer import show_pdf_viewer
             show_pdf_viewer(file_path, self)
         
         # Add to recent files again to update its position
@@ -168,13 +168,13 @@ class PDFDuplicateFinder(MainWindow):
         
     def on_show_about(self):
         """Show the about dialog."""
-        from script.about import AboutDialog
+        from script.UI.about import AboutDialog
         about_dialog = AboutDialog(self, self.language_manager)
         about_dialog.exec()
         
     def on_view_logs(self):
         """Show the log viewer dialog."""
-        from script.view_log import show_log_viewer
+        from script.UI.view_log import show_log_viewer
         log_file = os.path.join('logs', 'PDFDuplicateFinder.log')
         show_log_viewer(log_file, self)
         

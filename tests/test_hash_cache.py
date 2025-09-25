@@ -23,8 +23,8 @@ from unittest.mock import patch, MagicMock
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from script.hash_cache import HashCache, CacheEntry
-from script.text_processor import TextProcessor
+from script.utils.hash_cache import HashCache, CacheEntry
+from script.utils.text_processor import TextProcessor
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

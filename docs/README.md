@@ -66,7 +66,7 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
   - PyMuPDF (fitz) — default and bundled via requirements
   - Ghostscript (for Wand) — install Ghostscript and set its executable path in Settings
 
-See [PREREQUISITES.md](docs/PREREQUISITES.md) for platform-specific setup.
+See [PREREQUISITES.md](PREREQUISITES.md) for platform-specific setup.
 
 ### Install from source
 
@@ -148,17 +148,17 @@ Significant performance improvements in version 3.0.0:
 
 ## 📚 Documentation
 
-- [User Guide](docs/USER_GUIDE.md) - Comprehensive user documentation
-- [Changelog](docs/CHANGELOG.md) - Version history and changes
-- [Contributing](docs/CONTRIBUTING.md) - How to contribute to the project
-- [Security Policy](docs/SECURITY.md) - Security guidelines and vulnerability reporting
-- [Project Structure](docs/STRUCT.md) - Detailed project structure explanation
-- [Prerequisites](docs/PREREQUISITES.md) - System requirements and setup
-- [To Do List](docs/TO_DO.md) - Development roadmap and planned features
+- [User Guide](USER_GUIDE.md) - Comprehensive user documentation
+- [Changelog](CHANGELOG.md) - Version history and changes
+- [Contributing](CONTRIBUTING.md) - How to contribute to the project
+- [Security Policy](SECURITY.md) - Security guidelines and vulnerability reporting
+- [Project Structure](STRUCT.md) - Detailed project structure explanation
+- [Prerequisites](PREREQUISITES.md) - System requirements and setup
+- [To Do List](TO_DO.md) - Development roadmap and planned features
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## 🐛 Reporting Issues
 
