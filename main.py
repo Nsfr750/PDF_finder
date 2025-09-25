@@ -97,9 +97,7 @@ class PDFDuplicateFinder(MainWindow):
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
         
-        # Initialize recent files manager
-        self.recent_files_manager = RecentFilesManager(max_files=10, parent=self)
-        self.recent_files_manager.recents_changed.connect(self.update_recent_files_menu)
+        # RecentFilesManager is already initialized in the parent MainWindow class
         
         # Initialize progress dialog
         self.progress_dialog = None
@@ -525,6 +523,13 @@ class PDFDuplicateFinder(MainWindow):
         self.scan_in_progress = False
         self.last_scan_duplicates = duplicate_groups or []
         
+        # Clean up the scan thread properly
+        if hasattr(self, 'scan_thread') and self.scan_thread:
+            logger.debug("Cleaning up scan thread")
+            self.scan_thread.quit()
+            self.scan_thread.wait()  # Wait for thread to finish
+            self.scan_thread = None
+        
         # Update status
         if hasattr(self, 'status_bar'):
             self.status_bar.showMessage(
@@ -534,6 +539,7 @@ class PDFDuplicateFinder(MainWindow):
         
         # Close progress dialog
         if self.progress_dialog:
+            logger.debug("Closing progress dialog")
             self.progress_dialog.accept()
             self.progress_dialog = None
         

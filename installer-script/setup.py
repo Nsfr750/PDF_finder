@@ -14,7 +14,7 @@ def create_version_info():
         # Import the version module directly to get the version
         import sys
         from pathlib import Path
-        sys.path.insert(0, str(Path(__file__).parent / "script"))
+        sys.path.insert(0, str(Path(__file__).parent.parent / "script"))
         from version import __version__
         version = __version__
     except (ImportError, Exception) as e:
@@ -44,7 +44,7 @@ def read_requirements():
     """Read requirements from requirements.txt if it exists."""
     requirements = []
     try:
-        with open("requirements.txt", encoding="utf-8") as f:
+        with open(Path(__file__).parent.parent / "requirements.txt", encoding="utf-8") as f:
             requirements = [
                 line.strip() 
                 for line in f 
@@ -80,15 +80,15 @@ if __name__ == "__main__":
         version=version,
         python_requires=">=3.8",
         install_requires=read_requirements(),
-        package_dir={"": "."},
+        package_dir={"": ".."},
         packages=["script"],
         package_data={
             "": [
-                "assets/*",
-                "config/*",
-                "lang/*",
-                "*.md",
-                "*.txt"
+                "../assets/*",
+                "../config/*",
+                "../lang/*",
+                "../*.md",
+                "../*.txt"
             ]
         },
         entry_points={

@@ -667,7 +667,7 @@ class MenuBar(QObject):
     def on_show_pdf_viewer(self):
         """Open the PDF Viewer."""
         try:
-            from ..PDF_viewer import PDFViewer
+            from .PDF_viewer import PDFViewer
             viewer = PDFViewer(parent=self.parent, language_manager=self.language_manager)
             viewer.show()
         except Exception as e:

@@ -27,7 +27,7 @@ LOG_LEVELS = {
 
 def get_logs_dir() -> Path:
     """Get the logs directory, create it if it doesn't exist."""
-    base_dir = Path(__file__).parent.parent  # Go up from script/ to project root
+    base_dir = Path(__file__).parent.parent.parent  # Go up from script/utils to project root
     log_dir = base_dir / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir

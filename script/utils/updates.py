@@ -17,10 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject
 
 # Import language manager
-from ..lang.lang_manager import SimpleLanguageManager
+from script.lang.lang_manager import SimpleLanguageManager
 
-# Get the application directory
-APP_DIR = Path(__file__).parent.parent
+# Get the application directory (project root)
+APP_DIR = Path(__file__).parent.parent.parent
 
 # Ensure config directory exists
 CONFIG_DIR = APP_DIR / 'config'

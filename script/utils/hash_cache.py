@@ -65,12 +65,14 @@ class HashCache:
         Initialize the hash cache.
         
         Args:
-            cache_dir: Directory to store cache database (defaults to ~/.pdf_finder_cache)
+            cache_dir: Directory to store cache database (defaults to .data/ at project root)
             max_cache_size: Maximum number of entries in persistent cache
             cache_ttl_days: Time-to-live for cache entries in days
             memory_cache_size: Maximum number of entries in memory cache
         """
-        self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / '.pdf_finder_cache'
+        # Get the project root directory (go up from script/utils to project root)
+        project_root = Path(__file__).parent.parent.parent
+        self.cache_dir = Path(cache_dir) if cache_dir else project_root / '.data'
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
         self.db_path = self.cache_dir / 'pdf_cache.db'

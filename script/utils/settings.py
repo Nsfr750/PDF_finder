@@ -5,14 +5,16 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-from ..lang.lang_manager import SimpleLanguageManager
+from script.lang.lang_manager import SimpleLanguageManager
 logger = logging.getLogger('settings')
 
 class AppSettings:
     """Manage application settings with JSON file storage."""
     
     def __init__(self, config_dir: str = "config", config_file: str = "settings.json"):
-        self._config_path = Path(config_dir) / config_file
+        # Get the project root directory (go up from script/utils to project root)
+        project_root = Path(__file__).parent.parent.parent
+        self._config_path = project_root / config_dir / config_file
         self._data: Dict[str, Any] = {}
         self._load_settings()
     
