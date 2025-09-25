@@ -30,7 +30,6 @@ from .ui import MainUI
 from .settings_dialog import SettingsDialog
 from .PDF_viewer import show_pdf_viewer
 from ..utils.scanner import PDFScanner
-from ..utils.recents import RecentFilesManager
 
 class MainWindow(QMainWindow):
     """Base main window class with internationalization support."""
@@ -91,12 +90,6 @@ class MainWindow(QMainWindow):
         
         # Connect to our own language changed signal
         self.language_changed.connect(self.on_language_changed)
-        
-        # Initialize recent files manager
-        self.recent_files_manager = RecentFilesManager(max_files=10, parent=self)
-        self.recent_files_manager.recents_changed.connect(
-            lambda files: self.menu_bar.update_recent_files(files) if hasattr(self, 'menu_bar') else None
-        )
     
     def change_language(self, lang_code: str) -> bool:
         """Change the application language.
@@ -198,10 +191,6 @@ class MainWindow(QMainWindow):
             
             if folder_path:
                 logger.debug(f"on_open_folder: Processing selected folder: {folder_path}")
-                
-                # Add to recent files
-                logger.debug("on_open_folder: Adding to recent files")
-                self.recent_files_manager.add_file(folder_path)
                 
                 # Update the status bar
                 logger.debug("on_open_folder: Updating status bar")
@@ -975,45 +964,3 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error finishing scan: {e}", exc_info=True)
-        
-    def open_recent_file(self, file_path: str):
-        """Open a recent file or folder.
-        
-        Args:
-            file_path: Path to the file or folder to open
-        """
-        try:
-            if not file_path or not os.path.exists(file_path):
-                logger.warning(f"Recent file path does not exist: {file_path}")
-                self.recent_files_manager.remove_file(file_path)
-                return
-            
-            if os.path.isdir(file_path):
-                # Handle folder opening
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.status_scanning", "Scanning folder: %s") % file_path
-                )
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.folder_selected", "Selected folder: %s") % file_path,
-                    3000
-                )
-            else:
-                # Handle file opening
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.status_opening", "Opening file: %s") % file_path
-                )
-                self.status_bar.showMessage(
-                    self.language_manager.tr("ui.file_opened", "Opened file: %s") % file_path,
-                    3000
-                )
-            
-            # Add to recent files (this will update the last accessed time)
-            self.recent_files_manager.add_file(file_path)
-            
-        except Exception as e:
-            logger.error(f"Error opening recent file {file_path}: {e}")
-            QMessageBox.critical(
-                self,
-                self.language_manager.tr("dialog.error", "Error"),
-                self.language_manager.tr("errors.recent_file_open_failed", "Could not open recent file: %s") % str(e)
-            )

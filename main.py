@@ -46,7 +46,6 @@ from script.UI.settings_dialog import SettingsDialog
 from script.utils.scanner import PDFScanner
 from PyQt6.QtCore import QThread, QObject, QTimer, QMetaObject
 from PyQt6.QtWidgets import QProgressBar, QMessageBox, QDialog
-from script.utils.recents import RecentFilesManager
 from script.UI.progress_dialog import ScanProgressDialog
 
 # Set up logger
@@ -97,8 +96,6 @@ class PDFDuplicateFinder(MainWindow):
         # Storage for last scan results
         self.last_scan_duplicates: List[List[Dict[str, Any]]] = []
         
-        # RecentFilesManager is already initialized in the parent MainWindow class
-        
         # Initialize progress dialog
         self.progress_dialog = None
     
@@ -130,40 +127,6 @@ class PDFDuplicateFinder(MainWindow):
             logger.error(f"Error initializing hash cache: {e}", exc_info=True)
             self._scanner = None
     
-    def update_recent_files_menu(self, recent_files=None):
-        """Update the recent files menu when the recent files list changes.
-        
-        Args:
-            recent_files: Optional list of recent files (if None, gets from manager)
-        """
-        if recent_files is None:
-            recent_files = self.recent_files_manager.get_recent_files()
-        
-        # Update the menu through the menu bar
-        if hasattr(self, 'menu_bar') and self.menu_bar:
-            self.menu_bar.update_recent_files(recent_files)
-    
-    def open_recent_file(self, file_path):
-        """Open a recent file or folder.
-        
-        Args:
-            file_path: Path to the file or folder to open
-        """
-        if not file_path or not os.path.exists(file_path):
-            logger.warning(f"Cannot open non-existent path: {file_path}")
-            return
-        
-        if os.path.isdir(file_path):
-            # If it's a directory, scan it
-            self.scan_folder(file_path)
-        else:
-            # If it's a file, open it in the PDF viewer
-            from script.UI.PDF_viewer import show_pdf_viewer
-            show_pdf_viewer(file_path, self)
-        
-        # Add to recent files again to update its position
-        self.recent_files_manager.add_file(file_path)
-        
     def on_show_about(self):
         """Show the about dialog."""
         from script.UI.about import AboutDialog
@@ -502,8 +465,18 @@ class PDFDuplicateFinder(MainWindow):
             self.scan_thread.wait()
         
         if self.progress_dialog:
+            # Stop any pending updates and close the dialog
+            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
+                self.progress_dialog._update_timer.stop()
+            
+            # Process events to ensure the dialog is properly updated before closing
+            QCoreApplication.processEvents()
+            
             self.progress_dialog.accept()
             self.progress_dialog = None
+            
+            # Process events again to ensure the dialog is fully closed
+            QCoreApplication.processEvents()
         
         self.status_bar.showMessage(self.tr("Scan cancelled"), 3000)
     
@@ -514,8 +487,18 @@ class PDFDuplicateFinder(MainWindow):
             self.scan_thread.wait()
         
         if self.progress_dialog:
+            # Stop any pending updates and close the dialog
+            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
+                self.progress_dialog._update_timer.stop()
+            
+            # Process events to ensure the dialog is properly updated before closing
+            QCoreApplication.processEvents()
+            
             self.progress_dialog.accept()
             self.progress_dialog = None
+            
+            # Process events again to ensure the dialog is fully closed
+            QCoreApplication.processEvents()
     
     def _on_scan_finished(self, duplicate_groups=None):
         """Handle scan completion."""
@@ -540,8 +523,18 @@ class PDFDuplicateFinder(MainWindow):
         # Close progress dialog
         if self.progress_dialog:
             logger.debug("Closing progress dialog")
+            # Stop any pending updates and close the dialog
+            if hasattr(self.progress_dialog, '_update_timer') and self.progress_dialog._update_timer.isActive():
+                self.progress_dialog._update_timer.stop()
+            
+            # Process events to ensure the dialog is properly updated before closing
+            QCoreApplication.processEvents()
+            
             self.progress_dialog.accept()
             self.progress_dialog = None
+            
+            # Process events again to ensure the dialog is fully closed
+            QCoreApplication.processEvents()
         
         # Update the UI directly since we're already on the main thread
         self._update_scan_results_ui()

@@ -79,7 +79,8 @@ class ScanProgressDialog(QDialog):
             current_file: Current file being processed (optional)
             files_found: Number of files found so far (optional)
         """
-        if self._cancelled:
+        # Safety check: don't update if dialog is closed or timer is stopped
+        if self._cancelled or not self.isVisible() or not self._update_timer.isActive():
             return
             
         # Update progress bar
@@ -103,6 +104,9 @@ class ScanProgressDialog(QDialog):
         Args:
             message: New status message
         """
+        # Safety check: don't update if dialog is closed or timer is stopped
+        if self._cancelled or not self.isVisible() or not self._update_timer.isActive():
+            return
         self.status_label.setText(message)
     
     def on_cancel(self):
@@ -110,15 +114,23 @@ class ScanProgressDialog(QDialog):
         self._cancelled = True
         self.setEnabled(False)
         self.status_label.setText("Cancelling...")
+        # Stop the update timer to prevent UI updates after dialog is closed
+        if self._update_timer.isActive():
+            self._update_timer.stop()
         self.cancelled.emit()
     
     def force_update(self):
         """Force a UI update."""
-        if self.isVisible():
+        # Safety check: don't update if dialog is closed or timer is stopped
+        if self.isVisible() and self._update_timer.isActive():
             self.repaint()
     
     def closeEvent(self, event):
         """Handle dialog close event."""
+        # Stop the update timer to prevent UI updates after dialog is closed
+        if self._update_timer.isActive():
+            self._update_timer.stop()
+        
         if not self._cancelled:
             self.on_cancel()
         event.accept()
