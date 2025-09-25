@@ -4,11 +4,10 @@ This provides a straightforward way to handle language switching.
 """
 
 import logging
+import os
+import importlib.util
 from typing import Dict, Optional, Any
 from PyQt6.QtCore import QObject, pyqtSignal
-
-# Import translations
-from script.simple_translations import TRANSLATIONS, AVAILABLE_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +27,54 @@ class SimpleLanguageManager(QObject):
         super().__init__(parent)
         self.current_lang = default_lang
         self.default_lang = default_lang
+        
+        # Initialize translation storage
+        self.translations = {}
+        self.available_languages = {}
+        
+        # Load all available languages
+        self._load_languages()
 
         # Validate that the language exists
-        if self.current_lang not in TRANSLATIONS:
+        if self.current_lang not in self.translations:
             logger.warning(f"Language {self.current_lang} not found, using default 'en'")
             self.current_lang = 'en'
 
         logger.info(f"Language manager initialized with language: {self.current_lang}")
+    
+    def _load_languages(self):
+        """Load all available language files from the script/lang directory."""
+        lang_dir = os.path.join(os.path.dirname(__file__), 'lang')
+        
+        if not os.path.exists(lang_dir):
+            logger.error(f"Language directory not found: {lang_dir}")
+            return
+        
+        # Load each language file
+        for filename in os.listdir(lang_dir):
+            if filename.endswith('.py') and filename != '__init__.py':
+                lang_code = filename[:-3]  # Remove .py extension
+                lang_file_path = os.path.join(lang_dir, filename)
+                
+                try:
+                    # Load the language module
+                    spec = importlib.util.spec_from_file_location(f"lang_{lang_code}", lang_file_path)
+                    lang_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(lang_module)
+                    
+                    # Get translations and available languages
+                    if hasattr(lang_module, 'TRANSLATIONS'):
+                        self.translations.update(lang_module.TRANSLATIONS)
+                    
+                    if hasattr(lang_module, 'AVAILABLE_LANGUAGES'):
+                        self.available_languages.update(lang_module.AVAILABLE_LANGUAGES)
+                    
+                    logger.info(f"Loaded language: {lang_code}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to load language {lang_code}: {e}")
+        
+        logger.info(f"Loaded {len(self.translations)} languages: {list(self.translations.keys())}")
 
     def set_language(self, lang_code: str) -> bool:
         """Set the current language.
@@ -45,7 +85,7 @@ class SimpleLanguageManager(QObject):
         Returns:
             bool: True if the language was changed successfully, False otherwise
         """
-        if lang_code not in TRANSLATIONS:
+        if lang_code not in self.translations:
             logger.warning(f"Language {lang_code} not found")
             return False
 
@@ -82,7 +122,7 @@ class SimpleLanguageManager(QObject):
         Returns:
             Dict[str, str]: Dictionary of language codes to language names
         """
-        return AVAILABLE_LANGUAGES.copy()
+        return self.available_languages.copy()
 
     def tr(self, key: str, default: str = None) -> str:
         """Translate a key to the current language.
@@ -95,20 +135,20 @@ class SimpleLanguageManager(QObject):
             str: The translated text or default/key if not found
         """
         # Try to get the translation for the current language
-        if self.current_lang in TRANSLATIONS:
-            translation = TRANSLATIONS[self.current_lang]
+        if self.current_lang in self.translations:
+            translation = self.translations[self.current_lang]
             if key in translation:
                 return translation[key]
 
         # If not found, try the default language
-        if self.default_lang in TRANSLATIONS:
-            translation = TRANSLATIONS[self.default_lang]
+        if self.default_lang in self.translations:
+            translation = self.translations[self.default_lang]
             if key in translation:
                 return translation[key]
 
         # If still not found, try English as fallback
-        if 'en' in TRANSLATIONS and self.default_lang != 'en':
-            translation = TRANSLATIONS['en']
+        if 'en' in self.translations and self.default_lang != 'en':
+            translation = self.translations['en']
             if key in translation:
                 return translation[key]
 

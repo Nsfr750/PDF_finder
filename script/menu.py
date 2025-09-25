@@ -518,6 +518,8 @@ class MenuBar(QObject):
         languages = [
             ('English', 'en', '🇬🇧'),
             ('Italiano', 'it', '🇮🇹'),
+            ('Russian', 'ru', '🇷🇺'),
+            ('Ukrainian', 'ua', '🇺🇦'),
             # Add more languages as needed: ('Language Name', 'code', 'flag_emoji')
         ]
         

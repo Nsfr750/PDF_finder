@@ -1,0 +1,276 @@
+"""
+Russian translations for PDF Duplicate Finder.
+"""
+
+# Translation data
+TRANSLATIONS = {
+    "ru": {
+    # Main window
+    "main_window.title": "PDF Duplicate Finder",
+    "main_window.file": "Файл",
+    "main_window.edit": "Правка",
+    "main_window.view": "Вид",
+    "main_window.help": "Справка",
+    "main_window.settings": "Настройки",
+    "main_window.exit": "Выход",
+    
+    # Status bar
+    "ui.status_ready": "Готов",
+    
+    # Common
+    "common.ok": "ОК",
+    "common.cancel": "Отмена",
+    "common.yes": "Да",
+    "common.no": "Нет",
+    "common.close": "Закрыть",
+    "common.save": "Сохранить",
+    "common.apply": "Применить",
+    "common.open": "Открыть",
+    "common.delete": "Удалить",
+    "common.edit": "Правка",
+    "common.help": "Справка",
+    "common.about": "О программе",
+    "common.preferences": "Параметры",
+    "common.exit": "Выход",
+    "common.none": "Нет",
+    
+    # Settings dialog
+    "settings.title": "Настройки",
+    "settings.general": "Общие",
+    "settings.appearance": "Внешний вид",
+    "settings.language": "Язык",
+    "settings.save": "Сохранить",
+    "settings.cancel": "Отмена",
+    "settings.theme_system": "Система",
+    "settings.theme_light": "Светлая",
+    "settings.theme_dark": "Темная",
+    "settings.check_updates": "Проверять обновления при запуске",
+    "settings.auto_save": "Автосохранение настроек",
+    "settings.pdf_rendering": "Отрисовка PDF",
+    
+    # Menu items
+    "file.open": "Открыть папку...",
+    "file.save_results": "Сохранить результаты...",
+    "file.load_results": "Загрузить результаты...",
+    "file.settings": "Настройки...",
+    "file.exit": "Выход",
+    "edit.delete": "Удалить",
+    "edit.select_all": "Выделить всё",
+    "view.view_log": "Просмотреть журнал...",
+    "view.toolbar": "Панель инструментов",
+    "view.statusbar": "Строка состояния",
+    "help.about": "О программе",
+    "help.sponsor": "Спонсировать",
+    "help.check_updates": "Проверить обновления",
+    
+    # Toolbar tooltips
+    "toolbar.open_folder": "Открыть папку для сканирования",
+    "toolbar.start_scan": "Начать сканирование на дубликаты",
+    "toolbar.stop_scan": "Остановить сканирование",
+    "toolbar.save_results": "Сохранить результаты сканирования",
+    "toolbar.load_results": "Загрузить результаты сканирования",
+    "toolbar.delete_selected": "Удалить выбранные файлы",
+    "toolbar.delete_all": "Удалить все дубликаты",
+    "toolbar.view_log": "Просмотреть журнал",
+    "toolbar.settings": "Настройки",
+    "toolbar.about": "О программе",
+    
+    # Progress dialog
+    "progress.title": "Сканирование PDF",
+    "progress.scanning": "Сканирование...",
+    "progress.files_processed": "Обработано файлов:",
+    "progress.current_file": "Текущий файл:",
+    "progress.duplicates_found": "Найдено дубликатов:",
+    "progress.cancel": "Отмена",
+    
+    # Filter dialog
+    "filter.title": "Фильтр результатов",
+    "filter.min_size": "Минимальный размер (КБ):",
+    "filter.max_size": "Максимальный размер (КБ):",
+    "filter.min_pages": "Минимальное количество страниц:",
+    "filter.max_pages": "Максимальное количество страниц:",
+    "filter.name_contains": "Имя содержит:",
+    "filter.apply": "Применить",
+    "filter.reset": "Сброс",
+    "filter.cancel": "Отмена",
+    
+    # Settings dialog
+    "settings_dialog.title": "Настройки",
+    "settings_dialog.general_tab": "Общие",
+    "settings_dialog.appearance_tab": "Внешний вид",
+    "settings_dialog.language_label": "Язык:",
+    "settings_dialog.theme_label": "Тема:",
+    "settings_dialog.check_updates": "Проверять обновления при запуске",
+    "settings_dialog.auto_save": "Автосохранение настроек",
+    "settings_dialog.pdf_backend": "Движок PDF:",
+    "settings_dialog.test_backend": "Тестировать движок",
+    "settings_dialog.save": "Сохранить",
+    "settings_dialog.cancel": "Отмена",
+    "settings_dialog.restart_required": "Требуется перезапуск",
+    "settings_dialog.restart_message": "Приложение необходимо перезапустить для применения изменений языка.\nПерезапустить сейчас?",
+    "settings_dialog.language_changed": "Язык успешно изменен",
+    "settings_dialog.language_change_failed": "Не удалось изменить язык",
+    "settings_dialog.backend_ok": "ОК",
+    "settings_dialog.backend_missing": "Отсутствует или неверный путь",
+    "settings_dialog.no_backends_tested": "Движки не протестированы",
+    "settings_dialog.test_results_title": "Результаты тестирования движков",
+    "settings_dialog.backend_status": "Статус движка:",
+    "settings_dialog.test_backends": "Тестировать движки",
+    
+    # Main application
+    "main.welcome": "Добро пожаловать в PDF Duplicate Finder",
+    "main.select_folder": "Выберите папку для сканирования PDF-файлов",
+    "main.scan_started": "Сканирование начато",
+    "main.scan_completed": "Сканирование завершено",
+    "main.duplicates_found": "Найдено дубликатов: {count}",
+    "main.no_duplicates": "Дубликаты не найдены",
+    "main.files_deleted": "{count} файлов успешно удалено.",
+    "main.confirm_delete": "Вы уверены, что хотите удалить {count} выбранных файлов?",
+    "main.confirm_delete_title": "Подтверждение удаления",
+    "main.file_in_use": "Файл используется и не может быть удален: {file}",
+    "main.permission_denied": "Отказано в доступе при попытке удаления: {file}",
+    "main.group_processed": "Обработана группа {current}/{total}: найдено {found} дубликатов",
+    "main.retranslate_error": "Ошибка в callback retranslate: {error}",
+    "main.scanning_folder": "Сканирование папки: {folder}",
+    "main.no_pdfs_found": "PDF-файлы не найдены в выбранной папке.",
+    "main.duplicates_found_groups": "Найдено {count} потенциальных групп дубликатов.",
+    
+    # Scanner
+    "scanner.starting": "Запуск сканирования...",
+    "scanner.scanning": "Сканирование...",
+    "scanner.processing_file": "Обработка файла: {file}",
+    "scanner.comparing": "Сравнение файлов...",
+    "scanner.found_duplicates": "Найдены дубликаты: {count}",
+    "scanner.complete": "Сканирование завершено. Найдено {count} групп дубликатов",
+    "scanner.stopped": "Сканирование остановлено",
+    "scanner.processing": "Обработка {current} из {total}: {file}",
+    "scanner.stopping": "Остановка сканирования...",
+    
+    # PDF Viewer
+    "pdf_viewer.title": "Просмотр PDF",
+    "pdf_viewer.open": "Открыть PDF",
+    "pdf_viewer.previous": "Предыдущая",
+    "pdf_viewer.next": "Следующая",
+    "pdf_viewer.zoom_in": "Увеличить",
+    "pdf_viewer.zoom_out": "Уменьшить",
+    "pdf_viewer.zoom_fit": "Подогнать по размеру",
+    "pdf_viewer.zoom_100": "100%",
+    "pdf_viewer.rotate_left": "Повернуть влево",
+    "pdf_viewer.rotate_right": "Повернуть вправо",
+    "pdf_viewer.file_filter": "PDF-файлы (*.pdf)",
+    "pdf_viewer.status.page_of": "Страница {current} из {total} | {width} x {height} | {zoom:.0%}",
+    "pdf_viewer.page_number": "Страница {current} из {total}",
+    "pdf_viewer.errors.open_error": "Ошибка открытия PDF",
+    "pdf_viewer.errors.could_not_open": "Не удалось открыть {file}: {error}",
+    
+    # Language manager
+    "language_manager.default_language_info": "Язык по умолчанию: {language} ({code})",
+    "language_manager.language_switch_success": "Успешно переключено на {language}",
+    "language_manager.language_switch_failed": "Не удалось переключиться на {language}: {error}",
+    
+    # Sponsor dialog
+    "sponsor.title": "Поддержать разработку",
+    "sponsor.message": "PDF Duplicate Finder - это бесплатное программное обеспечение с открытым исходным кодом.\n\nЕсли вам нравится это приложение, пожалуйста, рассмотрите возможность поддержки его разработки.",
+    "sponsor.github_sponsors": "GitHub Sponsors",
+    "sponsor.patreon": "Patreon",
+    "sponsor.paypal": "PayPal",
+    "sponsor.monero": "Monero (XMR)",
+    "sponsor.close": "Закрыть",
+    
+    # Updates
+    "updates.window_title": "Обновление программного обеспечения",
+    "updates.current_version": "Текущая версия:",
+    "updates.latest_version": "Последняя версия:",
+    "updates.checking": "Проверка обновлений...",
+    "updates.release_notes": "<b>Примечания к выпуску:</b>",
+    "updates.update_available": "Доступно обновление!",
+    "updates.no_update_available": "У вас установлена последняя версия.",
+    "updates.download_update": "Скачать обновление",
+    "updates.later": "Позже",
+    "updates.error_checking": "Ошибка при проверке обновлений: {error}",
+    
+    # Log viewer
+    "log_viewer.title": "Просмотр журнала",
+    "log_viewer.open": "Открыть журнал",
+    "log_viewer.save": "Сохранить журнал",
+    "log_viewer.clear": "Очистить журнал",
+    "log_viewer.refresh": "Обновить",
+    "log_viewer.filter": "Фильтр",
+    "log_viewer.status.line_count": "{count} строк",
+    "log_viewer.status.last_updated": "Последнее обновление: {time}",
+    "log_viewer.errors.save_error": "Ошибка при сохранении файла журнала: {error}",
+    "log_viewer.save_error": "Не удалось сохранить файл журнала: {error}",
+    
+    # Theme settings
+    "theme.system": "Системная",
+    "theme.light": "Светлая",
+    "theme.dark": "Темная",
+    "theme.auto": "Автоматическая",
+    
+    # Additional UI elements
+    "Open Folder": "Открыть папку",
+    "Start Scan": "Начать сканирование",
+    "Stop Scan": "Остановить сканирование",
+    "Save Results": "Сохранить результаты",
+    "Load Results": "Загрузить результаты",
+    "Delete Selected": "Удалить выбранные",
+    "Delete All Duplicates": "Удалить все дубликаты",
+    "View Log": "Просмотреть журнал",
+    "Settings": "Настройки",
+    "About": "О программе",
+    "Exit": "Выход",
+    
+    # Dialogs
+    "Select Folder": "Выбрать папку",
+    "Save Results": "Сохранить результаты",
+    "Load Results": "Загрузить результаты",
+    "Confirm Delete": "Подтвердить удаление",
+    "Are you sure you want to delete the selected files?": "Вы уверены, что хотите удалить выбранные файлы?",
+    "Error": "Ошибка",
+    "Information": "Информация",
+    "Warning": "Предупреждение",
+    "Success": "Успех",
+    
+    # File operations
+    "File": "Файл",
+    "Edit": "Правка",
+    "View": "Вид",
+    "Help": "Справка",
+    "Select All": "Выделить всё",
+    "Open PDF Viewer": "Открыть просмотр PDF",
+    "Export Results to CSV": "Экспортировать результаты в CSV",
+    "Export last scan results to a CSV file": "Экспортировать последние результаты сканирования в CSV-файл",
+    "Exit": "Выход",
+    "Exit the application": "Выйти из приложения",
+    
+    # Progress dialog translations
+    "Files processed:": "Обработано файлов:",
+    "Current file:": "Текущий файл:",
+    "Duplicates found:": "Найдено дубликатов:",
+    
+    # Log viewer translations
+    "Failed to list log files: {}": "Не удалось перечислить файлы журнала: {}",
+    "Log file not found: {path}": "Файл журнала не найден: {path}",
+    "Failed to load log file: {}": "Не удалось загрузить файл журнала: {}",
+    "No log file selected": "Файл журнала не выбран",
+    "File: {file} | Entries: {entries} | Size: {size}": "Файл: {file} | Записи: {entries} | Размер: {size}",
+    "Confirm Delete": "Подтвердить удаление",
+    "Are you sure you want to delete the log file?\nThis will permanently delete: {}\nThis action cannot be undone.": "Вы уверены, что хотите удалить файл журнала?\nЭто приведет к безвозвратному удалению: {}\nЭто действие нельзя отменить.",
+    "Success": "Успех",
+    "Log file has been deleted.": "Файл журнала удален.",
+    "Failed to delete log file: {}": "Не удалось удалить файл журнала: {}",
+    "Showing {filtered} of {total} entries": "Показано {filtered} из {total} записей",
+    "Failed to filter logs: {}": "Не удалось отфильтровать журналы: {}",
+    "Confirm Clear": "Подтвердить очистку",
+    "Are you sure you want to clear all logs? This cannot be undone.": "Вы уверены, что хотите очистить все журналы? Это действие нельзя отменить.",
+    "Failed to clear logs: {error}": "Не удалось очистить журналы: {error}",
+    "Error": "Ошибка",
+}
+}
+# Available languages
+AVAILABLE_LANGUAGES = {
+    "en": "English",
+    "it": "Italiano",
+    "ru": "Русский",
+    "ua": "Українська", 
+}
