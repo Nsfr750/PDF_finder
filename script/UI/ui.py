@@ -165,6 +165,7 @@ class MainUI(QWidget):
         self.duplicates_tree.setIndentation(20)
         self.duplicates_tree.setWordWrap(True)
         self.duplicates_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.duplicates_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.duplicates_tree.itemDoubleClicked.connect(self.on_duplicate_double_clicked)
         
         # Set header properties
@@ -187,8 +188,27 @@ class MainUI(QWidget):
         self.main_layout.addWidget(self.tab_widget)
     
     def show_context_menu(self, position):
-        """Show context menu for file list with select/deselect/delete options."""
+        """Show context menu for file list or duplicates tree with select/deselect/delete options."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         menu = QMenu()
+        
+        # Determine which widget called this context menu
+        sender = self.sender()
+        if sender == self.file_list:
+            widget = self.file_list
+            logger.info("Context menu for file_list")
+        elif sender == self.duplicates_tree:
+            widget = self.duplicates_tree
+            logger.info("Context menu for duplicates_tree")
+        else:
+            widget = self.file_list  # Default fallback
+            logger.warning(f"Unknown sender for context menu: {sender}")
+        
+        # Check if items are selected in the current widget
+        selected_items = widget.selectedItems()
+        logger.info(f"Selected items in {widget.objectName()}: {len(selected_items)}")
         
         # Add select/deselect actions
         select_all_action = QAction(self.tr("Select All"), self)
@@ -205,7 +225,7 @@ class MainUI(QWidget):
         menu.addSeparator()
         
         # Add delete action if items are selected
-        if self.file_list.selectedItems():
+        if selected_items:
             delete_action = QAction(self.tr("Delete Selected"), self)
             delete_action.triggered.connect(self.delete_selected.emit)
             delete_action.setIcon(QApplication.style().standardIcon(
@@ -213,8 +233,11 @@ class MainUI(QWidget):
             ))
             self.translation_keys['delete_action'] = "Delete Selected"
             menu.addAction(delete_action)
+            logger.info("Delete action added to context menu")
+        else:
+            logger.info("No items selected, delete action not added")
         
-        menu.exec(self.file_list.viewport().mapToGlobal(position))
+        menu.exec(widget.viewport().mapToGlobal(position))
     
     def on_recent_file_double_clicked(self, item):
         """Handle double-click on a recent file."""

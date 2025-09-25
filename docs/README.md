@@ -24,9 +24,10 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - 🌍 **Enhanced Multi-language Support**: Completely rewritten translation system using Python modules for better performance and maintainability with 12 supported languages
 - 📊 **Progress Tracking**: Real-time progress bar for file processing operations
 - ⏱ **Recent Files**: Quick access to recently opened files with context menu options
-- 🐛 **Enhanced Stability**: Major bug fixes including duplicate tree population, PDF viewer issues, and signal handling improvements
+- 🐛 **Enhanced Stability**: Major bug fixes including duplicate tree population, PDF viewer issues, signal handling improvements, and file deletion functionality
 - 🗂️ **Improved Code Organization**: Restructured codebase with better separation of concerns (UI, utils, lang modules)
 - 🛡️ **Better Error Handling**: Comprehensive error handling and graceful degradation
+- 🧹 **Maintenance Tools**: Built-in script for cleaning Python cache files (__pycache__ directories and .pyc files)
 
 ## 🆕 What's New in Version 3.0.0
 
@@ -55,6 +56,13 @@ A powerful tool to find and manage duplicate PDF files on your computer. PDF Dup
 - **Fixed Translation System**: Eliminated "Translation key not found" errors and improved language switching
 - **Fixed Signal Handling**: Resolved duplicate signal connections that were causing multiple handler executions
 - **Fixed Import Structure**: Resolved all ModuleNotFoundError issues after code reorganization
+- **Fixed File Deletion**: Resolved critical issue where file deletion functionality was not working correctly due to method overriding conflicts
+  - Removed duplicate on_delete_selected method from main.py that was overriding the correct implementation
+  - Fixed UI update logic to properly remove only files that were actually deleted
+  - Added detailed logging for deletion operations and UI updates
+- **Added Maintenance Script**: Created clean_pycache.py script for easy cleanup of Python cache files (__pycache__ directories and .pyc files)
+  - Script supports dry-run mode, verbose output, and selective cleaning
+  - Helps maintain clean project structure and reduce disk usage
 
 ## 📦 Installation
 

@@ -503,12 +503,37 @@ class MainWindow(QMainWindow):
         """Handle deletion of selected files."""
         logger.info("on_delete_selected method called")
         try:
+            # Check for selected items in both file_list and duplicates_tree
             selected_items = self.main_ui.file_list.selectedItems()
-            if not selected_items:
+            selected_tree_items = self.main_ui.duplicates_tree.selectedItems()
+            
+            logger.info(f"Selected items in file_list: {len(selected_items)}")
+            logger.info(f"Selected items in duplicates_tree: {len(selected_tree_items)}")
+            
+            if not selected_items and not selected_tree_items:
+                logger.info("No files selected for deletion")
                 return
 
-            file_paths = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items if item.data(Qt.ItemDataRole.UserRole)]
+            # Get file paths from file_list
+            file_paths = []
+            for item in selected_items:
+                file_path = item.data(Qt.ItemDataRole.UserRole)
+                if file_path:
+                    file_paths.append(file_path)
+            
+            # Get file paths from duplicates_tree
+            logger.info(f"Extracting file paths from {len(selected_tree_items)} tree items...")
+            for i, item in enumerate(selected_tree_items):
+                file_path = item.data(Qt.ItemDataRole.UserRole)
+                logger.info(f"Tree item {i}: file_path = {file_path}")
+                if file_path:
+                    file_paths.append(file_path)
+                else:
+                    logger.warning(f"Tree item {i} has no file path in UserRole")
+            
+            logger.info(f"Total file paths extracted: {len(file_paths)}")
             if not file_paths:
+                logger.info("No valid file paths found in selected items")
                 return
 
             # Import delete function
@@ -529,11 +554,38 @@ class MainWindow(QMainWindow):
                         "Successfully moved {count} file(s) to Recycle Bin"
                     ).format(count=success)
                 )
-                # A more robust way to remove items from the list
+                
+                # Remove only items corresponding to files that were actually deleted
+                # Check which files no longer exist and remove their corresponding items
+                
+                # Remove from file_list
                 for item in list(selected_items): # Make a copy for safe iteration
-                    row = self.main_ui.file_list.row(item)
-                    if row >= 0:
-                        self.main_ui.file_list.takeItem(row)
+                    file_path = item.data(Qt.ItemDataRole.UserRole)
+                    if file_path and not os.path.exists(file_path):
+                        row = self.main_ui.file_list.row(item)
+                        if row >= 0:
+                            self.main_ui.file_list.takeItem(row)
+                            logger.info(f"Removed deleted file from file_list: {file_path}")
+                
+                # Remove from duplicates_tree
+                for item in list(selected_tree_items): # Make a copy for safe iteration
+                    file_path = item.data(Qt.ItemDataRole.UserRole)
+                    if file_path and not os.path.exists(file_path):
+                        parent = item.parent()
+                        if parent:
+                            # Remove from parent (group)
+                            parent.removeChild(item)
+                            logger.info(f"Removed deleted file from duplicates_tree: {file_path}")
+                            # If parent has no more children, remove the parent too
+                            if parent.childCount() == 0:
+                                root = self.main_ui.duplicates_tree.invisibleRootItem()
+                                root.removeChild(parent)
+                                logger.info(f"Removed empty parent group from duplicates_tree")
+                        else:
+                            # Remove top-level item
+                            root = self.main_ui.duplicates_tree.invisibleRootItem()
+                            root.removeChild(item)
+                            logger.info(f"Removed deleted top-level item from duplicates_tree: {file_path}")
 
             if failed > 0:
                 QMessageBox.warning(

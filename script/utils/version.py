@@ -17,7 +17,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-09-21"
+__date__ = "2025-09-25"
 
 # Version description
 __description__ = "A tool to find and manage duplicate PDF files on your computer."
@@ -36,22 +36,32 @@ __requires__ = [
 
 # Changelog
 __changelog__ = """
-## [3.0.0] - 2025-09-21
+## [3.0.0] - 2025-09-25
 ### Added
-- Converted Italian translations from JSON format (it.json) to Python module (it.py)
-- Enhanced translation system with improved structure and organization
-- Updated build date to September 21, 2025
+- Complete codebase refactoring and reorganization with improved separation of concerns
+- Completely rewritten translation system using Python modules for better performance
+- Enhanced multi-language support with 12 supported languages
+- Added comprehensive error handling and logging throughout the application
+- Added maintenance script clean_pycache.py for cleaning Python cache files
+- Improved help dialog with multi-language support and dynamic language buttons
 
 ### Fixed
 - Fixed duplicates tree population issue where size, modified, and similarity columns were not being populated
 - Fixed critical bug where double-clicking a result file opened 3 PDF viewers instead of 1
 - Resolved duplicate signal connections that were triggering multiple handlers
+- Fixed toolbar shifting issue during language changes
+- Fixed all "Translation key not found" errors in translation system
+- Fixed file deletion functionality - removed duplicate method overriding correct implementation
+- Fixed UI update logic to properly remove only files that were actually deleted
+- Fixed ModuleNotFoundError issues after code reorganization
 - Improved UI stability and signal handling for better user experience
 
 ### Changed
 - Improved translation loading performance by using Python modules instead of JSON files
 - Enhanced code maintainability with better-structured translation data
-- Updated version information and build metadata
+- Updated version information and build metadata to September 25, 2025
+- Improved overall application stability and error handling
+- Enhanced code organization with better separation of concerns
 
 ## [2.12.0] - 2025-08-23
 ### Added

@@ -26,6 +26,15 @@
   - [x] Resolve duplicate signal connection conflicts in script/UI/main_window.py and script/UI/ui.py
   - [x] Fix toolbar shifting issue during language changes
   - [x] Improve UI stability and signal handling throughout the application
+  - [x] Fix critical file deletion functionality issue
+    - [x] Remove duplicate on_delete_selected method from main.py that was overriding the correct implementation
+    - [x] Fix UI update logic to properly remove only files that were actually deleted from both file_list and duplicates_tree
+    - [x] Add detailed logging for deletion operations and UI updates
+    - [x] Resolve issue where only one selected file was being removed from UI even when multiple files were successfully deleted
+  - [x] Add maintenance script for cleaning Python cache files
+    - [x] Create script/clean_pycache.py with comprehensive cleanup functionality
+    - [x] Include support for dry-run mode, verbose output, and selective cleaning
+    - [x] Add command-line interface with multiple options and help documentation
 
 - [x] **Translation System Fixes**
   - [x] Fix all "Translation key not found" errors by updating translation keys

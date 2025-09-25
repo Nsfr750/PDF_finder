@@ -5,7 +5,7 @@ All notable changes to PDF Duplicate Finder will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2025-09-21
+## [3.0.0] - 2025-09-25
 
 ### Added in 3.0.0
 
@@ -88,6 +88,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added language initialization, validation, switching with signal emission
     - Implemented translation lookup with fallback logic (current language -> default language -> English)
     - Added available languages retrieval functionality
+
+  - Fixed critical file deletion functionality issue
+    - Removed duplicate on_delete_selected method from main.py that was overriding the correct implementation
+    - Fixed UI update logic to properly remove only files that were actually deleted from both file_list and duplicates_tree
+    - Added detailed logging for deletion operations and UI updates
+    - Resolved issue where only one selected file was being removed from UI even when multiple files were successfully deleted
+
+  - Added maintenance script for cleaning Python cache files
+    - Created script/clean_pycache.py with comprehensive cleanup functionality
+    - Script supports dry-run mode, verbose output, and selective cleaning
+    - Can clean __pycache__ directories, .pyc files, and .pyo files
+    - Includes command-line interface with multiple options and help documentation
+    - Helps maintain clean project structure and reduce disk usage
 
   - Removed language selection from settings dialog as per requirements
     - Removed language_changed signal from SettingsDialog class
