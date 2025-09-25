@@ -124,3 +124,4 @@ installer.nsi
 nuitka_config.toml
 pyproject.toml
 pyproject.toml
+publish_to_pypi.py
