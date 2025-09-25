@@ -144,10 +144,10 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## 🐞 Known Bugs
 
-- Language selection doesn't work
+- None known at this time
 
 ---
 
-📅 **Last Updated**: August 2025  
+📅 **Last Updated**: March 2025  
 🐍 **Python Version**: 3.8+  
 📜 **License**: GPL-3.0

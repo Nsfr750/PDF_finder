@@ -127,12 +127,14 @@ PDF Duplicate Finder uses a Python module-based translation system (as of v3.0.0
 
 - **Translation Files**: Located in `script/simple_translations.py`
 - **Language Manager**: `script/simple_lang_manager.py` contains the SimpleLanguageManager class
-- **Adding New Languages**: 
+- **Adding New Languages**:
   1. Add new language entries to `simple_translations.py`
   2. Update the available languages list in `SimpleLanguageManager`
   3. Ensure all translation keys have fallbacks to English
 - **Translation Keys**: Use descriptive keys without prefixes (e.g., "Files" instead of "ui.files")
 - **Testing**: Test language switching thoroughly to ensure all UI elements update correctly
+- **Help Dialog**: The help dialog supports 12 languages with dynamically generated language buttons
+- **Language Support**: Currently supports English, Italian, Russian, Ukrainian, German, French, Portuguese, Spanish, Japanese, Chinese, Arabic, and Hebrew
 
 ## Testing
 

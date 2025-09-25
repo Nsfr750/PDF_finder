@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved error handling around Qt style operations to gracefully handle system-level issues
   - Added fallback mechanisms for translation key lookups with proper error logging
 
+- **Help Dialog Improvements**
+
+  - Implemented comprehensive multi-language support for the help dialog with 12 supported languages
+  - Added dynamically generated language buttons for English, Italian, Russian, Ukrainian, German, French, Portuguese, Spanish, Japanese, Chinese, Arabic, and Hebrew
+  - Enhanced help dialog UI with proper language switching and state management
+  - Added centralized help text retrieval method with English fallback
+  - Styled the close button with red background and white text for better visibility
+  - Improved error handling and logging for help dialog operations
+
 ### Fixed in 3.0.0
 
 - **Critical Bug Fixes**
