@@ -8,6 +8,7 @@
 !define PATCH_VERSION "0"
 !define BUILD_NUMBER "0"
 !define VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.${BUILD_NUMBER}"
+!define SHORT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}"
 !define APPNAME "PDF-Finder"
 !define DISPLAY_NAME "PDF Duplicate Finder"
 !define PUBLISHER "Nsfr750"
@@ -93,17 +94,16 @@ ManifestDPIAware true
 ; Languages
 !insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "Italian"
+!insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "French"
+!insertmacro MUI_LANGUAGE "German"
 !insertmacro MUI_LANGUAGE "Russian"
 !insertmacro MUI_LANGUAGE "Ukrainian"
-!insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "Arabic"
-!insertmacro MUI_LANGUAGE "Chinese"
+!insertmacro MUI_LANGUAGE "SimpChinese"
 !insertmacro MUI_LANGUAGE "Japanese"
 !insertmacro MUI_LANGUAGE "Portuguese"
-!insertmacro MUI_LANGUAGE "French"
 !insertmacro MUI_LANGUAGE "Hebrew"
-!insertmacro MUI_LANGUAGE "German"
-
 
 Function .onInit
   ; Initialize variables
@@ -167,15 +167,15 @@ Section "MainSection" SecMain
   SetOutPath "$INSTDIR"
   
   ; First, copy the file with version in the name
-  File "/oname=PDF-Finder-${VERSION}.exe" "..\dist\PDF-Finder_${VERSION}.exe"
+  File /nonfatal /oname=PDF-Finder-${SHORT_VERSION}.exe "..\dist\PDF-Finder_${SHORT_VERSION}.exe"
   
   ; Verify the file was copied
-  IfFileExists "$INSTDIR\PDF-Finder-${VERSION}.exe" +3
-    MessageBox MB_OK|MB_ICONSTOP "Failed to install PDF-Finder-${VERSION}.exe to $INSTDIR"
+  IfFileExists "$INSTDIR\PDF-Finder-${SHORT_VERSION}.exe" +3
+    MessageBox MB_OK|MB_ICONSTOP "Failed to install PDF-Finder-${SHORT_VERSION}.exe to $INSTDIR"
     Abort
     
   ; Create a version-less copy for easier access
-  CopyFiles "$INSTDIR\PDF-Finder-${VERSION}.exe" "$INSTDIR\PDF-Finder.exe"
+  CopyFiles "$INSTDIR\PDF-Finder-${SHORT_VERSION}.exe" "$INSTDIR\PDF-Finder.exe"
   
   ; Add assets directory with detailed error checking
   IfFileExists "..\assets\*.*" assets_exist
@@ -222,8 +222,8 @@ Section "MainSection" SecMain
   skip_config:
   
   ; Add lang directory
-  IfFileExists "..\lang\*.*" lang_exist
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Skipping lang: Source directory not found at ..\lang"
+  IfFileExists "..\script\lang\*.*" lang_exist
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Skipping lang: Source directory not found at ..\script\lang"
     Goto skip_lang
   
   lang_exist:
@@ -233,7 +233,7 @@ Section "MainSection" SecMain
     Goto skip_lang
   
   SetOutPath "$INSTDIR\lang"
-  File /r "..\lang\*.*"
+  File /r "..\script\lang\*.*"
   IfFileExists "$INSTDIR\lang\*.*" lang_installed
     MessageBox MB_OK|MB_ICONSTOP "Failed to install lang to $INSTDIR\lang"
     Goto skip_lang
@@ -282,12 +282,12 @@ Section "MainSection" SecMain
   skip_license:
   
   ; Install CHANGELOG.md
-  IfFileExists "..\CHANGELOG.md" changelog_exists
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Skipping CHANGELOG.md: Source file not found at ..\CHANGELOG.md"
+  IfFileExists "..\docs\CHANGELOG.md" changelog_exists
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Skipping CHANGELOG.md: Source file not found at ..\docs\CHANGELOG.md"
     Goto skip_changelog
   
   changelog_exists:
-  File "..\CHANGELOG.md"
+  File "..\docs\CHANGELOG.md"
   IfFileExists "$INSTDIR\CHANGELOG.md" changelog_installed
     MessageBox MB_OK|MB_ICONSTOP "Failed to install CHANGELOG.md to $INSTDIR"
     Goto skip_changelog

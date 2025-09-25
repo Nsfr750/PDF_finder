@@ -5,6 +5,10 @@ import sys
 def main():
     print("Building PDF Duplicate Finder with Nuitka...")
     
+    # Get the script directory for proper path resolution
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    
     # Clean previous builds
     if os.path.exists("../dist-nuitka"):
         print("Cleaning previous build...")
@@ -15,7 +19,7 @@ def main():
     try:
         # Import the version module directly
         import sys
-        sys.path.insert(0, '../script')
+        sys.path.insert(0, os.path.join(project_root, 'script', 'utils'))
         from version import VERSION, __version__
         
         # Create version strings in the required format (X.Y.Z.W)
@@ -39,9 +43,9 @@ def main():
         "-m", "nuitka",
         "--standalone",
         "--onefile",
-        "--output-dir=../dist",
+        "--output-dir=os.path.join(project_root, 'dist')",
         "--output-filename=PDF-Finder_3.0.0",
-        "--windows-icon-from-ico=../assets/icon.ico",
+        f"--windows-icon-from-ico={os.path.join(project_root, 'assets', 'icon.ico')}",
         "--company-name=Tuxxle",
         "--product-name=PDF Duplicate Finder",
         "--file-description=Find and manage duplicate PDF files.",
@@ -58,14 +62,14 @@ def main():
         "--include-package=PyQt6.QtPrintSupport",
         "--include-package=PyQt6.QtSvg",
         "--include-package=PyQt6.QtWidgets",
-        "--include-data-files=../assets/icon.ico=assets/icon.ico",
-        "--include-data-files=../assets/logo.png=assets/logo.png",
-        "--include-data-files=../assets/version_info.txt=assets/version_info.txt",
-        "--include-data-files=../config/settings.json=config/settings.json",
-        "--include-data-files=../config/updates.json=config/updates.json",
-        "--include-data-dir=../assets=assets",
-        "--include-data-dir=../config=config",
-        "--include-data-dir=../script/lang=script/lang",
+        f"--include-data-files={os.path.join(project_root, 'assets', 'icon.ico')}=assets/icon.ico",
+        f"--include-data-files={os.path.join(project_root, 'assets', 'logo.png')}=assets/logo.png",
+        f"--include-data-files={os.path.join(project_root, 'assets', 'version_info.txt')}=assets/version_info.txt",
+        f"--include-data-files={os.path.join(project_root, 'config', 'settings.json')}=config/settings.json",
+        f"--include-data-files={os.path.join(project_root, 'config', 'updates.json')}=config/updates.json",
+        f"--include-data-dir={os.path.join(project_root, 'assets')}=assets",
+        f"--include-data-dir={os.path.join(project_root, 'config')}=config",
+        f"--include-data-dir={os.path.join(project_root, 'script', 'lang')}=script/lang",
         "--nofollow-import-to=*.tests,*.test,*.unittest,*.setuptools,*.distutils,*.pkg_resources",
         "--nofollow-import-to=*.pytest,*.setuptools_rust",
         "--nofollow-import-to=scipy",
@@ -74,7 +78,7 @@ def main():
         "--remove-output",
         "--assume-yes-for-downloads",
         "--windows-console-mode=disable",
-        "../main.py"
+        os.path.join(project_root, 'main.py')
     ]
     
     # Run the command
