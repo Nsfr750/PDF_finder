@@ -43,7 +43,7 @@ def main():
         "-m", "nuitka",
         "--standalone",
         "--onefile",
-        "--output-dir=os.path.join(project_root, 'dist')",
+        f"--output-dir={os.path.join(project_root, 'dist')}",
         "--output-filename=PDF-Finder_3.0.0",
         f"--windows-icon-from-ico={os.path.join(project_root, 'assets', 'icon.ico')}",
         "--company-name=Tuxxle",
@@ -67,9 +67,18 @@ def main():
         f"--include-data-files={os.path.join(project_root, 'assets', 'version_info.txt')}=assets/version_info.txt",
         f"--include-data-files={os.path.join(project_root, 'config', 'settings.json')}=config/settings.json",
         f"--include-data-files={os.path.join(project_root, 'config', 'updates.json')}=config/updates.json",
+        f"--include-data-files={os.path.join(project_root, '.data', 'pdf_cache.db')}=.data/pdf_cache.db",
         f"--include-data-dir={os.path.join(project_root, 'assets')}=assets",
-        f"--include-data-dir={os.path.join(project_root, 'config')}=config",
-        f"--include-data-dir={os.path.join(project_root, 'script', 'lang')}=script/lang",
+        f"--include-data-dir={os.path.join(project_root, 'config')}=config"
+    ]
+    
+    # Include language directory as data files
+    lang_dir = os.path.join(project_root, 'script', 'lang')
+    if os.path.exists(lang_dir):
+        cmd.append(f"--include-data-dir={lang_dir}=script/lang")
+    
+    # Add remaining command options
+    cmd.extend([
         "--nofollow-import-to=*.tests,*.test,*.unittest,*.setuptools,*.distutils,*.pkg_resources",
         "--nofollow-import-to=*.pytest,*.setuptools_rust",
         "--nofollow-import-to=scipy",
@@ -79,10 +88,13 @@ def main():
         "--assume-yes-for-downloads",
         "--windows-console-mode=disable",
         os.path.join(project_root, 'main.py')
-    ]
+    ])
     
     # Run the command
     print("Starting build...")
+    print("Full command to run:")
+    print(" ".join(cmd))
+    print()
     try:
         subprocess.run(cmd, check=True)
         print("\nBuild completed successfully!")

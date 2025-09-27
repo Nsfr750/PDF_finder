@@ -5,7 +5,6 @@ This provides a straightforward way to handle language switching.
 
 import logging
 import os
-import importlib.util
 from typing import Dict, Optional, Any
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -46,6 +45,9 @@ class SimpleLanguageManager(QObject):
         """Load all available language files from the script/lang directory."""
         lang_dir = os.path.dirname(__file__)
         
+        # Check if we're running in a Nuitka-compiled environment
+        is_nuitka = '__compiled__' in globals()
+        
         if not os.path.exists(lang_dir):
             logger.error(f"Language directory not found: {lang_dir}")
             return
@@ -57,17 +59,35 @@ class SimpleLanguageManager(QObject):
                 lang_file_path = os.path.join(lang_dir, filename)
                 
                 try:
-                    # Load the language module
-                    spec = importlib.util.spec_from_file_location(f"lang_{lang_code}", lang_file_path)
-                    lang_module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(lang_module)
+                    # Read the language file content
+                    if is_nuitka:
+                        # In Nuitka-compiled environment, try to read from data files
+                        try:
+                            import sys
+                            # Try to find the file in the Nuitka data directory
+                            for path in sys.path:
+                                potential_path = os.path.join(path, 'script', 'lang', filename)
+                                if os.path.exists(potential_path):
+                                    lang_file_path = potential_path
+                                    break
+                        except:
+                            pass
                     
-                    # Get translations and available languages
-                    if hasattr(lang_module, 'TRANSLATIONS'):
-                        self.translations.update(lang_module.TRANSLATIONS)
+                    with open(lang_file_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
                     
-                    if hasattr(lang_module, 'AVAILABLE_LANGUAGES'):
-                        self.available_languages.update(lang_module.AVAILABLE_LANGUAGES)
+                    # Create a namespace to execute the file content
+                    namespace = {}
+                    
+                    # Execute the file content in the namespace
+                    exec(file_content, namespace)
+                    
+                    # Get translations and available languages from the namespace
+                    if 'TRANSLATIONS' in namespace:
+                        self.translations.update(namespace['TRANSLATIONS'])
+                    
+                    if 'AVAILABLE_LANGUAGES' in namespace:
+                        self.available_languages.update(namespace['AVAILABLE_LANGUAGES'])
                     
                     logger.info(f"Loaded language: {lang_code}")
                     
