@@ -79,7 +79,7 @@ class DeleteConfirmationDialog(QDialog):
     
     def toggle_permanent(self, state):
         """Toggle the permanent deletion warning."""
-        self.permanently = state == Qt.Checked
+        self.permanently = state == Qt.CheckState.Checked
         self.warning_label.setVisible(self.permanently)
     
     def move_to_trash(self):

@@ -524,7 +524,8 @@ class MainWindow(QMainWindow):
             # Get file paths from duplicates_tree
             logger.info(f"Extracting file paths from {len(selected_tree_items)} tree items...")
             for i, item in enumerate(selected_tree_items):
-                file_path = item.data(Qt.ItemDataRole.UserRole)
+                # For QTreeWidgetItem, data() needs both column and role
+                file_path = item.data(0, Qt.ItemDataRole.UserRole)
                 logger.info(f"Tree item {i}: file_path = {file_path}")
                 if file_path:
                     file_paths.append(file_path)
