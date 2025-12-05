@@ -110,3 +110,4 @@ $RECYCLE.BIN/
 *.bat
 *.exe
 Setup.txt
+.windsurf/rules
